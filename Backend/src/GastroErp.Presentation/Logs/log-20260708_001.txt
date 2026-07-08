@@ -1762,3 +1762,12 @@ Void .ctor(System.Guid, System.Guid, System.String, System.String, System.String
    at GastroErp.Presentation.Middlewares.CorrelationIdMiddleware.InvokeAsync(HttpContext context) in D:\gastro-erp\Backend\src\GastroErp.Presentation\Middlewares\CorrelationIdMiddleware.cs:line 34
    at GastroErp.Presentation.Middlewares.ExceptionHandlingMiddleware.InvokeAsync(HttpContext context) in D:\gastro-erp\Backend\src\GastroErp.Presentation\Middlewares\ExceptionHandlingMiddleware.cs:line 22
 2026-07-08 17:22:45.656 +03:00 [INF] Request finished HTTP/1.1 POST http://localhost:5162/api/v1/organization/companies - 500 null application/json; x-api-version=1 1053.1576ms
+2026-07-08 17:37:41.126 +03:00 [INF] Request starting HTTP/1.1 GET http://localhost:5162/swagger/index.html - null null
+2026-07-08 17:37:41.127 +03:00 [INF] HTTP GET /swagger/index.html responded 200 in 0 ms
+2026-07-08 17:37:41.128 +03:00 [INF] Request finished HTTP/1.1 GET http://localhost:5162/swagger/index.html - 200 null text/html;charset=utf-8 1.6012ms
+2026-07-08 17:37:41.198 +03:00 [INF] Request starting HTTP/1.1 GET http://localhost:5162/swagger/index.js - null null
+2026-07-08 17:37:41.208 +03:00 [INF] HTTP GET /swagger/index.js responded 200 in 0 ms
+2026-07-08 17:37:41.209 +03:00 [INF] Request finished HTTP/1.1 GET http://localhost:5162/swagger/index.js - 200 null application/javascript;charset=utf-8 11.0763ms
+2026-07-08 17:37:42.503 +03:00 [INF] Request starting HTTP/1.1 GET http://localhost:5162/swagger/v1/swagger.json - null null
+2026-07-08 17:37:42.963 +03:00 [INF] HTTP GET /swagger/v1/swagger.json responded 200 in 459 ms
+2026-07-08 17:37:42.964 +03:00 [INF] Request finished HTTP/1.1 GET http://localhost:5162/swagger/v1/swagger.json - 200 null application/json;charset=utf-8 460.2979ms
