@@ -1425,7 +1425,8 @@
           "GastroErp.Domain": "1.0.0",
           "MediatR": "14.2.0",
           "Microsoft.EntityFrameworkCore": "9.0.6",
-          "Microsoft.Extensions.Logging.Abstractions": "10.0.9"
+          "Microsoft.Extensions.Logging.Abstractions": "10.0.9",
+          "Microsoft.Extensions.Options": "10.0.0"
         },
         "runtime": {
           "GastroErp.Application.dll": {

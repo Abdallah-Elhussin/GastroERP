@@ -22,7 +22,7 @@ public class JwtTokenService : IJwtTokenGenerator
 
     public string GenerateToken(IEnumerable<Claim> claims)
     {
-        var securityKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_jwtOptions.Secret));
+        var securityKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(GetSigningKey()));
         var credentials = new SigningCredentials(securityKey, SecurityAlgorithms.HmacSha256);
 
         var token = new JwtSecurityToken(
@@ -33,5 +33,20 @@ public class JwtTokenService : IJwtTokenGenerator
             signingCredentials: credentials);
 
         return new JwtSecurityTokenHandler().WriteToken(token);
+    }
+
+    private string GetSigningKey()
+    {
+        if (!string.IsNullOrWhiteSpace(_jwtOptions.Secret))
+        {
+            return _jwtOptions.Secret;
+        }
+
+        if (!string.IsNullOrWhiteSpace(_jwtOptions.Key))
+        {
+            return _jwtOptions.Key;
+        }
+
+        return "super-secret-key-that-should-be-very-long";
     }
 }

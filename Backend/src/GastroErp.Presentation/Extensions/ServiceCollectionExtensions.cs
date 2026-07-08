@@ -1,4 +1,5 @@
 using Asp.Versioning;
+using GastroErp.Application.Common.Options;
 using GastroErp.Presentation.Authorization;
 using GastroErp.Presentation.Filters;
 using GastroErp.Presentation.Infrastructure.FeatureFlags;
@@ -47,7 +48,13 @@ public static class ServiceCollectionExtensions
             options.SubstituteApiVersionInUrl = true;
         });
 
+        services.Configure<AuthJwtSettings>(configuration.GetSection(AuthJwtSettings.SectionName));
+
         // 3. Authentication (JWT)
+        var jwtSigningKey = configuration["Jwt:Secret"]
+            ?? configuration["Jwt:Key"]
+            ?? "super-secret-key-that-should-be-very-long-for-hmac-sha256";
+
         services.AddAuthentication(options =>
         {
             options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
@@ -63,11 +70,12 @@ public static class ServiceCollectionExtensions
                 ValidateIssuerSigningKey = true,
                 ValidIssuer = configuration["Jwt:Issuer"] ?? "GastroErp",
                 ValidAudience = configuration["Jwt:Audience"] ?? "GastroErpClient",
-                IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(configuration["Jwt:Key"] ?? "super-secret-key-that-should-be-very-long"))
+                IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSigningKey))
             };
         });
 
         // 4. Authorization
+        services.AddSingleton<IAuthorizationPolicyProvider, PermissionPolicyProvider>();
         services.AddAuthorization();
         services.AddSingleton<IAuthorizationHandler, PermissionAuthorizationHandler>();
 

@@ -9,17 +9,21 @@ namespace GastroErp.Infrastructure.Authentication;
 /// </summary>
 public class ClaimsFactory : IClaimsFactory
 {
-    public IEnumerable<Claim> CreateClaims(AppUser user)
+    public IEnumerable<Claim> CreateClaims(AppUser user, IReadOnlyCollection<string> roleNames)
     {
         var claims = new List<Claim>
         {
-            new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),
-            new Claim(ClaimTypes.Email, user.Email),
-            new Claim(ClaimTypes.Name, user.FullName),
-            new Claim("TenantId", user.TenantId.ToString())
+            new(ClaimTypes.NameIdentifier, user.Id.ToString()),
+            new(ClaimTypes.Email, user.Email),
+            new(ClaimTypes.Name, user.FullName),
+            new("TenantId", user.TenantId.ToString())
         };
 
-        // يمكن إضافة Roles وغيرها هنا
+        foreach (var role in roleNames)
+        {
+            claims.Add(new Claim(ClaimTypes.Role, role));
+        }
+
         return claims;
     }
 }

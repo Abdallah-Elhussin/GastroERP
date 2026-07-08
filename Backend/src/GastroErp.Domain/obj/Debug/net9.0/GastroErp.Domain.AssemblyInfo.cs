@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("GastroErp.Domain")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+6718b4bb45ec00b49b91f1b79a9ca94d40e6971b")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+4e6f149c01438aabaafdd220146a9d7d28b0b184")]
 [assembly: System.Reflection.AssemblyProductAttribute("GastroErp.Domain")]
 [assembly: System.Reflection.AssemblyTitleAttribute("GastroErp.Domain")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

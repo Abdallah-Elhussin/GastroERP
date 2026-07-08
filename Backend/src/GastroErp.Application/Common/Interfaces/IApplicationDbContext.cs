@@ -45,6 +45,7 @@ public interface IApplicationDbContext
     // ─── Identity ───────────────────────────────────────────────────
     DbSet<AppUser> AppUsers { get; }
     DbSet<Role> Roles { get; }
+    DbSet<UserRole> UserRoles { get; }
 
     // ─── Menu ─────────────────────────────────────────────────────────────────
     DbSet<Category> Categories { get; }

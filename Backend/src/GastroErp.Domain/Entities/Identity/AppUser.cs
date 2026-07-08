@@ -123,6 +123,12 @@ public sealed class AppUser : AuditableBaseEntity
         AvatarUrl = avatarUrl;
     }
 
+    public void UpdateEmail(string email)
+    {
+        if (string.IsNullOrWhiteSpace(email)) throw new ArgumentException("Email cannot be empty.", nameof(email));
+        Email = email.ToLowerInvariant();
+    }
+
     public void AssignRole(Guid roleId)
     {
         if (_roles.Any(r => r.RoleId == roleId)) return;

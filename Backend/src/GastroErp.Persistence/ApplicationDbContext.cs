@@ -58,6 +58,7 @@ public class ApplicationDbContext : DbContext, IApplicationDbContext
     // ─── Identity ───────────────────────────────────────────────────
     public DbSet<AppUser> AppUsers => Set<AppUser>();
     public DbSet<Role> Roles => Set<Role>();
+    public DbSet<UserRole> UserRoles => Set<UserRole>();
 
     // ─── Menu ─────────────────────────────────────────────────────────────────
     public DbSet<Category> Categories => Set<Category>();

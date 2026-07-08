@@ -7,14 +7,14 @@ public static class ApiRoutes
     public static class Auth
     {
         public const string Base = $"{Root}/auth";
-        public const string Login = "login";
-        public const string Refresh = "refresh";
-        public const string Logout = "logout";
-        public const string Me = "me";
-        public const string ChangePassword = "change-password";
-        public const string ForgotPassword = "forgot-password";
-        public const string ResetPassword = "reset-password";
-        public const string SwitchTenant = "switch-tenant";
+        public const string Login = $"{Base}/login";
+        public const string Refresh = $"{Base}/refresh";
+        public const string Logout = $"{Base}/logout";
+        public const string Me = $"{Base}/me";
+        public const string ChangePassword = $"{Base}/change-password";
+        public const string ForgotPassword = $"{Base}/forgot-password";
+        public const string ResetPassword = $"{Base}/reset-password";
+        public const string SwitchTenant = $"{Base}/switch-tenant";
     }
 
     public static class Organization
