@@ -43,6 +43,11 @@ public enum NotificationType
     WorkflowAssigned = 30,
     WorkflowCancelled = 31,
     WorkflowReturned = 32,
+    ReportReady = 33,
+    ScheduledReportCompleted = 34,
+    ScheduledReportFailed = 35,
+    KpiThresholdExceeded = 36,
+    DashboardShared = 37,
     System = 99
 }
 

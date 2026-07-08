@@ -3,6 +3,7 @@ namespace GastroErp.Application.Features.Automation.Services;
 using GastroErp.Application.Features.Ai.Services;
 using GastroErp.Application.Features.Hr.Services;
 using GastroErp.Application.Features.Workflow.Services;
+using GastroErp.Application.Features.ReportingPlatform.Services;
 
 public interface IScheduledJobCatalog
 {
@@ -17,18 +18,20 @@ public sealed class ScheduledJobCatalog : IScheduledJobCatalog
     private readonly IAiIntelligenceJobExecutor _intelligenceJobs;
     private readonly IHrJobExecutor _hrJobs;
     private readonly IWorkflowJobExecutor _workflowJobs;
+    private readonly IReportingPlatformJobExecutor _reportingJobs;
     private readonly Dictionary<string, Func<Guid, CancellationToken, Task>> _jobs;
 
     public ScheduledJobCatalog(
         ScheduledJobExecutor executor, IAiDataJobExecutor aiJobs,
         IAiIntelligenceJobExecutor intelligenceJobs, IHrJobExecutor hrJobs,
-        IWorkflowJobExecutor workflowJobs)
+        IWorkflowJobExecutor workflowJobs, IReportingPlatformJobExecutor reportingJobs)
     {
         _executor = executor;
         _aiJobs = aiJobs;
         _intelligenceJobs = intelligenceJobs;
         _hrJobs = hrJobs;
         _workflowJobs = workflowJobs;
+        _reportingJobs = reportingJobs;
         _jobs = new Dictionary<string, Func<Guid, CancellationToken, Task>>(StringComparer.OrdinalIgnoreCase)
         {
             ["AutoCloseFiscalPeriod"] = (t, c) => _executor.AutoCloseFiscalPeriodAsync(t, c),
@@ -62,7 +65,11 @@ public sealed class ScheduledJobCatalog : IScheduledJobCatalog
             ["WorkflowCleanupJob"] = (t, c) => _workflowJobs.RunCleanupJobAsync(t, c),
             ["DelegationExpiryJob"] = (t, c) => _workflowJobs.RunDelegationExpiryJobAsync(t, c),
             ["WorkflowRetryJob"] = (t, c) => _workflowJobs.RunRetryJobAsync(t, c),
-            ["WorkflowTimeoutJob"] = (t, c) => _workflowJobs.RunTimeoutJobAsync(t, c)
+            ["WorkflowTimeoutJob"] = (t, c) => _workflowJobs.RunTimeoutJobAsync(t, c),
+            ["ScheduledReportJob"] = (t, c) => _reportingJobs.RunScheduledReportsAsync(t, c),
+            ["KpiCalculationJob"] = (t, c) => _reportingJobs.RunKpiCalculationAsync(t, c),
+            ["DashboardCacheRefreshJob"] = (t, c) => _reportingJobs.RunDashboardCacheRefreshAsync(t, c),
+            ["ReportCleanupJob"] = (t, c) => _reportingJobs.RunReportCleanupAsync(t, c)
         };
     }
 

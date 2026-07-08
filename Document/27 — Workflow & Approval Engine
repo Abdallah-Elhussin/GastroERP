@@ -1,0 +1,384 @@
+# Phase 27 — Workflow & Approval Engine
+
+## الهدف
+
+إنشاء محرك سير عمل (Workflow Engine) ومحرك موافقات (Approval Engine) موحد وقابل للتخصيص يخدم جميع وحدات GastroERP، بحيث لا تمتلك أي وحدة (HR، Finance، Purchasing، CRM...) منطق الموافقات الخاص بها، وإنما تعتمد جميعها على محرك مركزي.
+
+---
+
+# قواعد التنفيذ
+
+- الالتزام الكامل بـ Clean Architecture.
+- الالتزام بـ Domain Driven Design (DDD).
+- دعم Multi-Tenant بالكامل.
+- جميع الكيانات ترث من BaseEntity.
+- جميع الجداول تحتوي على TenantId.
+- جميع العمليات تدعم Soft Delete و Audit Fields.
+- استخدام EF Core Code First.
+- جميع الخدمات تعتمد على Dependency Injection.
+- جميع العمليات غير المتزامنة تستخدم async/await.
+- جميع العمليات ترجع Result Pattern.
+- عدم استخدام Business Logic داخل Controllers.
+- استخدام CQRS عبر MediatR.
+- دعم Domain Events.
+- دعم Validation باستخدام FluentValidation.
+- تغطية Unit Tests.
+- Build يجب أن ينتهي بدون أي Errors أو Warnings.
+
+---
+
+# 1. Domain Layer
+
+إنشاء الكيانات التالية:
+
+## WorkflowDefinition
+
+يمثل تعريف سير العمل.
+
+يشمل:
+
+- Name
+- Code
+- Description
+- Module
+- IsActive
+- Version
+
+---
+
+## WorkflowStep
+
+يمثل خطوة داخل Workflow.
+
+يشمل:
+
+- WorkflowDefinitionId
+- StepOrder
+- Name
+- ApprovalType
+- IsFinalStep
+
+---
+
+## WorkflowCondition
+
+الشروط التي تحدد انتقال الطلب.
+
+مثل:
+
+- Amount > 10000
+- Department == Finance
+- EmployeeLevel >= Manager
+
+---
+
+## WorkflowInstance
+
+نسخة تشغيلية من Workflow.
+
+يشمل:
+
+- WorkflowDefinitionId
+- ReferenceType
+- ReferenceId
+- CurrentStep
+- Status
+
+---
+
+## WorkflowApproval
+
+يمثل موافقة مستخدم.
+
+يشمل:
+
+- WorkflowInstanceId
+- ApproverId
+- Decision
+- DecisionDate
+- Comments
+
+---
+
+## WorkflowHistory
+
+سجل كامل للحركات.
+
+يشمل:
+
+- Action
+- OldStatus
+- NewStatus
+- UserId
+- Date
+
+---
+
+## ApprovalDelegate
+
+تفويض الصلاحيات.
+
+يشمل:
+
+- UserId
+- DelegateUserId
+- FromDate
+- ToDate
+
+---
+
+## ApprovalEscalation
+
+التصعيد الآلي.
+
+يشمل:
+
+- StepId
+- EscalateAfterHours
+- EscalateToRole
+
+---
+
+# 2. Enums
+
+إنشاء:
+
+- WorkflowStatus
+- ApprovalStatus
+- ApprovalDecision
+- WorkflowModule
+- WorkflowTrigger
+- WorkflowPriority
+
+---
+
+# 3. Domain Events
+
+إنشاء الأحداث التالية:
+
+- WorkflowStartedEvent
+- WorkflowStepCompletedEvent
+- WorkflowApprovedEvent
+- WorkflowRejectedEvent
+- WorkflowEscalatedEvent
+- WorkflowCancelledEvent
+- WorkflowCompletedEvent
+
+---
+
+# 4. Application Layer
+
+## Commands
+
+إنشاء:
+
+- CreateWorkflowDefinition
+- UpdateWorkflowDefinition
+- PublishWorkflowDefinition
+- StartWorkflow
+- ApproveWorkflow
+- RejectWorkflow
+- CancelWorkflow
+- DelegateApproval
+
+---
+
+## Queries
+
+إنشاء:
+
+- GetWorkflowDefinition
+- GetWorkflowHistory
+- GetWorkflowApprovals
+- GetPendingApprovals
+- GetUserTasks
+
+---
+
+## Validators
+
+إنشاء FluentValidation لجميع Commands.
+
+---
+
+# 5. Infrastructure
+
+إنشاء:
+
+- WorkflowRepository
+- ApprovalRepository
+- WorkflowEngine
+- ApprovalService
+- EscalationService
+- DelegateService
+- WorkflowHistoryService
+
+---
+
+# 6. API
+
+إنشاء Controllers:
+
+## WorkflowDefinitionsController
+
+يشمل:
+
+- CRUD
+- Publish
+- Activate
+- Deactivate
+
+---
+
+## WorkflowController
+
+يشمل:
+
+- Start
+- Approve
+- Reject
+- Cancel
+- History
+- Pending
+
+---
+
+## ApprovalDelegationController
+
+يشمل:
+
+- Create
+- Update
+- Delete
+- ActiveDelegations
+
+---
+
+# 7. Permissions
+
+إضافة:
+
+Workflow.*
+
+ومنها:
+
+- Workflow.View
+- Workflow.Create
+- Workflow.Edit
+- Workflow.Delete
+- Workflow.Publish
+- Workflow.Start
+- Workflow.Approve
+- Workflow.Reject
+- Workflow.Cancel
+- Workflow.Delegate
+- Workflow.Admin
+
+وربطها مع Controllers.
+
+---
+
+# 8. Notifications
+
+إضافة:
+
+- WorkflowStarted
+- ApprovalRequested
+- ApprovalApproved
+- ApprovalRejected
+- WorkflowCompleted
+- WorkflowEscalated
+- DelegationAssigned
+
+---
+
+# 9. Background Jobs
+
+إنشاء Jobs:
+
+- WorkflowEscalationJob
+- WorkflowReminderJob
+- WorkflowCleanupJob
+- DelegationExpiryJob
+
+---
+
+# 10. Health Check
+
+إنشاء:
+
+WorkflowEngineHealthCheck
+
+وربطه مع Infrastructure.
+
+---
+
+# 11. Swagger
+
+- Tags مستقلة.
+- وصف لجميع Endpoints.
+- أمثلة Requests و Responses.
+
+---
+
+# 12. Database Migration
+
+إنشاء Migration جديدة باسم:
+
+AddWorkflowEngine
+
+بدون تطبيقها على قاعدة البيانات.
+
+---
+
+# 13. Unit Tests
+
+إنشاء اختبارات تغطي:
+
+- Workflow Creation
+- Workflow Start
+- Approval
+- Rejection
+- Escalation
+- Delegation
+- Conditions
+- History
+- Validation Rules
+
+---
+
+# 14. Documentation
+
+إنشاء:
+
+Document/27 — Workflow & Approval Engine.md
+
+وتحديث:
+
+- Document/README.md
+- Document/00 — فهرس التوثيق وملخص المنصة.md
+
+---
+
+# معايير القبول
+
+- Build ناجح.
+- 0 Errors.
+- 0 Warnings.
+- جميع Controllers تعمل.
+- جميع Permissions مربوطة.
+- جميع الخدمات مسجلة في Dependency Injection.
+- Domain Events تعمل.
+- Notifications تعمل.
+- Background Jobs تعمل.
+- Health Check يعمل.
+- Swagger مكتمل.
+- Migration منشأة وغير مطبقة.
+- Unit Tests ناجحة.
+- Documentation محدثة.
+
+---
+
+# النتيجة المتوقعة
+
+بعد إكمال Phase 27 سيكون لدى GastroERP محرك Workflow وموافقات مركزي ومرن يدعم جميع وحدات النظام مثل الموارد البشرية، المشتريات، المالية، إدارة العقود، وإدارة الطلبات، مع دعم التفويض، التصعيد، سجل المراجعة، والإشعارات، مما يجعل المنصة جاهزة لبناء عمليات أعمال معقدة وقابلة للتخصيص دون تكرار منطق الموافقات داخل الوحدات المختلفة.

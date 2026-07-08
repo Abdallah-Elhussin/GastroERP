@@ -449,4 +449,18 @@ public static class Permissions
         public const string Return = "Workflow.Return";
         public const string ViewTimeline = "Workflow.ViewTimeline";
     }
+
+    public static class Reporting
+    {
+        public const string View = "Reporting.View";
+        public const string Create = "Reporting.Create";
+        public const string Edit = "Reporting.Edit";
+        public const string Delete = "Reporting.Delete";
+        public const string Execute = "Reporting.Execute";
+        public const string Export = "Reporting.Export";
+        public const string Publish = "Reporting.Publish";
+        public const string Schedule = "Reporting.Schedule";
+        public const string Kpi = "Reporting.KPI";
+        public const string Admin = "Reporting.Admin";
+    }
 }

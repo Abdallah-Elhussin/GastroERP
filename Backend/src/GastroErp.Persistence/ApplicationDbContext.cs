@@ -23,6 +23,7 @@ using GastroErp.Domain.Entities.Automation;
 using GastroErp.Domain.Entities.Ai;
 using GastroErp.Domain.Entities.HR;
 using GastroErp.Domain.Entities.Workflow;
+using GastroErp.Domain.Entities.Reporting;
 using Microsoft.EntityFrameworkCore;
 
 namespace GastroErp.Persistence;
@@ -215,6 +216,14 @@ public class ApplicationDbContext : DbContext, IApplicationDbContext
     public DbSet<WorkflowHistory> WorkflowHistories => Set<WorkflowHistory>();
     public DbSet<ApprovalDelegate> ApprovalDelegates => Set<ApprovalDelegate>();
     public DbSet<ApprovalEscalation> ApprovalEscalations => Set<ApprovalEscalation>();
+
+    public DbSet<Dashboard> ReportingDashboards => Set<Dashboard>();
+    public DbSet<DashboardWidget> ReportingDashboardWidgets => Set<DashboardWidget>();
+    public DbSet<ReportDefinition> ReportDefinitions => Set<ReportDefinition>();
+    public DbSet<ReportExecution> ReportExecutions => Set<ReportExecution>();
+    public DbSet<ScheduledReport> ScheduledReports => Set<ScheduledReport>();
+    public DbSet<KpiDefinition> KpiDefinitions => Set<KpiDefinition>();
+    public DbSet<KpiSnapshot> KpiSnapshots => Set<KpiSnapshot>();
 
     protected override void OnModelCreating(ModelBuilder builder)
     {

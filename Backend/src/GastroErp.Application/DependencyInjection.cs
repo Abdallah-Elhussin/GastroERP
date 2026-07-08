@@ -10,6 +10,7 @@ using GastroErp.Application.Features.Delivery.Services;
 using GastroErp.Application.Features.Finance.Services;
 using GastroErp.Application.Features.Hr.Services;
 using GastroErp.Application.Features.Workflow.Services;
+using GastroErp.Application.Features.ReportingPlatform.Services;
 using GastroErp.Application.Features.Reporting.Services;
 using GastroErp.Application.Features.Invoicing.Services;
 using MediatR;
@@ -134,6 +135,17 @@ public static class DependencyInjection
         services.AddScoped<IWorkflowIntegrationService, WorkflowIntegrationService>();
         services.AddScoped<IWorkflowModuleOutcomeService, WorkflowModuleOutcomeService>();
         services.AddScoped<IHrWorkflowRequestService, HrWorkflowRequestService>();
+
+        services.AddScoped<IDashboardManagementService, DashboardManagementService>();
+        services.AddScoped<IReportDefinitionService, ReportDefinitionService>();
+        services.AddScoped<IReportDataResolver, ReportDataResolver>();
+        services.AddScoped<IReportExecutionService, ReportExecutionService>();
+        services.AddScoped<IKpiAnalyticsEngine, KpiAnalyticsEngine>();
+        services.AddScoped<IPlatformExportService, PlatformExportService>();
+        services.AddScoped<IChartService, ChartService>();
+        services.AddScoped<IPowerBiIntegrationService, PowerBiIntegrationService>();
+        services.AddScoped<IScheduledReportService, ScheduledReportService>();
+        services.AddScoped<IReportingPlatformJobExecutor, ReportingPlatformJobExecutor>();
 
         services.AddMediatR(cfg => {
             cfg.RegisterServicesFromAssembly(Assembly.GetExecutingAssembly());

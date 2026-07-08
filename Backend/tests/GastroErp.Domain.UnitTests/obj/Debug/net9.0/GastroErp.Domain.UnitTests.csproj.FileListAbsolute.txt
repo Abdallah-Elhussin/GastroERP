@@ -100,3 +100,4 @@ D:\gastro-erp\Backend\tests\GastroErp.Domain.UnitTests\obj\Debug\net9.0\refint\G
 D:\gastro-erp\Backend\tests\GastroErp.Domain.UnitTests\obj\Debug\net9.0\GastroErp.Domain.UnitTests.pdb
 D:\gastro-erp\Backend\tests\GastroErp.Domain.UnitTests\obj\Debug\net9.0\GastroErp.Domain.UnitTests.genruntimeconfig.cache
 D:\gastro-erp\Backend\tests\GastroErp.Domain.UnitTests\obj\Debug\net9.0\ref\GastroErp.Domain.UnitTests.dll
+D:\gastro-erp\Backend\tests\GastroErp.Domain.UnitTests\obj\Debug\net9.0\GastroErp.Domain.UnitTests.sourcelink.json

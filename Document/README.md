@@ -19,9 +19,9 @@
 
 ## الحالة الحالية
 
-- **Backend Phases 1–28:** ✅ مكتمل
+- **Backend Phases 1–29:** ✅ مكتمل
 - **Build:** 0 Errors / 0 Warnings
-- **Migrations:** ⏳ مُنشأة — لم تُطبَّق (يشمل `AddWorkflowIntegration`)
+- **Migrations:** ⏳ مُنشأة — لم تُطبَّق (يشمل `AddReportingAnalytics`)
 
 ---
 

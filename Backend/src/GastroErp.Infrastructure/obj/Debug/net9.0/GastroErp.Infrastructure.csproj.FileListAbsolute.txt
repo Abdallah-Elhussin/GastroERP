@@ -15,3 +15,4 @@ D:\gastro-erp\Backend\src\GastroErp.Infrastructure\obj\Debug\net9.0\GastroErp.In
 D:\gastro-erp\Backend\src\GastroErp.Infrastructure\obj\Debug\net9.0\refint\GastroErp.Infrastructure.dll
 D:\gastro-erp\Backend\src\GastroErp.Infrastructure\obj\Debug\net9.0\GastroErp.Infrastructure.pdb
 D:\gastro-erp\Backend\src\GastroErp.Infrastructure\obj\Debug\net9.0\ref\GastroErp.Infrastructure.dll
+D:\gastro-erp\Backend\src\GastroErp.Infrastructure\obj\Debug\net9.0\GastroErp.Infrastructure.sourcelink.json

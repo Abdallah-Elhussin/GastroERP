@@ -15,3 +15,4 @@ D:\gastro-erp\Backend\src\GastroErp.Persistence\obj\Debug\net9.0\GastroErp.Persi
 D:\gastro-erp\Backend\src\GastroErp.Persistence\obj\Debug\net9.0\refint\GastroErp.Persistence.dll
 D:\gastro-erp\Backend\src\GastroErp.Persistence\obj\Debug\net9.0\GastroErp.Persistence.pdb
 D:\gastro-erp\Backend\src\GastroErp.Persistence\obj\Debug\net9.0\ref\GastroErp.Persistence.dll
+D:\gastro-erp\Backend\src\GastroErp.Persistence\obj\Debug\net9.0\GastroErp.Persistence.sourcelink.json

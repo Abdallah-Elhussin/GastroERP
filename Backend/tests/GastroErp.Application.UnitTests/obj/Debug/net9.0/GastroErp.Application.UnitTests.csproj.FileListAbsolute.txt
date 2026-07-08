@@ -122,3 +122,4 @@ d:\gastro-erp\Backend\tests\GastroErp.Application.UnitTests\bin\Debug\net9.0\Mic
 d:\gastro-erp\Backend\tests\GastroErp.Application.UnitTests\bin\Debug\net9.0\Microsoft.IdentityModel.Logging.dll
 d:\gastro-erp\Backend\tests\GastroErp.Application.UnitTests\bin\Debug\net9.0\Microsoft.IdentityModel.Tokens.dll
 d:\gastro-erp\Backend\tests\GastroErp.Application.UnitTests\bin\Debug\net9.0\System.Diagnostics.DiagnosticSource.dll
+D:\gastro-erp\Backend\tests\GastroErp.Application.UnitTests\obj\Debug\net9.0\GastroErp.Application.UnitTests.sourcelink.json

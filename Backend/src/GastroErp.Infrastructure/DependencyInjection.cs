@@ -143,7 +143,8 @@ public static class DependencyInjection
             .AddCheck<QueueHealthCheck>("Queue")
             .AddCheck<AiIntelligenceHealthCheck>("AIIntelligence")
             .AddCheck<HrWorkforceHealthCheck>("HRWorkforce")
-            .AddCheck<WorkflowEngineHealthCheck>("WorkflowEngine");
+            .AddCheck<WorkflowEngineHealthCheck>("WorkflowEngine")
+            .AddCheck<ReportingHealthCheck>("ReportingPlatform");
 
         return services;
     }

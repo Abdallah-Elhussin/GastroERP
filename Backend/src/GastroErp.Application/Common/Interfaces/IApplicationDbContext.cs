@@ -23,6 +23,7 @@ using GastroErp.Domain.Entities.Automation;
 using GastroErp.Domain.Entities.Ai;
 using GastroErp.Domain.Entities.HR;
 using GastroErp.Domain.Entities.Workflow;
+using GastroErp.Domain.Entities.Reporting;
 
 namespace GastroErp.Application.Common.Interfaces;
 
@@ -200,6 +201,14 @@ public interface IApplicationDbContext
     DbSet<WorkflowHistory> WorkflowHistories { get; }
     DbSet<ApprovalDelegate> ApprovalDelegates { get; }
     DbSet<ApprovalEscalation> ApprovalEscalations { get; }
+
+    DbSet<Dashboard> ReportingDashboards { get; }
+    DbSet<DashboardWidget> ReportingDashboardWidgets { get; }
+    DbSet<ReportDefinition> ReportDefinitions { get; }
+    DbSet<ReportExecution> ReportExecutions { get; }
+    DbSet<ScheduledReport> ScheduledReports { get; }
+    DbSet<KpiDefinition> KpiDefinitions { get; }
+    DbSet<KpiSnapshot> KpiSnapshots { get; }
 
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
 }

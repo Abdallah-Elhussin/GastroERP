@@ -1,4 +1,5 @@
 using GastroErp.Domain.Common;
+using GastroErp.Domain.Enums;
 
 namespace GastroErp.Domain.Events.Reporting;
 

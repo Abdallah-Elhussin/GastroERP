@@ -21,3 +21,4 @@ D:\gastro-erp\Backend\src\GastroErp.Domain\bin\Debug\net9.0\GastroErp.Domain.dep
 D:\gastro-erp\Backend\src\GastroErp.Domain\bin\Debug\net9.0\GastroErp.Domain.dll
 D:\gastro-erp\Backend\src\GastroErp.Domain\bin\Debug\net9.0\GastroErp.Domain.pdb
 D:\gastro-erp\Backend\src\GastroErp.Domain\obj\Debug\net9.0\ref\GastroErp.Domain.dll
+D:\gastro-erp\Backend\src\GastroErp.Domain\obj\Debug\net9.0\GastroErp.Domain.sourcelink.json

@@ -13,3 +13,4 @@ D:\gastro-erp\Backend\src\GastroErp.Application\obj\Debug\net9.0\GastroErp.Appli
 D:\gastro-erp\Backend\src\GastroErp.Application\obj\Debug\net9.0\refint\GastroErp.Application.dll
 D:\gastro-erp\Backend\src\GastroErp.Application\obj\Debug\net9.0\GastroErp.Application.pdb
 D:\gastro-erp\Backend\src\GastroErp.Application\obj\Debug\net9.0\ref\GastroErp.Application.dll
+D:\gastro-erp\Backend\src\GastroErp.Application\obj\Debug\net9.0\GastroErp.Application.sourcelink.json

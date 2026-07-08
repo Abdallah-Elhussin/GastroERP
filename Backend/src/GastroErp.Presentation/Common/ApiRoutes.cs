@@ -154,4 +154,15 @@ public static class ApiRoutes
         public const string Instances = $"{Base}/instances";
         public const string Delegations = $"{Base}/delegations";
     }
+
+    public static class ReportingPlatform
+    {
+        public const string Base = $"{Root}/reporting";
+        public const string Dashboards = $"{Base}/dashboards";
+        public const string Reports = $"{Base}/definitions";
+        public const string Kpis = $"{Base}/kpis";
+        public const string Scheduled = $"{Base}/scheduled";
+        public const string Charts = $"{Base}/charts";
+        public const string PowerBi = $"{Base}/powerbi";
+    }
 }
