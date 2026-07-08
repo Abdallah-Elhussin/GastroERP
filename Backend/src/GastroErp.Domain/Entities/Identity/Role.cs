@@ -102,7 +102,9 @@ public sealed class RolePermission
 /// </summary>
 public sealed class Permission
 {
-    public Guid Id { get; private set; } = Guid.NewGuid();
+    public Guid Id { get; private set; }
+    public Guid? CategoryId { get; private set; }
+    public Guid? GroupId { get; private set; }
     public string Module { get; private set; }
     public string Name { get; private set; }
     public string DisplayName { get; private set; }
@@ -116,17 +118,38 @@ public sealed class Permission
         DisplayName = string.Empty;
     }
 
-    public Permission(string module, string name, string displayName,
-                      string? displayNameAr = null, string? description = null)
+    public Permission(Guid id, string module, string name, string displayName,
+                      string? displayNameAr = null, string? description = null,
+                      Guid? categoryId = null, Guid? groupId = null)
     {
+        if (id == Guid.Empty) throw new ArgumentException("Id cannot be empty.", nameof(id));
         if (string.IsNullOrWhiteSpace(module)) throw new ArgumentException("Module cannot be empty.", nameof(module));
         if (string.IsNullOrWhiteSpace(name)) throw new ArgumentException("Name cannot be empty.", nameof(name));
         if (string.IsNullOrWhiteSpace(displayName)) throw new ArgumentException("Display name cannot be empty.", nameof(displayName));
 
+        Id = id;
         Module = module;
-        Name = name.ToLowerInvariant();
+        Name = name;
         DisplayName = displayName;
         DisplayNameAr = displayNameAr;
         Description = description;
+        CategoryId = categoryId;
+        GroupId = groupId;
+    }
+
+    public Permission(string module, string name, string displayName,
+                      string? displayNameAr = null, string? description = null)
+        : this(CreateStableId(name), module, name, displayName, displayNameAr, description)
+    {
+    }
+
+    public static Guid CreateStableId(string permissionName)
+    {
+        var bytes = System.Security.Cryptography.SHA256.HashData(System.Text.Encoding.UTF8.GetBytes($"gastroerp:perm:{permissionName.ToLowerInvariant()}"));
+        var guidBytes = new byte[16];
+        Array.Copy(bytes, guidBytes, 16);
+        guidBytes[6] = (byte)((guidBytes[6] & 0x0F) | 0x50);
+        guidBytes[8] = (byte)((guidBytes[8] & 0x3F) | 0x80);
+        return new Guid(guidBytes);
     }
 }

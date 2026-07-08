@@ -1,3 +1,4 @@
+using GastroErp.Application.Common.Interfaces;
 using GastroErp.Application.Common.Interfaces.Security;
 using GastroErp.Domain.Entities.Identity;
 using GastroErp.Domain.Entities.Organization;
@@ -15,17 +16,20 @@ public class ApplicationDbContextInitializer
     private readonly ILogger<ApplicationDbContextInitializer> _logger;
     private readonly ApplicationDbContext _context;
     private readonly TenantMasterDataSeeder _masterDataSeeder;
+    private readonly IIdentityPlatformSeedService _identitySeed;
     private readonly IPasswordHasher _passwordHasher;
 
     public ApplicationDbContextInitializer(
         ILogger<ApplicationDbContextInitializer> logger,
         ApplicationDbContext context,
         TenantMasterDataSeeder masterDataSeeder,
+        IIdentityPlatformSeedService identitySeed,
         IPasswordHasher passwordHasher)
     {
         _logger = logger;
         _context = context;
         _masterDataSeeder = masterDataSeeder;
+        _identitySeed = identitySeed;
         _passwordHasher = passwordHasher;
     }
 
@@ -33,7 +37,7 @@ public class ApplicationDbContextInitializer
     {
         try
         {
-            if (_context.Database.IsSqlServer())
+            if (_context.Database.IsRelational())
             {
                 await _context.Database.MigrateAsync();
             }
@@ -68,15 +72,9 @@ public class ApplicationDbContextInitializer
             await _context.SaveChangesAsync();
         }
 
-        var adminRole = await _context.Roles
-            .FirstOrDefaultAsync(r => r.TenantId == tenantEntity.Id && r.Name == "Administrator");
+        await _identitySeed.EnsureGlobalPermissionsAsync();
 
-        if (adminRole is null)
-        {
-            adminRole = new Role(tenantEntity.Id, "Administrator", "مدير النظام", "Has all permissions");
-            _context.Roles.Add(adminRole);
-            await _context.SaveChangesAsync();
-        }
+        var adminRole = await _identitySeed.EnsureTenantRolesAsync(tenantEntity.Id);
 
         var adminUser = await _context.AppUsers
             .FirstOrDefaultAsync(u => u.TenantId == tenantEntity.Id &&

@@ -46,6 +46,12 @@ public interface IApplicationDbContext
     DbSet<AppUser> AppUsers { get; }
     DbSet<Role> Roles { get; }
     DbSet<UserRole> UserRoles { get; }
+    DbSet<Permission> Permissions { get; }
+    DbSet<PermissionCategory> PermissionCategories { get; }
+    DbSet<PermissionGroup> PermissionGroups { get; }
+    DbSet<RolePermission> RolePermissions { get; }
+    DbSet<UserSession> UserSessions { get; }
+    DbSet<RefreshTokenEntity> RefreshTokens { get; }
 
     // ─── Menu ─────────────────────────────────────────────────────────────────
     DbSet<Category> Categories { get; }

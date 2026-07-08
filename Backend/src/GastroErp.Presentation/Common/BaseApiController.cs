@@ -1,3 +1,4 @@
+using GastroErp.Application.Common.Interfaces.Platform;
 using GastroErp.Application.Common.Responses;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
@@ -8,12 +9,12 @@ namespace GastroErp.Presentation.Common;
 public abstract class BaseApiController : ControllerBase
 {
     private ISender? _mediator;
-    private GastroErp.Presentation.Resolution.ITenantResolver? _tenantResolver;
+    private ITenantResolver? _tenantResolver;
     private GastroErp.Presentation.Resolution.IBranchResolver? _branchResolver;
 
     protected ISender Mediator => _mediator ??= HttpContext.RequestServices.GetRequiredService<ISender>();
     
-    protected Guid TenantId => (_tenantResolver ??= HttpContext.RequestServices.GetRequiredService<GastroErp.Presentation.Resolution.ITenantResolver>()).ResolveTenantId() ?? Guid.Empty;
+    protected Guid TenantId => (_tenantResolver ??= HttpContext.RequestServices.GetRequiredService<ITenantResolver>()).ResolveTenantId() ?? Guid.Empty;
     
     protected Guid? BranchId => (_branchResolver ??= HttpContext.RequestServices.GetRequiredService<GastroErp.Presentation.Resolution.IBranchResolver>()).ResolveBranchId();
 

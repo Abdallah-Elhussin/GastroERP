@@ -10,6 +10,7 @@ using GastroErp.Application.Features.Delivery.Services;
 using GastroErp.Application.Features.Finance.Services;
 using GastroErp.Application.Features.Hr.Services;
 using GastroErp.Application.Features.Workflow.Services;
+using GastroErp.Application.Features.Platform.Services;
 using GastroErp.Application.Features.ReportingPlatform.Services;
 using GastroErp.Application.Features.Reporting.Services;
 using GastroErp.Application.Features.Invoicing.Services;
@@ -146,6 +147,8 @@ public static class DependencyInjection
         services.AddScoped<IPowerBiIntegrationService, PowerBiIntegrationService>();
         services.AddScoped<IScheduledReportService, ScheduledReportService>();
         services.AddScoped<IReportingPlatformJobExecutor, ReportingPlatformJobExecutor>();
+
+        services.AddScoped<IPlatformJobExecutor, PlatformJobExecutor>();
 
         services.AddMediatR(cfg => {
             cfg.RegisterServicesFromAssembly(Assembly.GetExecutingAssembly());

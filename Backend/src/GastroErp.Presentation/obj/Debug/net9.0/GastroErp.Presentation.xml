@@ -139,6 +139,16 @@
             Product management
             </summary>
         </member>
+        <member name="T:GastroErp.Presentation.Controllers.Onboarding.OnboardingController">
+            <summary>
+            Tenant onboarding and company registration
+            </summary>
+        </member>
+        <member name="M:GastroErp.Presentation.Controllers.Onboarding.OnboardingController.RegisterCompany(GastroErp.Application.Features.Onboarding.DTOs.RegisterCompanyDto)">
+            <summary>
+            Register a new company, tenant, admin user, and trial subscription
+            </summary>
+        </member>
         <member name="T:GastroErp.Presentation.Controllers.Organization.BranchController">
             <summary>
             Branch management within a company

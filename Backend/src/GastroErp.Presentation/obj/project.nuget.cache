@@ -1,6 +1,6 @@
 {
   "version": 2,
-  "dgSpecHash": "Vk3R+3YgyaA=",
+  "dgSpecHash": "7p5qKrih6Ak=",
   "success": true,
   "projectFilePath": "D:\\gastro-erp\\Backend\\src\\GastroErp.Presentation\\GastroErp.Presentation.csproj",
   "expectedPackageFiles": [
@@ -75,6 +75,8 @@
     "C:\\Users\\abdoo\\.nuget\\packages\\microsoft.sqlserver.server\\1.0.0\\microsoft.sqlserver.server.1.0.0.nupkg.sha512",
     "C:\\Users\\abdoo\\.nuget\\packages\\microsoft.win32.systemevents\\6.0.0\\microsoft.win32.systemevents.6.0.0.nupkg.sha512",
     "C:\\Users\\abdoo\\.nuget\\packages\\mono.texttemplating\\3.0.0\\mono.texttemplating.3.0.0.nupkg.sha512",
+    "C:\\Users\\abdoo\\.nuget\\packages\\npgsql\\9.0.0\\npgsql.9.0.0.nupkg.sha512",
+    "C:\\Users\\abdoo\\.nuget\\packages\\npgsql.entityframeworkcore.postgresql\\9.0.0\\npgsql.entityframeworkcore.postgresql.9.0.0.nupkg.sha512",
     "C:\\Users\\abdoo\\.nuget\\packages\\qrcoder\\1.8.0\\qrcoder.1.8.0.nupkg.sha512",
     "C:\\Users\\abdoo\\.nuget\\packages\\serilog\\4.3.1\\serilog.4.3.1.nupkg.sha512",
     "C:\\Users\\abdoo\\.nuget\\packages\\serilog.aspnetcore\\9.0.0\\serilog.aspnetcore.9.0.0.nupkg.sha512",

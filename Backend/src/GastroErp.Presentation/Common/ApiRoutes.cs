@@ -17,6 +17,11 @@ public static class ApiRoutes
         public const string SwitchTenant = $"{Base}/switch-tenant";
     }
 
+    public static class Onboarding
+    {
+        public const string RegisterCompany = $"{Root}/onboarding/register-company";
+    }
+
     public static class Organization
     {
         public const string Tenants = $"{Root}/organization/tenants";

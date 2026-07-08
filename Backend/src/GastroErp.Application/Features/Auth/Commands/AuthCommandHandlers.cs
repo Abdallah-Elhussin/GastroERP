@@ -8,6 +8,7 @@ using GastroErp.Domain.Entities.Identity;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
+using System.IdentityModel.Tokens.Jwt;
 
 namespace GastroErp.Application.Features.Auth.Commands;
 
@@ -25,6 +26,7 @@ public class AuthCommandHandlers :
     private readonly IJwtTokenGenerator _jwtTokenGenerator;
     private readonly IClaimsFactory _claimsFactory;
     private readonly IRefreshTokenService _refreshTokenService;
+    private readonly IAuthSessionService _authSessionService;
     private readonly ICurrentUser _currentUser;
     private readonly AuthJwtSettings _jwtSettings;
 
@@ -34,6 +36,7 @@ public class AuthCommandHandlers :
         IJwtTokenGenerator jwtTokenGenerator,
         IClaimsFactory claimsFactory,
         IRefreshTokenService refreshTokenService,
+        IAuthSessionService authSessionService,
         ICurrentUser currentUser,
         IOptions<AuthJwtSettings> jwtSettings)
     {
@@ -42,6 +45,7 @@ public class AuthCommandHandlers :
         _jwtTokenGenerator = jwtTokenGenerator;
         _claimsFactory = claimsFactory;
         _refreshTokenService = refreshTokenService;
+        _authSessionService = authSessionService;
         _currentUser = currentUser;
         _jwtSettings = jwtSettings.Value;
     }
@@ -73,19 +77,56 @@ public class AuthCommandHandlers :
         user.RecordSuccessfulLogin();
         await _context.SaveChangesAsync(cancellationToken);
 
-        return await IssueTokensAsync(user, cancellationToken);
+        return await IssueTokensAsync(user, "login", cancellationToken);
     }
 
-    public Task<Result<AuthResponseDto>> Handle(RefreshTokenCommand request, CancellationToken cancellationToken)
+    public async Task<Result<AuthResponseDto>> Handle(RefreshTokenCommand request, CancellationToken cancellationToken)
     {
-        return Task.FromResult(Result<AuthResponseDto>.Failure(
-            "NotImplemented",
-            "Refresh token flow is not configured yet."));
+        var handler = new JwtSecurityTokenHandler();
+        if (!handler.CanReadToken(request.Dto.Token))
+        {
+            return Result<AuthResponseDto>.Failure("Unauthorized.InvalidToken", "Invalid access token.");
+        }
+
+        var jwt = handler.ReadJwtToken(request.Dto.Token);
+        var userIdClaim = jwt.Claims.FirstOrDefault(c => c.Type is "nameid" or System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+        var tenantClaim = jwt.Claims.FirstOrDefault(c => c.Type == "TenantId")?.Value;
+
+        if (!Guid.TryParse(userIdClaim, out var userId) || !Guid.TryParse(tenantClaim, out var tenantId))
+        {
+            return Result<AuthResponseDto>.Failure("Unauthorized.InvalidToken", "Token is missing required claims.");
+        }
+
+        var isValid = await _authSessionService.ValidateRefreshTokenAsync(tenantId, userId, request.Dto.RefreshToken, cancellationToken);
+        if (!isValid)
+        {
+            return Result<AuthResponseDto>.Failure("Unauthorized.InvalidRefreshToken", "Refresh token is invalid or expired.");
+        }
+
+        var rotated = await _authSessionService.RotateRefreshTokenAsync(tenantId, userId, request.Dto.RefreshToken, cancellationToken);
+        if (rotated is null)
+        {
+            return Result<AuthResponseDto>.Failure("Unauthorized.InvalidRefreshToken", "Refresh token rotation failed.");
+        }
+
+        var user = await _context.AppUsers.FirstOrDefaultAsync(u => u.Id == userId, cancellationToken);
+        if (user is null || !user.IsActive)
+        {
+            return Result<AuthResponseDto>.Failure("Unauthorized.InvalidCredentials", "User is not active.");
+        }
+
+        return await IssueTokensAsync(user, "refresh", cancellationToken, rotated);
     }
 
-    public Task<Result> Handle(LogoutCommand request, CancellationToken cancellationToken)
+    public async Task<Result> Handle(LogoutCommand request, CancellationToken cancellationToken)
     {
-        return Task.FromResult(Result.Success());
+        if (_currentUser.Id is null || _currentUser.Id == Guid.Empty)
+        {
+            return Result.Failure("Unauthorized", "User is not authenticated.");
+        }
+
+        await _authSessionService.RevokeAllSessionsForUserAsync(_currentUser.Id.Value, cancellationToken);
+        return Result.Success();
     }
 
     public async Task<Result> Handle(ChangePasswordCommand request, CancellationToken cancellationToken)
@@ -130,7 +171,11 @@ public class AuthCommandHandlers :
             "Tenant switching is not configured yet."));
     }
 
-    private async Task<Result<AuthResponseDto>> IssueTokensAsync(AppUser user, CancellationToken cancellationToken)
+    private async Task<Result<AuthResponseDto>> IssueTokensAsync(
+        AppUser user,
+        string deviceId,
+        CancellationToken cancellationToken,
+        string? existingRefreshToken = null)
     {
         var roleNames = await (
             from userRole in _context.UserRoles
@@ -141,9 +186,19 @@ public class AuthCommandHandlers :
 
         var claims = _claimsFactory.CreateClaims(user, roleNames);
         var accessToken = _jwtTokenGenerator.GenerateToken(claims);
-        var refreshToken = _refreshTokenService.GenerateRefreshToken();
-        var expiresIn = _jwtSettings.ExpiryMinutes * 60;
+        var refreshToken = existingRefreshToken ?? _refreshTokenService.GenerateRefreshToken();
 
+        if (existingRefreshToken is null)
+        {
+            await _authSessionService.CreateSessionAsync(
+                user.TenantId,
+                user.Id,
+                refreshToken,
+                deviceId,
+                cancellationToken: cancellationToken);
+        }
+
+        var expiresIn = _jwtSettings.ExpiryMinutes * 60;
         return Result<AuthResponseDto>.Success(new AuthResponseDto(accessToken, refreshToken, expiresIn));
     }
 

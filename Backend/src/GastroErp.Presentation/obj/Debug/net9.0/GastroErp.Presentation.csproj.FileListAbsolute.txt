@@ -218,3 +218,8 @@ D:\gastro-erp\Backend\src\GastroErp.Presentation\bin\Debug\net9.0\runtimes\win\l
 D:\gastro-erp\Backend\src\GastroErp.Presentation\bin\Debug\net9.0\runtimes\win\lib\net6.0\System.Security.Cryptography.ProtectedData.dll
 D:\gastro-erp\Backend\src\GastroErp.Presentation\bin\Debug\net9.0\runtimes\win\lib\net6.0\System.Windows.Extensions.dll
 D:\gastro-erp\Backend\src\GastroErp.Presentation\obj\Debug\net9.0\GastroErp.Presentation.sourcelink.json
+D:\gastro-erp\Backend\src\GastroErp.Presentation\bin\Debug\net9.0\appsettings.Production.json
+D:\gastro-erp\Backend\src\GastroErp.Presentation\bin\Debug\net9.0\appsettings.Staging.json
+D:\gastro-erp\Backend\src\GastroErp.Presentation\bin\Debug\net9.0\appsettings.Testing.json
+D:\gastro-erp\Backend\src\GastroErp.Presentation\bin\Debug\net9.0\Npgsql.dll
+D:\gastro-erp\Backend\src\GastroErp.Presentation\bin\Debug\net9.0\Npgsql.EntityFrameworkCore.PostgreSQL.dll

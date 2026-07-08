@@ -31,9 +31,10 @@ public class TenantProvider : ITenantProvider
             }
 
             // 2. Try get from Header
-            if (httpContext.Request.Headers.TryGetValue("X-Tenant-Id", out var tenantIdHeader))
+            foreach (var headerName in new[] { "X-Tenant-Id", "X-Tenant" })
             {
-                if (Guid.TryParse(tenantIdHeader.ToString(), out var tenantIdFromHeader))
+                if (httpContext.Request.Headers.TryGetValue(headerName, out var tenantIdHeader) &&
+                    Guid.TryParse(tenantIdHeader.ToString(), out var tenantIdFromHeader))
                 {
                     return tenantIdFromHeader;
                 }

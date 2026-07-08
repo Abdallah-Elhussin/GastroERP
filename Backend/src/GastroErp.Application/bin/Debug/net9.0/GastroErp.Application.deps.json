@@ -14,7 +14,8 @@
           "MediatR": "14.2.0",
           "Microsoft.EntityFrameworkCore": "9.0.0",
           "Microsoft.Extensions.Logging.Abstractions": "10.0.9",
-          "Microsoft.Extensions.Options": "10.0.0"
+          "Microsoft.Extensions.Options": "10.0.0",
+          "System.IdentityModel.Tokens.Jwt": "8.3.0"
         },
         "runtime": {
           "GastroErp.Application.dll": {}
@@ -236,6 +237,18 @@
           }
         }
       },
+      "System.IdentityModel.Tokens.Jwt/8.3.0": {
+        "dependencies": {
+          "Microsoft.IdentityModel.JsonWebTokens": "8.14.0",
+          "Microsoft.IdentityModel.Tokens": "8.14.0"
+        },
+        "runtime": {
+          "lib/net9.0/System.IdentityModel.Tokens.Jwt.dll": {
+            "assemblyVersion": "8.3.0.0",
+            "fileVersion": "8.3.0.51204"
+          }
+        }
+      },
       "GastroErp.Domain/1.0.0": {
         "runtime": {
           "GastroErp.Domain.dll": {
@@ -391,6 +404,13 @@
       "sha512": "sha512-VzIU41Sb23Em98hDQc71LPwKTC72xkiG7lpCZaIkf84jBJW+ViaKPa24qqR4FPmj1N4vDWilzs6Dq5Om8aFj+Q==",
       "path": "system.diagnostics.diagnosticsource/10.0.9",
       "hashPath": "system.diagnostics.diagnosticsource.10.0.9.nupkg.sha512"
+    },
+    "System.IdentityModel.Tokens.Jwt/8.3.0": {
+      "type": "package",
+      "serviceable": true,
+      "sha512": "sha512-9GESpDG0Zb17HD5mBW/uEWi2yz/uKPmCthX2UhyLnk42moGH2FpMgXA2Y4l2Qc7P75eXSUTA6wb/c9D9GSVkzw==",
+      "path": "system.identitymodel.tokens.jwt/8.3.0",
+      "hashPath": "system.identitymodel.tokens.jwt.8.3.0.nupkg.sha512"
     },
     "GastroErp.Domain/1.0.0": {
       "type": "project",

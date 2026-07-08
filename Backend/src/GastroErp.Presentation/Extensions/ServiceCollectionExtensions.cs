@@ -83,8 +83,7 @@ public static class ServiceCollectionExtensions
         services.AddSwaggerDocumentation();
 
         // 6. Resolvers
-        services.AddScoped<ITenantResolver, TenantResolver>();
-        services.AddScoped<IBranchResolver, BranchResolver>();
+        services.AddScoped<GastroErp.Presentation.Resolution.IBranchResolver, BranchResolver>();
         services.AddHttpContextAccessor();
 
         // 7. Passive Infrastructure

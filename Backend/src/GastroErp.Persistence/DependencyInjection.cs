@@ -2,6 +2,9 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.EntityFrameworkCore;
 using GastroErp.Application.Common.Interfaces;
+using GastroErp.Application.Common.Interfaces.Platform;
+using GastroErp.Application.Common.Options;
+using GastroErp.Persistence.Platform;
 using GastroErp.Persistence.Seeders;
 
 namespace GastroErp.Persistence;
@@ -10,10 +13,20 @@ public static class DependencyInjection
 {
     public static IServiceCollection AddPersistenceServices(this IServiceCollection services, IConfiguration configuration)
     {
-        services.AddDbContext<ApplicationDbContext>(options =>
-            options.UseSqlServer(
-                configuration.GetConnectionString("DefaultConnection"),
-                b => b.MigrationsAssembly(typeof(ApplicationDbContext).Assembly.FullName)));
+        services.Configure<DatabaseOptions>(configuration.GetSection(DatabaseOptions.SectionName));
+        services.AddScoped<IDatabaseProviderConfigurator, DatabaseProviderConfigurator>();
+        services.AddScoped<IIdentityPlatformSeedService, IdentityPlatformSeedService>();
+
+        services.AddDbContext<ApplicationDbContext>((serviceProvider, options) =>
+        {
+            var resolver = serviceProvider.GetRequiredService<IConnectionStringResolver>();
+            var configurator = serviceProvider.GetRequiredService<IDatabaseProviderConfigurator>();
+            var connectionString = resolver.Resolve();
+            configurator.Configure(
+                options,
+                connectionString,
+                typeof(ApplicationDbContext).Assembly.FullName!);
+        });
 
         services.AddScoped<IApplicationDbContext>(provider => provider.GetRequiredService<ApplicationDbContext>());
         services.AddScoped<ApplicationDbContextInitializer>();

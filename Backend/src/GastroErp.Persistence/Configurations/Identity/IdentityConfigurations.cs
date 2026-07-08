@@ -58,6 +58,64 @@ public sealed class RolePermissionConfiguration : IEntityTypeConfiguration<RoleP
     {
         builder.ToTable("RolePermissions");
         builder.HasKey(x => new { x.RoleId, x.PermissionId });
+        builder.HasOne<Role>().WithMany(r => r.Permissions).HasForeignKey(x => x.RoleId);
+    }
+}
+
+public sealed class PermissionConfiguration : IEntityTypeConfiguration<Permission>
+{
+    public void Configure(EntityTypeBuilder<Permission> builder)
+    {
+        builder.ToTable("Permissions");
+        builder.HasKey(x => x.Id);
+        builder.Property(x => x.Module).IsRequired().HasMaxLength(100);
+        builder.Property(x => x.Name).IsRequired().HasMaxLength(200);
+        builder.Property(x => x.DisplayName).IsRequired().HasMaxLength(200);
+        builder.HasIndex(x => x.Name).IsUnique();
+        builder.HasIndex(x => x.Module);
+    }
+}
+
+public sealed class PermissionCategoryConfiguration : IEntityTypeConfiguration<PermissionCategory>
+{
+    public void Configure(EntityTypeBuilder<PermissionCategory> builder)
+    {
+        builder.ToTable("PermissionCategories");
+        builder.HasKey(x => x.Id);
+        builder.Property(x => x.Name).IsRequired().HasMaxLength(100);
+    }
+}
+
+public sealed class PermissionGroupConfiguration : IEntityTypeConfiguration<PermissionGroup>
+{
+    public void Configure(EntityTypeBuilder<PermissionGroup> builder)
+    {
+        builder.ToTable("PermissionGroups");
+        builder.HasKey(x => x.Id);
+        builder.Property(x => x.Name).IsRequired().HasMaxLength(100);
+    }
+}
+
+public sealed class UserSessionConfiguration : IEntityTypeConfiguration<UserSession>
+{
+    public void Configure(EntityTypeBuilder<UserSession> builder)
+    {
+        builder.ToTable("UserSessions");
+        builder.HasKey(x => x.Id);
+        builder.HasIndex(x => new { x.TenantId, x.UserId });
+        builder.HasIndex(x => x.ExpiresAt);
+    }
+}
+
+public sealed class RefreshTokenConfiguration : IEntityTypeConfiguration<RefreshTokenEntity>
+{
+    public void Configure(EntityTypeBuilder<RefreshTokenEntity> builder)
+    {
+        builder.ToTable("RefreshTokens");
+        builder.HasKey(x => x.Id);
+        builder.Property(x => x.TokenHash).IsRequired().HasMaxLength(128);
+        builder.HasIndex(x => new { x.TenantId, x.UserId, x.TokenHash });
+        builder.HasIndex(x => x.ExpiresAt);
     }
 }
 

@@ -59,6 +59,12 @@ public class ApplicationDbContext : DbContext, IApplicationDbContext
     public DbSet<AppUser> AppUsers => Set<AppUser>();
     public DbSet<Role> Roles => Set<Role>();
     public DbSet<UserRole> UserRoles => Set<UserRole>();
+    public DbSet<Permission> Permissions => Set<Permission>();
+    public DbSet<PermissionCategory> PermissionCategories => Set<PermissionCategory>();
+    public DbSet<PermissionGroup> PermissionGroups => Set<PermissionGroup>();
+    public DbSet<RolePermission> RolePermissions => Set<RolePermission>();
+    public DbSet<UserSession> UserSessions => Set<UserSession>();
+    public DbSet<RefreshTokenEntity> RefreshTokens => Set<RefreshTokenEntity>();
 
     // ─── Menu ─────────────────────────────────────────────────────────────────
     public DbSet<Category> Categories => Set<Category>();

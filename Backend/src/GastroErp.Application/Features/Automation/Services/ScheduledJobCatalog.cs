@@ -3,6 +3,7 @@ namespace GastroErp.Application.Features.Automation.Services;
 using GastroErp.Application.Features.Ai.Services;
 using GastroErp.Application.Features.Hr.Services;
 using GastroErp.Application.Features.Workflow.Services;
+using GastroErp.Application.Features.Platform.Services;
 using GastroErp.Application.Features.ReportingPlatform.Services;
 
 public interface IScheduledJobCatalog
@@ -19,12 +20,14 @@ public sealed class ScheduledJobCatalog : IScheduledJobCatalog
     private readonly IHrJobExecutor _hrJobs;
     private readonly IWorkflowJobExecutor _workflowJobs;
     private readonly IReportingPlatformJobExecutor _reportingJobs;
+    private readonly IPlatformJobExecutor _platformJobs;
     private readonly Dictionary<string, Func<Guid, CancellationToken, Task>> _jobs;
 
     public ScheduledJobCatalog(
         ScheduledJobExecutor executor, IAiDataJobExecutor aiJobs,
         IAiIntelligenceJobExecutor intelligenceJobs, IHrJobExecutor hrJobs,
-        IWorkflowJobExecutor workflowJobs, IReportingPlatformJobExecutor reportingJobs)
+        IWorkflowJobExecutor workflowJobs, IReportingPlatformJobExecutor reportingJobs,
+        IPlatformJobExecutor platformJobs)
     {
         _executor = executor;
         _aiJobs = aiJobs;
@@ -32,6 +35,7 @@ public sealed class ScheduledJobCatalog : IScheduledJobCatalog
         _hrJobs = hrJobs;
         _workflowJobs = workflowJobs;
         _reportingJobs = reportingJobs;
+        _platformJobs = platformJobs;
         _jobs = new Dictionary<string, Func<Guid, CancellationToken, Task>>(StringComparer.OrdinalIgnoreCase)
         {
             ["AutoCloseFiscalPeriod"] = (t, c) => _executor.AutoCloseFiscalPeriodAsync(t, c),
@@ -69,7 +73,12 @@ public sealed class ScheduledJobCatalog : IScheduledJobCatalog
             ["ScheduledReportJob"] = (t, c) => _reportingJobs.RunScheduledReportsAsync(t, c),
             ["KpiCalculationJob"] = (t, c) => _reportingJobs.RunKpiCalculationAsync(t, c),
             ["DashboardCacheRefreshJob"] = (t, c) => _reportingJobs.RunDashboardCacheRefreshAsync(t, c),
-            ["ReportCleanupJob"] = (t, c) => _reportingJobs.RunReportCleanupAsync(t, c)
+            ["ReportCleanupJob"] = (t, c) => _reportingJobs.RunReportCleanupAsync(t, c),
+            ["ExpiredSessionCleanup"] = (_, c) => _platformJobs.CleanupExpiredSessionsAsync(c),
+            ["RefreshTokenCleanup"] = (_, c) => _platformJobs.CleanupRefreshTokensAsync(c),
+            ["InactiveTenantCheck"] = (_, c) => _platformJobs.CheckInactiveTenantsAsync(c),
+            ["TrialExpiryReminder"] = (_, c) => _platformJobs.SendTrialExpiryRemindersAsync(c),
+            ["SubscriptionExpiryReminder"] = (_, c) => _platformJobs.SendSubscriptionExpiryRemindersAsync(c)
         };
     }
 

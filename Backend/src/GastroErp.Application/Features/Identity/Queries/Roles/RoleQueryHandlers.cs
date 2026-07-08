@@ -50,12 +50,15 @@ public class RoleQueryHandlers :
         return Result<RoleDto>.Success(role);
     }
 
-    public Task<Result<IReadOnlyList<PermissionDto>>> Handle(GetPermissionsQuery request, CancellationToken cancellationToken)
+    public async Task<Result<IReadOnlyList<PermissionDto>>> Handle(GetPermissionsQuery request, CancellationToken cancellationToken)
     {
-        // Permissions are static/seeded usually. But since we don't have a Permissions DbSet exposed in DbContext interface yet, 
-        // we can just return empty or pull from a constant list if any exist. 
-        // Wait, does IApplicationDbContext have Permissions? Let me check. No.
-        // Let's just return an empty list for now, we'll fix it if we expose Permissions.
-        return Task.FromResult(Result<IReadOnlyList<PermissionDto>>.Success(new List<PermissionDto>()));
+        var permissions = await _context.Permissions
+            .AsNoTracking()
+            .OrderBy(p => p.Module)
+            .ThenBy(p => p.Name)
+            .Select(p => new PermissionDto(p.Id, p.Module, p.Name, p.DisplayName))
+            .ToListAsync(cancellationToken);
+
+        return Result<IReadOnlyList<PermissionDto>>.Success(permissions);
     }
 }

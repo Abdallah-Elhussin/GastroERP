@@ -25,6 +25,8 @@ using GastroErp.Infrastructure.Security;
 using GastroErp.Infrastructure.Storage;
 using GastroErp.Infrastructure.Sync;
 using GastroErp.Infrastructure.Tenant;
+using GastroErp.Application.Common.Interfaces.Platform;
+using GastroErp.Infrastructure.Platform;
 using GastroErp.Application.Common.Interfaces.Security;
 using GastroErp.Application.Common.Interfaces.Authentication;
 using Microsoft.Extensions.Configuration;
@@ -38,6 +40,8 @@ public static class DependencyInjection
     {
         // Add Options
         services.Configure<JwtOptions>(configuration.GetSection(JwtOptions.SectionName));
+        services.Configure<GastroErp.Application.Common.Options.AuthJwtSettings>(
+            configuration.GetSection(GastroErp.Application.Common.Options.AuthJwtSettings.SectionName));
         services.Configure<StorageOptions>(configuration.GetSection(StorageOptions.SectionName));
         services.Configure<CacheOptions>(configuration.GetSection(CacheOptions.SectionName));
         services.Configure<SmtpOptions>(configuration.GetSection(SmtpOptions.SectionName));
@@ -55,13 +59,15 @@ public static class DependencyInjection
         services.AddScoped<IJwtTokenGenerator, JwtTokenService>();
         services.AddScoped<IJwtTokenValidator, JwtTokenValidator>();
         services.AddScoped<IRefreshTokenService, RefreshTokenService>();
+        services.AddScoped<IAuthSessionService, AuthSessionService>();
         services.AddScoped<IClaimsFactory, ClaimsFactory>();
 
-        // Tenant & DateTime
+        // Tenant & Platform
         services.AddScoped<ITenantProvider, TenantProvider>();
+        services.AddScoped<ITenantContext, TenantContext>();
+        services.AddScoped<ITenantResolver, TenantResolver>();
+        services.AddSingleton<IConnectionStringResolver, ConnectionStringResolver>();
         services.AddSingleton<IDateTime, MachineDateTime>();
-
-        // QrCode & Barcode
         services.AddSingleton<IInvoiceQrCodeGenerator, InvoiceQrCodeGenerator>();
         services.AddSingleton<IMenuQrCodeGenerator, MenuQrCodeGenerator>();
         services.AddSingleton<IProductBarcodeGenerator, ProductBarcodeGenerator>();
@@ -144,7 +150,11 @@ public static class DependencyInjection
             .AddCheck<AiIntelligenceHealthCheck>("AIIntelligence")
             .AddCheck<HrWorkforceHealthCheck>("HRWorkforce")
             .AddCheck<WorkflowEngineHealthCheck>("WorkflowEngine")
-            .AddCheck<ReportingHealthCheck>("ReportingPlatform");
+            .AddCheck<ReportingHealthCheck>("ReportingPlatform")
+            .AddCheck<AuthenticationHealthCheck>("Authentication")
+            .AddCheck<TenantResolutionHealthCheck>("TenantResolution")
+            .AddCheck<RbacHealthCheck>("RBAC")
+            .AddCheck<DatabaseProviderHealthCheck>("DatabaseProvider");
 
         return services;
     }

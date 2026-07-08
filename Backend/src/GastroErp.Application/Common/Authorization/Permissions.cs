@@ -1,4 +1,4 @@
-namespace GastroErp.Presentation.Authorization;
+namespace GastroErp.Application.Common.Authorization;
 
 public static class Permissions
 {
@@ -462,5 +462,29 @@ public static class Permissions
         public const string Schedule = "Reporting.Schedule";
         public const string Kpi = "Reporting.KPI";
         public const string Admin = "Reporting.Admin";
+    }
+
+    public static class Identity
+    {
+        public const string View = "Identity.View";
+        public const string Manage = "Identity.Manage";
+        public const string RolesView = "Identity.Roles.View";
+        public const string RolesManage = "Identity.Roles.Manage";
+        public const string UsersView = "Identity.Users.View";
+        public const string UsersManage = "Identity.Users.Manage";
+        public const string PermissionsView = "Identity.Permissions.View";
+        public const string PermissionsManage = "Identity.Permissions.Manage";
+    }
+
+    public static class Administration
+    {
+        public const string View = "Administration.View";
+        public const string Manage = "Administration.Manage";
+    }
+
+    public static class Settings
+    {
+        public const string View = "Settings.View";
+        public const string Manage = "Settings.Manage";
     }
 }

@@ -52,6 +52,7 @@ public static class ApplicationBuilderExtensions
 
         // 9. Auth
         app.UseAuthentication();
+        app.UseTenantResolution();
         app.UseAuthorization();
 
         // 10. Endpoints
