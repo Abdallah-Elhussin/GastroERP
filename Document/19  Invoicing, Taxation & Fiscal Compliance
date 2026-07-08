@@ -1,0 +1,380 @@
+# GastroERP Backend Roadmap
+# Phase 19
+# Invoicing, Taxation & Fiscal Compliance
+
+## Current Status
+
+Completed
+
+- Phase 1–15
+- Phase 16 — POS Core
+- Phase 17 — Payments & Cash Management
+- Phase 18 — Kitchen, Dining & KDS
+
+Build
+
+- 0 Errors
+- 0 Warnings
+
+Pending Migrations
+
+- AddSalesOrderTables
+- AddPaymentsAndCashManagement
+- AddKitchenDiningAndKDS
+
+Do NOT apply migrations yet.
+
+---
+
+# Mission
+
+Implement the complete invoicing and taxation module.
+
+This module is responsible for generating fiscal documents and preparing the system for country-specific tax regulations.
+
+The implementation must integrate seamlessly with:
+
+- Sales Orders
+- Payments
+- Inventory
+- Organization
+- Future Accounting module
+
+---
+
+# Mandatory Rules
+
+Before implementing:
+
+- Review all existing Sales, Payment and Kitchen entities.
+- Reuse existing Value Objects, Enums and Domain Events.
+- Do not duplicate invoice concepts already present in SalesOrder.
+- Maintain Clean Architecture, DDD, CQRS and Multi-Tenancy.
+- Application Layer remains the Single Source of Truth.
+- Build must remain 0 Errors / 0 Warnings.
+
+---
+
+# Domain
+
+Implement the following Aggregate Roots.
+
+## Invoice
+
+Support:
+
+- Sales Invoice
+- Tax Invoice
+- Simplified Invoice
+- Draft Invoice
+- Finalized Invoice
+- Cancelled Invoice
+- Credit Invoice
+- Debit Invoice
+
+---
+
+## InvoiceLine
+
+Track:
+
+- Product Snapshot
+- Quantity
+- Unit Price
+- Discount
+- Tax
+- Net Amount
+- Total Amount
+
+---
+
+## TaxRate
+
+Support:
+
+- Percentage
+- Fixed Amount
+- Inclusive Tax
+- Exclusive Tax
+
+---
+
+## TaxGroup
+
+Allow assigning multiple tax rules to products and categories.
+
+---
+
+## Credit Note
+
+Support:
+
+- Full Credit
+- Partial Credit
+- Item Credit
+
+Reference original invoice.
+
+---
+
+## Debit Note
+
+Support additional charges after invoice issuance.
+
+---
+
+# Enumerations
+
+Create only missing enums.
+
+Examples:
+
+- InvoiceStatus
+- InvoiceType
+- TaxType
+- TaxCalculationMethod
+- CreditNoteStatus
+- DebitNoteStatus
+
+---
+
+# Domain Events
+
+Generate only missing events.
+
+Examples:
+
+- InvoiceCreated
+- InvoiceFinalized
+- InvoiceCancelled
+- InvoicePrinted
+- CreditNoteIssued
+- DebitNoteIssued
+- TaxCalculated
+
+---
+
+# Business Rules
+
+Implement:
+
+- One finalized invoice per completed order.
+- Cancelled invoices require authorization.
+- Credit Note amount cannot exceed invoice amount.
+- Debit Note must reference an existing invoice.
+- Tax values cannot be negative.
+- Invoice totals must equal line totals.
+- Invoice numbers must be unique per Tenant.
+- Prevent editing finalized invoices.
+
+---
+
+# CQRS
+
+Generate:
+
+- Commands
+- Queries
+- Handlers
+- DTOs
+- Validators
+
+Do not duplicate existing components.
+
+---
+
+# Services
+
+Create:
+
+- InvoiceNumberGenerator
+- TaxCalculationService
+- InvoiceGenerationService
+- FiscalValidationService
+- ReceiptPrintingService (Backend)
+
+---
+
+# AutoMapper
+
+Register all required mappings.
+
+---
+
+# Validation
+
+Create FluentValidation validators for:
+
+- Create Invoice
+- Finalize Invoice
+- Cancel Invoice
+- Issue Credit Note
+- Issue Debit Note
+- Create Tax Rate
+- Update Tax Group
+
+---
+
+# REST API
+
+Create:
+
+## InvoiceController
+
+Endpoints:
+
+- GET
+- GET/{id}
+- POST
+- POST/{id}/finalize
+- POST/{id}/cancel
+- POST/{id}/print
+
+---
+
+## CreditNoteController
+
+Endpoints:
+
+- Create
+- View
+- Cancel
+
+---
+
+## DebitNoteController
+
+Endpoints:
+
+- Create
+- View
+- Cancel
+
+---
+
+## TaxController
+
+Endpoints:
+
+- CRUD Tax Rates
+- CRUD Tax Groups
+
+---
+
+# Permissions
+
+Create:
+
+Invoice.*
+
+Tax.*
+
+CreditNote.*
+
+DebitNote.*
+
+---
+
+# Persistence
+
+Implement:
+
+- EF Configurations
+- Indexes
+- Unique Constraints
+- Check Constraints
+- Decimal Precision
+- Delete Behaviors
+- Global Query Filters
+
+Generate one migration.
+
+Do NOT apply it.
+
+---
+
+# Integration
+
+SalesOrder
+
+- Generate Invoice automatically after order completion.
+
+Payment
+
+- Mark invoice as paid.
+
+Inventory
+
+- Preserve inventory movement references.
+
+Kitchen
+
+- Read-only integration.
+
+Future Finance
+
+- Prepare integration points.
+- Do not implement accounting.
+
+---
+
+# Reporting Preparation
+
+Expose read models for:
+
+- Daily Sales
+- VAT Summary
+- Invoice Register
+- Tax Report
+- Outstanding Invoices
+
+---
+
+# Deliverables
+
+Generate only missing:
+
+- Domain
+- Persistence
+- CQRS
+- DTOs
+- Validators
+- AutoMapper
+- Controllers
+- Services
+- Migration
+
+---
+
+# Final Validation
+
+Verify:
+
+- No duplicate entities.
+- No duplicate CQRS.
+- No temporary implementations.
+- No TODO placeholders.
+- No NotImplementedException.
+
+Target:
+
+- Build = 0 Errors
+- Build = 0 Warnings
+
+Migration created successfully.
+
+Do NOT apply migrations.
+
+---
+
+# Completion Report
+
+Generate a detailed implementation report.
+
+After completing Phase 19, automatically generate the implementation instructions for:
+
+# Phase 20 — Delivery Management
+
+Do not implement Phase 20.
+
+Generate only the markdown roadmap, then stop.

@@ -1,0 +1,15 @@
+D:\gastro-erp\Backend\src\GastroErp.Application\bin\Debug\net9.0\GastroErp.Application.deps.json
+D:\gastro-erp\Backend\src\GastroErp.Application\bin\Debug\net9.0\GastroErp.Application.dll
+D:\gastro-erp\Backend\src\GastroErp.Application\bin\Debug\net9.0\GastroErp.Application.pdb
+D:\gastro-erp\Backend\src\GastroErp.Application\bin\Debug\net9.0\GastroErp.Domain.dll
+D:\gastro-erp\Backend\src\GastroErp.Application\bin\Debug\net9.0\GastroErp.Domain.pdb
+D:\gastro-erp\Backend\src\GastroErp.Application\obj\Debug\net9.0\GastroErp.Application.csproj.AssemblyReference.cache
+D:\gastro-erp\Backend\src\GastroErp.Application\obj\Debug\net9.0\GastroErp.Application.GeneratedMSBuildEditorConfig.editorconfig
+D:\gastro-erp\Backend\src\GastroErp.Application\obj\Debug\net9.0\GastroErp.Application.AssemblyInfoInputs.cache
+D:\gastro-erp\Backend\src\GastroErp.Application\obj\Debug\net9.0\GastroErp.Application.AssemblyInfo.cs
+D:\gastro-erp\Backend\src\GastroErp.Application\obj\Debug\net9.0\GastroErp.Application.csproj.CoreCompileInputs.cache
+D:\gastro-erp\Backend\src\GastroErp.Application\obj\Debug\net9.0\GastroEr.CAC15511.Up2Date
+D:\gastro-erp\Backend\src\GastroErp.Application\obj\Debug\net9.0\GastroErp.Application.dll
+D:\gastro-erp\Backend\src\GastroErp.Application\obj\Debug\net9.0\refint\GastroErp.Application.dll
+D:\gastro-erp\Backend\src\GastroErp.Application\obj\Debug\net9.0\GastroErp.Application.pdb
+D:\gastro-erp\Backend\src\GastroErp.Application\obj\Debug\net9.0\ref\GastroErp.Application.dll

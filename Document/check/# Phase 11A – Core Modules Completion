@@ -1,0 +1,597 @@
+# Phase 11A – Core Modules Completion
+## GastroERP Backend
+### Objective
+Complete all missing functionality inside the **existing modules** before introducing any new business domains (POS, CRM, Finance, etc.).
+
+---
+
+# General Rules
+
+You are the Lead Software Architect of the GastroERP project.
+
+The solution already follows:
+
+- Clean Architecture
+- Domain Driven Design (DDD)
+- CQRS
+- MediatR
+- Repository Pattern
+- Unit of Work
+- FluentValidation
+- AutoMapper
+- ASP.NET Core .NET 9
+- SQL Server
+- Multi-Tenancy
+- JWT Authentication
+
+## IMPORTANT RULES
+
+- Do NOT change the architecture.
+- Do NOT introduce another pattern.
+- Follow existing project conventions.
+- Maintain backward compatibility.
+- Preserve Multi-Tenant support.
+- Preserve Branch isolation.
+- Every new feature must support:
+  - TenantId
+  - BranchId (when applicable)
+  - Audit Fields
+  - Soft Delete
+  - Concurrency (RowVersion)
+
+---
+
+# Phase Goal
+
+Before implementing any new modules (POS, Finance, CRM...),
+
+the existing modules must become feature-complete.
+
+Modules included:
+
+1. Identity
+2. Organization
+3. Menu
+4. Inventory
+5. System Settings
+
+---
+
+# =====================================================
+# MODULE 1 — Identity Completion
+# =====================================================
+
+## Review Existing Identity
+
+Inspect:
+
+- AppUser
+- Role
+- Permission
+- UserRole
+- RolePermission
+
+Detect missing functionality.
+
+---
+
+## Required Features
+
+Implement if missing:
+
+### Users
+
+- CreateUser
+- UpdateUser
+- DeleteUser (Soft Delete)
+- RestoreUser
+- ActivateUser
+- DeactivateUser
+- ResetPassword
+- ChangePassword
+- LockUser
+- UnlockUser
+
+### Roles
+
+- CreateRole
+- UpdateRole
+- DeleteRole
+- AssignPermissions
+- RemovePermissions
+
+### User Role Management
+
+- AssignRoleToUser
+- RemoveRoleFromUser
+
+### Queries
+
+- GetUsers
+- GetUserById
+- SearchUsers
+- GetRoles
+- GetRoleById
+- GetPermissions
+
+---
+
+## Required Components
+
+For every operation create:
+
+- Command
+- Query
+- DTO
+- Validator
+- Handler
+- Mapping
+- Controller Endpoint
+
+---
+
+# =====================================================
+# MODULE 2 — Organization Completion
+# =====================================================
+
+Inspect:
+
+- Organization
+- Tenant
+- Company
+- Branch
+- Department
+- BranchDevice
+
+---
+
+## Missing Features
+
+### Organization Settings
+
+Support:
+
+- Company Logo
+- Theme
+- Language
+- Time Zone
+- Currency
+- Date Format
+- Fiscal Year
+- Business Information
+
+---
+
+### Subscription
+
+Support:
+
+- Plan
+- Billing Cycle
+- Trial
+- Expiration
+- Renew
+- Suspend
+
+---
+
+### Branch Device Management
+
+Support:
+
+- Assign Device
+- Remove Device
+- Activate Device
+- Deactivate Device
+
+---
+
+### Queries
+
+- GetSettings
+- UpdateSettings
+- GetSubscription
+- UpdateSubscription
+
+---
+
+Generate:
+
+- Commands
+- Queries
+- DTOs
+- Validators
+- Handlers
+- Controllers
+
+---
+
+# =====================================================
+# MODULE 3 — Menu Completion
+# =====================================================
+
+Inspect:
+
+- Menu
+- Category
+- Product
+- Modifier
+- Combo
+- MenuSection
+- OptionGroup
+- Option
+- PriceLevel
+
+---
+
+Implement missing features.
+
+---
+
+## Menu Sections
+
+Support:
+
+- CRUD
+- Ordering
+- Visibility
+
+---
+
+## Price Levels
+
+Support:
+
+- Multiple Price Levels
+
+Examples:
+
+Morning
+
+Lunch
+
+Dinner
+
+Delivery
+
+VIP
+
+Take Away
+
+---
+
+## Option Groups
+
+Support:
+
+- Required Options
+- Optional Options
+- Minimum Selection
+- Maximum Selection
+- Extra Price
+
+---
+
+## Product Availability
+
+Support:
+
+- Available Days
+- Available Time
+- Seasonal Availability
+
+---
+
+## Queries
+
+- Search Products
+- Search Categories
+- Search Menu
+- Search Modifiers
+
+---
+
+Create all missing:
+
+- Commands
+- Queries
+- DTOs
+- Validators
+- Handlers
+- Controllers
+- AutoMapper Profiles
+
+---
+
+# =====================================================
+# MODULE 4 — Inventory Completion
+# =====================================================
+
+Inspect:
+
+- InventoryItem
+- Warehouse
+- Supplier
+- PurchaseOrder
+- Recipe
+- RecipeItem
+- UnitConversion
+- AdjustmentReason
+- WasteReason
+- InventorySettings
+
+---
+
+## Unit Conversion
+
+Support:
+
+Examples:
+
+kg → g
+
+Box → Piece
+
+Bottle → ml
+
+---
+
+CRUD Required
+
+---
+
+## Adjustment Reasons
+
+Support:
+
+- Damaged
+- Lost
+- Expired
+- Correction
+
+CRUD Required
+
+---
+
+## Waste Reasons
+
+CRUD Required
+
+---
+
+## Inventory Settings
+
+Support:
+
+- Negative Stock
+- Auto Deduction
+- Auto Reservation
+- Costing Method
+- Low Stock Alert
+
+---
+
+## Queries
+
+- Search Inventory
+- Search Suppliers
+- Search Warehouses
+
+---
+
+Generate all missing CQRS.
+
+---
+
+# =====================================================
+# MODULE 5 — System Settings
+# =====================================================
+
+Create if missing.
+
+---
+
+Support
+
+General Settings
+
+Localization
+
+Currencies
+
+Countries
+
+Tax Settings
+
+Receipt Settings
+
+Barcode Settings
+
+Numbering Settings
+
+Printing Settings
+
+Email Settings
+
+SMS Settings
+
+---
+
+Every setting should support:
+
+- Get
+- Update
+
+---
+
+# =====================================================
+# AutoMapper
+# =====================================================
+
+Review every Profile.
+
+Generate mappings for every new DTO.
+
+No missing mappings.
+
+---
+
+# =====================================================
+# FluentValidation
+# =====================================================
+
+Every Create/Update Command must have Validator.
+
+No command without validation.
+
+---
+
+# =====================================================
+# Controllers
+# =====================================================
+
+Every Aggregate Root must expose REST endpoints.
+
+Follow REST conventions.
+
+GET
+
+GET/{id}
+
+POST
+
+PUT/{id}
+
+DELETE/{id}
+
+---
+
+# =====================================================
+# Persistence
+# =====================================================
+
+Review EF Configurations.
+
+Add if missing:
+
+Indexes
+
+Unique Constraints
+
+Check Constraints
+
+Delete Behaviors
+
+Precision
+
+Default Values
+
+Concurrency Tokens
+
+---
+
+# =====================================================
+# Performance
+# =====================================================
+
+Optimize queries.
+
+Use:
+
+AsNoTracking()
+
+Projection
+
+Pagination
+
+Filtering
+
+Sorting
+
+Searching
+
+---
+
+# =====================================================
+# Security
+# =====================================================
+
+Every endpoint must respect:
+
+Authorization
+
+Roles
+
+Permissions
+
+Tenant Isolation
+
+Branch Isolation
+
+---
+
+# =====================================================
+# Deliverables
+# =====================================================
+
+Produce:
+
+✅ New Entities (only if required)
+
+✅ Commands
+
+✅ Queries
+
+✅ DTOs
+
+✅ Validators
+
+✅ Handlers
+
+✅ Controllers
+
+✅ AutoMapper Profiles
+
+✅ EF Configurations
+
+✅ API Endpoints
+
+✅ Database Constraints
+
+✅ Migrations
+
+---
+
+# Final Validation
+
+At completion verify:
+
+- No Dummy Handlers
+
+- No NotImplementedException
+
+- No Duplicate CQRS
+
+- No Missing DTOs
+
+- No Missing Validators
+
+- No Missing AutoMapper Profiles
+
+- No Missing Controllers
+
+- No Missing EF Configurations
+
+- No Build Errors
+
+- No Build Warnings
+
+Target:
+
+Build Succeeded
+
+0 Errors
+
+0 Warnings
+
+The Backend must be considered feature-complete for all existing modules before starting Phase 11B (POS & Sales).

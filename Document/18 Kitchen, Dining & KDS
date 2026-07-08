@@ -1,0 +1,39 @@
+# GastroERP Backend Roadmap
+# Phase 18
+# Kitchen, Dining & KDS
+
+> ## Current Project Status
+
+### ✅ Completed
+
+- Phase 1–15: Backend Foundation
+- Phase 16: POS Core
+- Phase 17: Payments & Cash Management
+
+Build Status
+
+- ✅ Build Succeeded
+- ✅ 0 Errors
+- ✅ 0 Warnings
+
+Migration Status
+
+- AddSalesOrderTables (Created)
+- AddPaymentsAndCashManagement (Created)
+
+Do NOT merge or apply migrations yet.
+
+---
+
+# Mission
+
+Implement the complete Kitchen Display System (KDS) and Dining Management module.
+
+This module manages:
+
+- Kitchen workflow
+- Restaurant tables
+- Dining areas
+- Floor plans
+- Reservations
+- Order routing

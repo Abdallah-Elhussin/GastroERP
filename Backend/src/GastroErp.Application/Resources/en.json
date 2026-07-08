@@ -1,0 +1,27 @@
+{
+  "Validation.NameRequired": "Name is required.",
+  "Validation.NameArRequired": "Arabic name is required.",
+  "Validation.NameEnRequired": "English name is required.",
+  "Validation.InvalidEmail": "Invalid email address.",
+
+  "Organization.CompanyDeactivated": "Company is deactivated.",
+  "Organization.CompanyAlreadyActive": "Company is already active.",
+  "Organization.CompanyAlreadyInactive": "Company is already inactive.",
+  "Organization.BranchAlreadyExists": "Branch already exists.",
+
+  "Menu.CategoryNotFound": "Category not found.",
+  "Menu.ProductNotFound": "Product not found.",
+
+  "Inventory.InsufficientStock": "Insufficient stock.",
+  "Inventory.WarehouseNotFound": "Warehouse not found.",
+
+  "Notification.CreatedSuccessfully": "Created successfully.",
+  "Notification.UpdatedSuccessfully": "Updated successfully.",
+  "Notification.DeletedSuccessfully": "Deleted successfully.",
+  
+  "Notification.OrderCreated": "Order created successfully.",
+  "Notification.OrderCancelled": "Order cancelled.",
+  
+  "Notification.CompanyActivated": "Company activated successfully.",
+  "Notification.CompanyDeactivated": "Company deactivated successfully."
+}

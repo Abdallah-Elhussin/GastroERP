@@ -1,0 +1,141 @@
+# Phase 26 — Human Resources & Workforce Management (Completion)
+
+> **📚 فهرس التوثيق:** [`00 — فهرس التوثيق وملخص المنصة.md`](00%20—%20فهرس%20التوثيق%20وملخص%20المنصة.md)
+
+## Build Target
+
+- 0 Errors · 0 Warnings · Production Ready
+
+---
+
+## الحالة — ✅ مكتمل
+
+| البند | الحالة |
+|-------|--------|
+| Domain + Name Rules | ✅ |
+| Persistence + DbContext | ✅ |
+| Application Services + CQRS | ✅ |
+| Finance Payroll Posting | ✅ |
+| API Controllers + Routes | ✅ |
+| Permissions (`Hr.*`) | ✅ |
+| Dependency Injection | ✅ |
+| Domain Events + Handlers | ✅ |
+| Notifications (Phase 24) | ✅ |
+| Scheduled Jobs | ✅ |
+| Health Checks | ✅ |
+| Swagger Tags | ✅ |
+| Migration `AddHrWorkforceModule` | ✅ (لم تُطبَّق) |
+| Unit Tests (Domain) | ✅ |
+
+---
+
+## 1. Permissions
+
+```
+Hr.Employee.View | Create | Update | Delete
+Hr.Attendance.View | Manage
+Hr.Schedule.View | Manage
+Hr.Leave.View | Request | Approve | Reject
+Hr.Payroll.View | Generate | Approve | Post
+Hr.Performance.View | Manage
+Hr.Recruitment.View | Manage
+Hr.Training.View | Manage
+Hr.SelfService.Use
+Hr.Dashboard.View
+```
+
+---
+
+## 2. API — `/api/v1/hr/*`
+
+| Controller | المسارات |
+|------------|----------|
+| Employees | CRUD، عقود، جهات طوارئ |
+| Attendance | check-in/out، breaks |
+| Scheduling | جداول، ورديات، مناصب |
+| Leave | طلب، اعتماد |
+| Payroll | run، calculate، approve، post، payslips |
+| Performance | KPI، تقييم |
+| Recruitment | متقدمون، مقابلات، تعيين |
+| Training | دورات، تسجيل، إكمال |
+| Dashboard | لوحة HR |
+| Self-Service | ملف، إجازة |
+
+---
+
+## 3. قاعدة الاسم الثلاثي
+
+- **موظف:** `Name` + `NameAr` (اختياري)
+- **متقدم:** `Name` + `NameAr`
+- **جهة طوارئ:** `Name`
+- التحقق: Domain + FluentValidation
+
+---
+
+## 4. Finance Integration
+
+```
+Debit  Salary Expense (5100)
+Credit Salaries Payable (2200)
+```
+
+عبر `PostPayrollRunAsync` عند ترحيل دورة الرواتب.
+
+---
+
+## 5. Domain Events
+
+| Event | Handler |
+|-------|---------|
+| EmployeeHired | Welcome + Audit |
+| EmployeeTerminated | Audit |
+| LeaveRequested | Notification + Audit |
+| LeaveApproved / Rejected | Notification + Audit |
+| PayrollApproved | Payslip Ready |
+| PayrollPosted | Finance Notification + Audit |
+| PerformanceEvaluated | Audit |
+| TrainingCompleted | Audit |
+| ApplicantHired | Audit |
+
+---
+
+## 6. Scheduled Jobs
+
+| Job | التكرار |
+|-----|---------|
+| HrAttendanceSummary | يومي |
+| HrLeaveBalanceUpdate | يومي |
+| HrMissingAttendanceReport | أسبوعي |
+| HrOvertimeSummary | أسبوعي |
+| HrPayrollGeneration | شهري |
+| HrPayrollPostingReminder | شهري |
+| HrPerformanceReminder | شهري |
+| HrContractExpiry | يومي |
+| HrProbationExpiry | شهري |
+| HrCertificationExpiry | يومي |
+
+---
+
+## 7. Migration
+
+```
+AddHrWorkforceModule
+```
+
+> **لم تُطبَّق** — تُنشأ فقط وتُطبَّق بطلب صريح.
+
+---
+
+## 8. Definition of Done ✅
+
+- صلاحيات HR مكتملة
+- DI مسجّل
+- Events + Notifications
+- Jobs + Health Checks
+- Swagger محدّث
+- Migration منشأة
+- Build 0/0
+
+---
+
+*Phase 26 Complete — GastroERP أصبح ERP + POS + Finance + BI + AI + **HR + Payroll***

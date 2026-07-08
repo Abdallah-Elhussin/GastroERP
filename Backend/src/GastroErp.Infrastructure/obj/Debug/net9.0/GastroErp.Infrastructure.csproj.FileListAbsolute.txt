@@ -1,0 +1,17 @@
+D:\gastro-erp\Backend\src\GastroErp.Infrastructure\obj\Debug\net9.0\GastroErp.Infrastructure.csproj.AssemblyReference.cache
+D:\gastro-erp\Backend\src\GastroErp.Infrastructure\obj\Debug\net9.0\GastroErp.Infrastructure.GeneratedMSBuildEditorConfig.editorconfig
+D:\gastro-erp\Backend\src\GastroErp.Infrastructure\obj\Debug\net9.0\GastroErp.Infrastructure.AssemblyInfoInputs.cache
+D:\gastro-erp\Backend\src\GastroErp.Infrastructure\obj\Debug\net9.0\GastroErp.Infrastructure.AssemblyInfo.cs
+D:\gastro-erp\Backend\src\GastroErp.Infrastructure\obj\Debug\net9.0\GastroErp.Infrastructure.csproj.CoreCompileInputs.cache
+D:\gastro-erp\Backend\src\GastroErp.Infrastructure\bin\Debug\net9.0\GastroErp.Infrastructure.deps.json
+D:\gastro-erp\Backend\src\GastroErp.Infrastructure\bin\Debug\net9.0\GastroErp.Infrastructure.dll
+D:\gastro-erp\Backend\src\GastroErp.Infrastructure\bin\Debug\net9.0\GastroErp.Infrastructure.pdb
+D:\gastro-erp\Backend\src\GastroErp.Infrastructure\bin\Debug\net9.0\GastroErp.Application.dll
+D:\gastro-erp\Backend\src\GastroErp.Infrastructure\bin\Debug\net9.0\GastroErp.Domain.dll
+D:\gastro-erp\Backend\src\GastroErp.Infrastructure\bin\Debug\net9.0\GastroErp.Application.pdb
+D:\gastro-erp\Backend\src\GastroErp.Infrastructure\bin\Debug\net9.0\GastroErp.Domain.pdb
+D:\gastro-erp\Backend\src\GastroErp.Infrastructure\obj\Debug\net9.0\GastroEr.5767DAA1.Up2Date
+D:\gastro-erp\Backend\src\GastroErp.Infrastructure\obj\Debug\net9.0\GastroErp.Infrastructure.dll
+D:\gastro-erp\Backend\src\GastroErp.Infrastructure\obj\Debug\net9.0\refint\GastroErp.Infrastructure.dll
+D:\gastro-erp\Backend\src\GastroErp.Infrastructure\obj\Debug\net9.0\GastroErp.Infrastructure.pdb
+D:\gastro-erp\Backend\src\GastroErp.Infrastructure\obj\Debug\net9.0\ref\GastroErp.Infrastructure.dll

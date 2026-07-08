@@ -1,0 +1,23 @@
+{
+  "runtimeTarget": {
+    "name": ".NETCoreApp,Version=v9.0",
+    "signature": ""
+  },
+  "compilationOptions": {},
+  "targets": {
+    ".NETCoreApp,Version=v9.0": {
+      "GastroErp.Domain/1.0.0": {
+        "runtime": {
+          "GastroErp.Domain.dll": {}
+        }
+      }
+    }
+  },
+  "libraries": {
+    "GastroErp.Domain/1.0.0": {
+      "type": "project",
+      "serviceable": false,
+      "sha512": ""
+    }
+  }
+}

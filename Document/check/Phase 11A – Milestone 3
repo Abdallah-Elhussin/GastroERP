@@ -1,0 +1,447 @@
+# GastroERP Backend Roadmap
+# Phase 11A – Milestone 3
+# Menu Completion
+
+> **Current Status**
+>
+> ✅ Milestone 1 completed — Identity Completion
+>
+> ✅ Milestone 2 completed — Organization Completion
+>
+> 🚧 Current Milestone — Menu Completion
+
+---
+
+# General Instructions
+
+You are the Lead Software Architect of the GastroERP project.
+
+The Backend architecture is considered stable.
+
+The project follows:
+
+- Clean Architecture
+- Domain Driven Design (DDD)
+- CQRS
+- MediatR
+- Repository Pattern
+- Unit of Work
+- AutoMapper
+- FluentValidation
+- Multi-Tenancy
+- SQL Server
+- ASP.NET Core .NET 9
+
+Do NOT change the architecture.
+
+Do NOT introduce new design patterns.
+
+Follow the existing coding conventions.
+
+Preserve backward compatibility.
+
+Maintain Build = 0 Errors / 0 Warnings.
+
+---
+
+# IMPORTANT
+
+Before generating ANY code:
+
+Scan the entire solution.
+
+Reuse every existing:
+
+- Entity
+- DTO
+- Command
+- Query
+- Handler
+- Validator
+- AutoMapper Profile
+- Controller
+- EF Configuration
+
+Never duplicate existing implementations.
+
+Always extend existing functionality before creating new files.
+
+The Application Layer remains the Single Source of Truth.
+
+---
+
+# Objective
+
+Complete the Menu module to Enterprise Restaurant ERP standards.
+
+No temporary implementations.
+
+No placeholders.
+
+No Dummy Handlers.
+
+No NotImplementedException.
+
+---
+
+# Review Existing Domain
+
+Inspect every Menu entity.
+
+Including:
+
+- Menu
+- MenuSection
+- Category
+- Product
+- Modifier
+- ModifierGroup
+- OptionGroup
+- Option
+- PriceLevel
+- BranchMenu
+- ComboMeal
+
+Detect missing business rules.
+
+Detect incomplete relationships.
+
+Detect missing API functionality.
+
+---
+
+# Menu
+
+Complete support for:
+
+- CRUD
+- Activation
+- Deactivation
+- Visibility
+- Display Order
+- Search
+- Pagination
+- Filtering
+- Sorting
+
+---
+
+# Menu Sections
+
+Complete:
+
+- CRUD
+- Ordering
+- Visibility
+- Enable
+- Disable
+
+---
+
+# Categories
+
+Complete:
+
+- Parent Categories
+- Nested Categories
+- Display Order
+- Visibility
+- Images
+
+Support unlimited hierarchy.
+
+---
+
+# Products
+
+Review Product completely.
+
+Support:
+
+- SKU
+- Barcode
+- Image
+- Description
+- Preparation Time
+- Calories
+- Allergens
+- Tax Group
+- Selling Price
+- Cost Price
+- Product Status
+- Product Availability
+
+Review relationships with:
+
+- Recipes
+- Modifiers
+- Option Groups
+- Categories
+- Menus
+
+---
+
+# Modifier Groups
+
+Support:
+
+- Required
+- Optional
+- Minimum Selection
+- Maximum Selection
+- Multiple Selection
+- Display Order
+
+---
+
+# Modifiers
+
+Complete:
+
+- CRUD
+- Extra Price
+- Availability
+- Sort Order
+
+---
+
+# Option Groups
+
+Complete:
+
+- CRUD
+- Required
+- Optional
+- Minimum Selection
+- Maximum Selection
+- Extra Price Rules
+
+---
+
+# Options
+
+Support:
+
+- Extra Price
+- Default Option
+- Display Order
+- Enable
+- Disable
+
+---
+
+# Price Levels
+
+Support:
+
+- Dine In
+- Take Away
+- Delivery
+- VIP
+- Morning
+- Lunch
+- Dinner
+- Happy Hour
+
+Every Product should support multiple price levels.
+
+---
+
+# Branch Menus
+
+Complete support for:
+
+- Branch specific menus
+- Enable Menu
+- Disable Menu
+- Visibility
+
+---
+
+# Combo Meals
+
+Complete support for:
+
+- Required Items
+- Optional Items
+- Replacement Rules
+- Combo Pricing
+
+---
+
+# Search
+
+Generate advanced queries.
+
+Support:
+
+- Search Products
+- Search Categories
+- Search Menus
+- Search Modifiers
+
+Include:
+
+- Filtering
+- Pagination
+- Sorting
+
+---
+
+# CQRS
+
+Review every Aggregate Root.
+
+Generate missing:
+
+- Commands
+- Queries
+- DTOs
+- Validators
+- Handlers
+
+Only when missing.
+
+Never duplicate existing implementations.
+
+---
+
+# Controllers
+
+Every Aggregate Root must expose REST endpoints.
+
+Follow REST standards.
+
+GET
+
+GET/{id}
+
+POST
+
+PUT/{id}
+
+DELETE/{id}
+
+---
+
+# AutoMapper
+
+Review all mapping profiles.
+
+Generate missing mappings.
+
+No DTO without mapping.
+
+---
+
+# FluentValidation
+
+Every Create and Update command must have Validator.
+
+---
+
+# Persistence
+
+Review Entity Framework configurations.
+
+Complete:
+
+- Indexes
+- Unique Constraints
+- Check Constraints
+- Delete Behaviors
+- Precision
+- Default Values
+- Concurrency Tokens
+
+---
+
+# Performance
+
+Optimize every read query.
+
+Use:
+
+- AsNoTracking()
+- Projection
+- Pagination
+- Filtering
+- Sorting
+
+Avoid loading unnecessary navigation properties.
+
+---
+
+# Security
+
+Every endpoint must respect:
+
+- Authentication
+- Authorization
+- Permission-based access
+- Tenant Isolation
+- Branch Isolation
+
+---
+
+# Deliverables
+
+Generate only missing items.
+
+Deliver:
+
+- Commands
+- Queries
+- DTOs
+- Validators
+- Handlers
+- Controllers
+- AutoMapper Profiles
+- EF Configurations
+- Migrations (only if required)
+
+---
+
+# Final Validation
+
+Verify:
+
+- No Dummy Handlers
+- No NotImplementedException
+- No duplicate CQRS
+- No duplicate DTOs
+- No duplicate Validators
+- No duplicate Controllers
+- No missing AutoMapper mappings
+- No missing EF Configurations
+- Build succeeds
+
+Target:
+
+Build = 0 Errors
+
+Build = 0 Warnings
+
+---
+
+# AFTER COMPLETING THIS MILESTONE
+
+Do NOT stop.
+
+Immediately start the next milestone.
+
+Generate a new markdown document named:
+
+Phase11A_Milestone4_InventoryCompletion.md
+
+The document must contain the complete implementation instructions for the Inventory Completion milestone.
+
+The generated document must follow the same structure, level of detail, validation rules, architecture constraints, coding standards, and completion checklist used in this milestone.
+
+At the end of Inventory Completion, automatically generate the instructions for:
+
+Phase11A_Milestone5_SystemSettingsCompletion.md
+
+Continue this chaining approach so that every completed milestone automatically prepares the next milestone, ensuring the implementation roadmap progresses without requiring additional user prompts.
+
+Only stop after Phase 11A has been fully completed.

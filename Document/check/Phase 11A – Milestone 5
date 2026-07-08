@@ -1,0 +1,465 @@
+# GastroERP Backend Roadmap
+# Phase 11A – Milestone 5
+# Database Hardening & Persistence Completion
+
+> Current Status
+
+✅ Identity Completion
+
+✅ Organization Completion
+
+✅ Menu Completion
+
+✅ Inventory Completion
+
+🚧 Current Milestone — Database Hardening
+
+---
+
+# General Instructions
+
+You are the Lead Software Architect of GastroERP.
+
+The Backend is functionally complete for the existing bounded contexts.
+
+Your goal is NOT to introduce new business features.
+
+Your goal is to harden the persistence layer for production.
+
+Maintain:
+
+- Clean Architecture
+- DDD
+- CQRS
+- Multi-Tenancy
+- EF Core
+- SQL Server
+- .NET 9
+
+Do NOT modify business logic unless required to enforce database integrity.
+
+Maintain:
+
+Build = 0 Errors
+
+Build = 0 Warnings
+
+---
+
+# Objective
+
+Review EVERY Entity Framework Configuration.
+
+Ensure every entity is production ready.
+
+Review:
+
+- Keys
+- Indexes
+- Constraints
+- Relationships
+- Delete Behaviors
+- Precision
+- Concurrency
+- Default Values
+
+---
+
+# Entity Configurations
+
+Review every IEntityTypeConfiguration<>.
+
+Verify:
+
+- Primary Keys
+- Composite Keys
+- Alternate Keys
+
+---
+
+# Indexes
+
+Review all entities.
+
+Create indexes where appropriate.
+
+Examples:
+
+TenantId
+
+BranchId
+
+CompanyId
+
+Name
+
+Code
+
+SKU
+
+Barcode
+
+Email
+
+Phone
+
+Status
+
+CreatedAt
+
+IsDeleted
+
+ExpirationDate
+
+BatchNumber
+
+OrderNumber
+
+InvoiceNumber
+
+ReservationNumber
+
+Support composite indexes where business rules require them.
+
+---
+
+# Unique Constraints
+
+Review every business entity.
+
+Examples:
+
+Tenant + Company Code
+
+Tenant + Branch Code
+
+Tenant + Department Code
+
+Tenant + Product SKU
+
+Tenant + Barcode
+
+Tenant + Category Name
+
+Tenant + Warehouse Code
+
+Tenant + Supplier Code
+
+Tenant + Price Level Name
+
+Tenant + Menu Name
+
+Prevent duplicate business records inside the same tenant.
+
+---
+
+# Check Constraints
+
+Review numeric values.
+
+Prevent invalid data.
+
+Examples:
+
+Price >= 0
+
+Cost >= 0
+
+Quantity >= 0
+
+Stock >= 0 (unless Negative Stock enabled)
+
+Discount <= 100
+
+Tax >= 0
+
+Credit Limit >= 0
+
+Conversion Factor > 0
+
+Reservation Quantity > 0
+
+Yield > 0
+
+---
+
+# Decimal Precision
+
+Verify monetary values.
+
+Standard:
+
+decimal(18,4)
+
+Review:
+
+Price
+
+Cost
+
+Average Cost
+
+Standard Cost
+
+Tax
+
+Discount
+
+Recipe Cost
+
+Inventory Cost
+
+Purchase Cost
+
+Transfer Cost
+
+---
+
+# Relationships
+
+Review every relationship.
+
+Verify:
+
+One-to-One
+
+One-to-Many
+
+Many-to-Many
+
+Ensure correct DeleteBehavior.
+
+Examples:
+
+Restrict
+
+Cascade
+
+SetNull
+
+Never allow accidental cascade deletion of financial or inventory data.
+
+---
+
+# Soft Delete
+
+Review all aggregate roots.
+
+Ensure:
+
+Global Query Filters
+
+IsDeleted
+
+DeletedAt
+
+DeletedBy
+
+Support Restore operations.
+
+---
+
+# Concurrency
+
+Review all critical entities.
+
+Verify:
+
+RowVersion
+
+Timestamp
+
+Concurrency Tokens
+
+Required for:
+
+Inventory
+
+Organization
+
+Menu
+
+Identity
+
+Purchasing
+
+---
+
+# Default Values
+
+Review default values.
+
+Examples:
+
+CreatedAt
+
+Status
+
+IsActive
+
+IsDeleted
+
+Currency
+
+Language
+
+TimeZone
+
+CreatedBy
+
+---
+
+# Foreign Keys
+
+Review every foreign key.
+
+Ensure:
+
+Required relationships
+
+Optional relationships
+
+No orphan records
+
+---
+
+# Navigation Properties
+
+Review all navigation properties.
+
+Ensure:
+
+Correct inverse navigation
+
+No circular loading problems
+
+No duplicate navigation
+
+---
+
+# Query Performance
+
+Review common filtering columns.
+
+Optimize for:
+
+TenantId
+
+BranchId
+
+Status
+
+CreatedAt
+
+Code
+
+Name
+
+SKU
+
+Barcode
+
+Email
+
+---
+
+# Migration Review
+
+Generate ONE clean migration.
+
+Migration must contain only:
+
+Indexes
+
+Constraints
+
+Precision
+
+Relationship fixes
+
+Delete Behaviors
+
+Default Values
+
+No accidental schema recreation.
+
+No dropped data.
+
+---
+
+# Validation
+
+Verify every configuration.
+
+Ensure:
+
+No duplicate indexes
+
+No duplicated constraints
+
+No duplicate foreign keys
+
+No duplicate relationships
+
+---
+
+# Build Validation
+
+Build project.
+
+Target:
+
+Build = 0 Errors
+
+Build = 0 Warnings
+
+Migration succeeds.
+
+Database updates successfully.
+
+---
+
+# Deliverables
+
+Complete:
+
+- EF Configurations
+- Indexes
+- Unique Constraints
+- Check Constraints
+- Relationship fixes
+- Precision
+- Delete Behaviors
+- Query Filters
+- Final Migration
+
+---
+
+# Completion Report
+
+Generate a final report containing:
+
+1. Updated Configurations
+2. Added Indexes
+3. Added Constraints
+4. Performance Improvements
+5. Database Integrity Improvements
+6. Migration Summary
+
+---
+
+# AFTER COMPLETION
+
+Phase 11A is officially COMPLETE.
+
+Immediately generate a new markdown document:
+
+Phase11B_POS_and_Sales.md
+
+The document must contain the complete implementation plan for the POS & Sales module.
+
+Do NOT implement POS.
+
+Only generate the roadmap document.
+
+Stop after generating it.

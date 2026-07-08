@@ -1,0 +1,6 @@
+@GastroErp.Presentation_HostAddress = http://localhost:5162
+
+GET {{GastroErp.Presentation_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###

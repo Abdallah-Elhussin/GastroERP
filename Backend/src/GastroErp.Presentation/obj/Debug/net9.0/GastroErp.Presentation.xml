@@ -1,0 +1,368 @@
+<?xml version="1.0"?>
+<doc>
+    <assembly>
+        <name>GastroErp.Presentation</name>
+    </assembly>
+    <members>
+        <member name="T:GastroErp.Presentation.Controllers.Auth.AuthController">
+            <summary>
+            Authentication and User Identity management
+            </summary>
+        </member>
+        <member name="M:GastroErp.Presentation.Controllers.Auth.AuthController.Login(GastroErp.Application.Features.Auth.DTOs.LoginDto)">
+            <summary>
+            Authenticate user and return JWT token
+            </summary>
+        </member>
+        <member name="M:GastroErp.Presentation.Controllers.Auth.AuthController.RefreshToken(GastroErp.Application.Features.Auth.DTOs.RefreshTokenDto)">
+            <summary>
+            Refresh an expired JWT token using a valid refresh token
+            </summary>
+        </member>
+        <member name="M:GastroErp.Presentation.Controllers.Auth.AuthController.Logout">
+            <summary>
+            Logout the current user and invalidate their refresh token
+            </summary>
+        </member>
+        <member name="M:GastroErp.Presentation.Controllers.Auth.AuthController.ChangePassword(GastroErp.Application.Features.Auth.DTOs.ChangePasswordDto)">
+            <summary>
+            Change the current user's password
+            </summary>
+        </member>
+        <member name="M:GastroErp.Presentation.Controllers.Auth.AuthController.ForgotPassword(GastroErp.Application.Features.Auth.DTOs.ForgotPasswordDto)">
+            <summary>
+            Request a password reset email
+            </summary>
+        </member>
+        <member name="M:GastroErp.Presentation.Controllers.Auth.AuthController.ResetPassword(GastroErp.Application.Features.Auth.DTOs.ResetPasswordDto)">
+            <summary>
+            Reset password using token sent to email
+            </summary>
+        </member>
+        <member name="M:GastroErp.Presentation.Controllers.Auth.AuthController.GetCurrentUser">
+            <summary>
+            Get the current authenticated user's profile and permissions
+            </summary>
+        </member>
+        <member name="M:GastroErp.Presentation.Controllers.Auth.AuthController.SwitchTenant(GastroErp.Application.Features.Auth.DTOs.SwitchTenantDto)">
+            <summary>
+            Switch to another tenant the user has access to
+            </summary>
+        </member>
+        <member name="T:GastroErp.Presentation.Controllers.Identity.RoleController">
+            <summary>
+            Role and Permission management endpoints
+            </summary>
+        </member>
+        <member name="T:GastroErp.Presentation.Controllers.Identity.UserController">
+            <summary>
+            User management endpoints
+            </summary>
+        </member>
+        <member name="T:GastroErp.Presentation.Controllers.Inventory.ItemController">
+            <summary>
+            Inventory Item management
+            </summary>
+        </member>
+        <member name="T:GastroErp.Presentation.Controllers.Inventory.PurchaseController">
+            <summary>
+            Purchase Orders &amp; Invoices
+            </summary>
+        </member>
+        <member name="T:GastroErp.Presentation.Controllers.Inventory.PurchaseReturnController">
+            <summary>
+            Purchase Return management
+            </summary>
+        </member>
+        <member name="T:GastroErp.Presentation.Controllers.Inventory.RecipeController">
+            <summary>
+            Recipe management
+            </summary>
+        </member>
+        <member name="T:GastroErp.Presentation.Controllers.Inventory.ReservationController">
+            <summary>
+            Inventory Reservation management
+            </summary>
+        </member>
+        <member name="T:GastroErp.Presentation.Controllers.Inventory.StockController">
+            <summary>
+            Stock transactions and tracking
+            </summary>
+        </member>
+        <member name="T:GastroErp.Presentation.Controllers.Inventory.StockCountController">
+            <summary>
+            Stock Count management
+            </summary>
+        </member>
+        <member name="T:GastroErp.Presentation.Controllers.Inventory.SupplierController">
+            <summary>
+            Supplier management
+            </summary>
+        </member>
+        <member name="T:GastroErp.Presentation.Controllers.Inventory.WarehouseController">
+            <summary>
+            Warehouse management
+            </summary>
+        </member>
+        <member name="T:GastroErp.Presentation.Controllers.Menu.BranchMenuController">
+            <summary>
+            Branch Menu assignment and availability management
+            </summary>
+        </member>
+        <member name="T:GastroErp.Presentation.Controllers.Menu.CategoryController">
+            <summary>
+            Category management
+            </summary>
+        </member>
+        <member name="T:GastroErp.Presentation.Controllers.Menu.ComboController">
+            <summary>
+            Combo management
+            </summary>
+        </member>
+        <member name="T:GastroErp.Presentation.Controllers.Menu.MenuController">
+            <summary>
+            Menu management
+            </summary>
+        </member>
+        <member name="T:GastroErp.Presentation.Controllers.Menu.ModifierController">
+            <summary>
+            Modifier management
+            </summary>
+        </member>
+        <member name="T:GastroErp.Presentation.Controllers.Menu.PriceLevelController">
+            <summary>
+            Price level management
+            </summary>
+        </member>
+        <member name="T:GastroErp.Presentation.Controllers.Menu.ProductController">
+            <summary>
+            Product management
+            </summary>
+        </member>
+        <member name="T:GastroErp.Presentation.Controllers.Organization.BranchController">
+            <summary>
+            Branch management within a company
+            </summary>
+        </member>
+        <member name="M:GastroErp.Presentation.Controllers.Organization.BranchController.GetBranches(System.Nullable{System.Guid},GastroErp.Presentation.Common.PaginationQuery)">
+            <summary>
+            Get all branches
+            </summary>
+        </member>
+        <member name="M:GastroErp.Presentation.Controllers.Organization.BranchController.GetBranchById(System.Guid)">
+            <summary>
+            Get a branch by its ID
+            </summary>
+        </member>
+        <member name="M:GastroErp.Presentation.Controllers.Organization.BranchController.CreateBranch(GastroErp.Application.Features.Organization.DTOs.CreateBranchDto)">
+            <summary>
+            Create a new branch
+            </summary>
+        </member>
+        <member name="M:GastroErp.Presentation.Controllers.Organization.BranchController.UpdateBranch(System.Guid,GastroErp.Application.Features.Organization.DTOs.UpdateBranchDto)">
+            <summary>
+            Update an existing branch
+            </summary>
+        </member>
+        <member name="M:GastroErp.Presentation.Controllers.Organization.BranchController.ChangeBranchStatus(System.Guid,System.Boolean)">
+            <summary>
+            Change branch status (Activate/Deactivate)
+            </summary>
+        </member>
+        <member name="M:GastroErp.Presentation.Controllers.Organization.BranchController.ArchiveBranch(System.Guid)">
+            <summary>
+            Archive a branch
+            </summary>
+        </member>
+        <member name="M:GastroErp.Presentation.Controllers.Organization.BranchController.RestoreBranch(System.Guid)">
+            <summary>
+            Restore an archived branch
+            </summary>
+        </member>
+        <member name="T:GastroErp.Presentation.Controllers.Organization.CompanyController">
+            <summary>
+            Company management within a tenant
+            </summary>
+        </member>
+        <member name="M:GastroErp.Presentation.Controllers.Organization.CompanyController.GetCompanies(GastroErp.Presentation.Common.PaginationQuery)">
+            <summary>
+            Get all companies for the current tenant
+            </summary>
+        </member>
+        <member name="M:GastroErp.Presentation.Controllers.Organization.CompanyController.GetCompanyById(System.Guid)">
+            <summary>
+            Get a company by its ID
+            </summary>
+        </member>
+        <member name="M:GastroErp.Presentation.Controllers.Organization.CompanyController.CreateCompany(GastroErp.Application.Features.Organization.DTOs.CreateCompanyDto)">
+            <summary>
+            Create a new company
+            </summary>
+        </member>
+        <member name="M:GastroErp.Presentation.Controllers.Organization.CompanyController.UpdateCompany(System.Guid,GastroErp.Application.Features.Organization.DTOs.UpdateCompanyDto)">
+            <summary>
+            Update an existing company
+            </summary>
+        </member>
+        <member name="T:GastroErp.Presentation.Controllers.Organization.DepartmentController">
+            <summary>
+            Department management within a branch
+            </summary>
+        </member>
+        <member name="M:GastroErp.Presentation.Controllers.Organization.DepartmentController.GetDepartments(System.Guid,GastroErp.Presentation.Common.PaginationQuery)">
+            <summary>
+            Get all departments
+            </summary>
+        </member>
+        <member name="M:GastroErp.Presentation.Controllers.Organization.DepartmentController.GetDepartmentById(System.Guid)">
+            <summary>
+            Get a department by its ID
+            </summary>
+        </member>
+        <member name="M:GastroErp.Presentation.Controllers.Organization.DepartmentController.CreateDepartment(GastroErp.Application.Features.Organization.DTOs.CreateDepartmentDto)">
+            <summary>
+            Create a new department
+            </summary>
+        </member>
+        <member name="M:GastroErp.Presentation.Controllers.Organization.DepartmentController.UpdateDepartment(System.Guid,GastroErp.Application.Features.Organization.DTOs.UpdateDepartmentDto)">
+            <summary>
+            Update an existing department
+            </summary>
+        </member>
+        <member name="T:GastroErp.Presentation.Controllers.Organization.DeviceController">
+            <summary>
+            Device (POS, KDS) management
+            </summary>
+        </member>
+        <member name="M:GastroErp.Presentation.Controllers.Organization.DeviceController.GetDevices(GastroErp.Presentation.Common.PaginationQuery)">
+            <summary>
+            Get all devices
+            </summary>
+        </member>
+        <member name="M:GastroErp.Presentation.Controllers.Organization.DeviceController.GetDeviceById(System.Guid)">
+            <summary>
+            Get a device by its ID
+            </summary>
+        </member>
+        <member name="M:GastroErp.Presentation.Controllers.Organization.DeviceController.CreateDevice(GastroErp.Application.Features.Organization.DTOs.CreateDeviceDto)">
+            <summary>
+            Create a new device
+            </summary>
+        </member>
+        <member name="M:GastroErp.Presentation.Controllers.Organization.DeviceController.UpdateDevice(System.Guid,GastroErp.Application.Features.Organization.DTOs.UpdateDeviceDto)">
+            <summary>
+            Update an existing device
+            </summary>
+        </member>
+        <member name="M:GastroErp.Presentation.Controllers.Organization.DeviceController.LinkBranchDevice(System.Guid,GastroErp.Application.Features.Organization.DTOs.LinkBranchDeviceDto)">
+            <summary>
+            Link a device to a branch
+            </summary>
+        </member>
+        <member name="M:GastroErp.Presentation.Controllers.Organization.DeviceController.AssignDevice(System.Guid,System.Guid)">
+            <summary>
+            Assign a device to a branch
+            </summary>
+        </member>
+        <member name="M:GastroErp.Presentation.Controllers.Organization.DeviceController.UnassignDevice(System.Guid,System.Guid)">
+            <summary>
+            Unassign a device from a branch
+            </summary>
+        </member>
+        <member name="M:GastroErp.Presentation.Controllers.Organization.DeviceController.DeactivateDevice(System.Guid)">
+            <summary>
+            Deactivate a device
+            </summary>
+        </member>
+        <member name="T:GastroErp.Presentation.Controllers.Organization.OrganizationController">
+            <summary>
+            Tenants (Organization) management
+            </summary>
+        </member>
+        <member name="M:GastroErp.Presentation.Controllers.Organization.OrganizationController.GetTenants(GastroErp.Presentation.Common.PaginationQuery)">
+            <summary>
+            Get a paginated list of tenants
+            </summary>
+        </member>
+        <member name="M:GastroErp.Presentation.Controllers.Organization.OrganizationController.GetTenantById(System.Guid)">
+            <summary>
+            Get a tenant by its ID
+            </summary>
+        </member>
+        <member name="M:GastroErp.Presentation.Controllers.Organization.OrganizationController.CreateTenant(GastroErp.Application.Features.Organization.DTOs.CreateTenantDto)">
+            <summary>
+            Create a new tenant
+            </summary>
+        </member>
+        <member name="M:GastroErp.Presentation.Controllers.Organization.OrganizationController.UpdateTenant(System.Guid,GastroErp.Application.Features.Organization.DTOs.UpdateTenantDto)">
+            <summary>
+            Update an existing tenant
+            </summary>
+        </member>
+        <member name="M:GastroErp.Presentation.Controllers.Organization.OrganizationController.DeactivateTenant(System.Guid)">
+            <summary>
+            Deactivate a tenant
+            </summary>
+        </member>
+        <member name="T:GastroErp.Presentation.Controllers.Organization.OrganizationSettingsController">
+            <summary>
+            Organization Settings management
+            </summary>
+        </member>
+        <member name="M:GastroErp.Presentation.Controllers.Organization.OrganizationSettingsController.GetSettings">
+            <summary>
+            Get organization settings
+            </summary>
+        </member>
+        <member name="M:GastroErp.Presentation.Controllers.Organization.OrganizationSettingsController.UpdateSettings(GastroErp.Application.Features.Organization.DTOs.UpdateOrganizationSettingsDto)">
+            <summary>
+            Update organization settings
+            </summary>
+        </member>
+        <member name="T:GastroErp.Presentation.Controllers.Organization.SubscriptionController">
+            <summary>
+            Subscription management
+            </summary>
+        </member>
+        <member name="M:GastroErp.Presentation.Controllers.Organization.SubscriptionController.GetSubscription">
+            <summary>
+            Get tenant subscription details
+            </summary>
+        </member>
+        <member name="M:GastroErp.Presentation.Controllers.Organization.SubscriptionController.CreateSubscription(GastroErp.Application.Features.Organization.DTOs.CreateSubscriptionDto)">
+            <summary>
+            Create a new subscription
+            </summary>
+        </member>
+        <member name="M:GastroErp.Presentation.Controllers.Organization.SubscriptionController.RenewSubscription(System.Guid,GastroErp.Presentation.Controllers.Organization.RenewSubscriptionDto)">
+            <summary>
+            Renew subscription
+            </summary>
+        </member>
+        <member name="M:GastroErp.Presentation.Controllers.Organization.SubscriptionController.SuspendSubscription(System.Guid)">
+            <summary>
+            Suspend subscription
+            </summary>
+        </member>
+        <member name="M:GastroErp.Presentation.Controllers.Organization.SubscriptionController.ResumeSubscription(System.Guid)">
+            <summary>
+            Resume subscription
+            </summary>
+        </member>
+        <member name="M:GastroErp.Presentation.Controllers.Organization.SubscriptionController.CancelSubscription(System.Guid)">
+            <summary>
+            Cancel subscription
+            </summary>
+        </member>
+        <member name="M:GastroErp.Presentation.Controllers.Organization.SubscriptionController.GetPlans">
+            <summary>
+            Get available subscription plans
+            </summary>
+        </member>
+        <member name="T:GastroErp.Presentation.Controllers.Sales.OrderController">
+            <summary>
+            POS Sales Order management
+            </summary>
+        </member>
+    </members>
+</doc>

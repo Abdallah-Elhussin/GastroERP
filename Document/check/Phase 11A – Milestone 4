@@ -1,0 +1,554 @@
+# GastroERP Backend Roadmap
+# Phase 11A – Milestone 4
+# Inventory Completion
+
+> Current Status
+>
+> ✅ Milestone 1 — Identity Completion
+>
+> ✅ Milestone 2 — Organization Completion
+>
+> ✅ Milestone 3 — Menu Completion
+>
+> 🚧 Current Milestone — Inventory Completion
+
+---
+
+# General Instructions
+
+You are the Lead Software Architect of the GastroERP project.
+
+The Backend architecture is stable.
+
+Current architecture:
+
+- Clean Architecture
+- Domain Driven Design (DDD)
+- CQRS
+- MediatR
+- Repository Pattern
+- Unit of Work
+- FluentValidation
+- AutoMapper
+- Multi-Tenancy
+- SQL Server
+- ASP.NET Core .NET 9
+
+Maintain all architectural principles.
+
+Do NOT introduce new design patterns.
+
+Maintain Build = 0 Errors / 0 Warnings.
+
+Never duplicate existing code.
+
+Always extend existing implementations whenever possible.
+
+Application Layer remains the Single Source of Truth.
+
+---
+
+# Objective
+
+Complete the Inventory bounded context to enterprise ERP standards.
+
+Inventory is the foundation for:
+
+- Purchasing
+- POS
+- Warehouse
+- Manufacturing
+- Recipes
+- Reporting
+- Cost Calculation
+
+No temporary implementations.
+
+No placeholders.
+
+No Dummy Handlers.
+
+No NotImplementedException.
+
+---
+
+# Review Existing Domain
+
+Inspect all inventory entities.
+
+Including:
+
+- InventoryCategory
+- InventoryItem
+- InventoryUnit
+- UnitConversion
+- Warehouse
+- StockTransfer
+- Supplier
+- PurchaseOrder
+- GoodsReceipt
+- PurchaseReturn
+- StockAdjustment
+- AdjustmentReason
+- StockCount
+- WasteRecord
+- WasteReason
+- Recipe
+- RecipeItem
+- InventoryTransaction
+- StockMovement
+- InventoryBatch
+- InventoryReservation
+- InventorySetting
+
+Determine missing business rules.
+
+Determine incomplete aggregates.
+
+Determine missing CQRS.
+
+Determine missing endpoints.
+
+---
+
+# Inventory Items
+
+Complete support for:
+
+- CRUD
+- SKU
+- Barcode
+- Cost Price
+- Average Cost
+- Last Cost
+- Standard Cost
+- Inventory Status
+- Reorder Level
+- Maximum Level
+- Minimum Level
+- Expiration Tracking
+- Batch Tracking
+- Serial Tracking
+
+---
+
+# Warehouses
+
+Complete:
+
+- CRUD
+- Warehouse Code
+- Warehouse Type
+- Default Warehouse
+- Active / Inactive
+- Capacity
+- Address
+
+---
+
+# Unit Conversions
+
+Support:
+
+- CRUD
+
+Examples:
+
+kg → g
+
+g → kg
+
+Box → Piece
+
+Bottle → ml
+
+Pack → Item
+
+Support conversion validation.
+
+Prevent invalid conversion loops.
+
+---
+
+# Suppliers
+
+Complete:
+
+- CRUD
+- Supplier Code
+- Tax Number
+- Payment Terms
+- Contact Person
+- Credit Limit
+- Supplier Status
+
+Support searching and filtering.
+
+---
+
+# Purchase Orders
+
+Complete:
+
+- Create
+- Update
+- Submit
+- Approve
+- Reject
+- Receive
+- Cancel
+- Close
+
+Support workflow status.
+
+---
+
+# Goods Receipts
+
+Support:
+
+- Partial Receiving
+- Complete Receiving
+- Batch Creation
+- Inventory Update
+- Cost Update
+
+---
+
+# Purchase Returns
+
+Complete:
+
+- Return Items
+- Return Reasons
+- Supplier Reference
+- Stock Reversal
+
+---
+
+# Stock Adjustments
+
+Support:
+
+- Positive Adjustment
+- Negative Adjustment
+
+Reasons:
+
+- Damaged
+- Lost
+- Expired
+- Correction
+- Manual
+
+Automatically create inventory transactions.
+
+---
+
+# Stock Counts
+
+Support:
+
+- Open Count
+- Freeze Inventory
+- Count Entry
+- Variance Detection
+- Approval
+- Adjustment Generation
+
+---
+
+# Waste Management
+
+Support:
+
+- Waste Recording
+- Waste Reasons
+- Quantity Tracking
+- Cost Calculation
+- Approval
+
+---
+
+# Recipes
+
+Review Recipe implementation.
+
+Support:
+
+- Ingredient Management
+- Quantity Updates
+- Yield
+- Recipe Cost
+- Recipe Versioning
+
+Automatically recalculate recipe cost.
+
+---
+
+# Inventory Transactions
+
+Support immutable transaction history.
+
+Transaction Types:
+
+- Purchase
+- Sale
+- Adjustment
+- Waste
+- Transfer
+- Production
+- Reservation
+- Release
+
+Never allow updates after posting.
+
+---
+
+# Stock Movements
+
+Generate automatically.
+
+Track:
+
+- From Warehouse
+- To Warehouse
+- Quantity
+- Cost
+- User
+- Timestamp
+
+---
+
+# Inventory Batches
+
+Support:
+
+- Batch Number
+- Expiration Date
+- Manufacturing Date
+- Quantity
+- Cost
+
+FIFO ready.
+
+---
+
+# Inventory Reservation
+
+Support:
+
+- Reserve Stock
+- Release Stock
+- Expiration
+- Partial Reservation
+
+Required later by POS.
+
+---
+
+# Inventory Settings
+
+Complete support for:
+
+- Negative Stock
+- Auto Deduction
+- Reservation Enabled
+- Costing Method
+
+Support:
+
+FIFO
+
+LIFO
+
+Weighted Average
+
+Standard Cost
+
+---
+
+# Search
+
+Generate advanced queries.
+
+Support:
+
+Search Inventory
+
+Search Warehouses
+
+Search Suppliers
+
+Search Purchase Orders
+
+Search Transactions
+
+Filtering
+
+Sorting
+
+Pagination
+
+Projection
+
+---
+
+# CQRS
+
+Review every Aggregate Root.
+
+Generate missing:
+
+- Commands
+- Queries
+- DTOs
+- Validators
+- Handlers
+
+Only when missing.
+
+Never duplicate.
+
+---
+
+# Controllers
+
+Every Aggregate Root must expose REST endpoints.
+
+Follow REST standards.
+
+---
+
+# AutoMapper
+
+Review every mapping.
+
+Generate missing mappings.
+
+---
+
+# FluentValidation
+
+Every Create and Update Command must have Validator.
+
+---
+
+# Persistence
+
+Review EF Configurations.
+
+Complete:
+
+Indexes
+
+Unique Constraints
+
+Check Constraints
+
+Delete Behaviors
+
+Precision
+
+Concurrency Tokens
+
+Default Values
+
+---
+
+# Performance
+
+Optimize every query.
+
+Use:
+
+AsNoTracking()
+
+Projection
+
+Pagination
+
+Filtering
+
+Sorting
+
+Avoid unnecessary Include() calls.
+
+---
+
+# Security
+
+Every endpoint must support:
+
+Authentication
+
+Authorization
+
+Permission-based Access
+
+Tenant Isolation
+
+Branch Isolation
+
+---
+
+# Deliverables
+
+Generate only missing components.
+
+Deliver:
+
+Commands
+
+Queries
+
+DTOs
+
+Validators
+
+Handlers
+
+Controllers
+
+Mappings
+
+EF Configurations
+
+Migrations (only if required)
+
+---
+
+# Final Validation
+
+Verify:
+
+- No Dummy Handlers
+- No NotImplementedException
+- No duplicate CQRS
+- No duplicate DTOs
+- No duplicate Validators
+- No duplicate Controllers
+- No missing AutoMapper mappings
+- No missing EF Configurations
+
+Build succeeds.
+
+Target:
+
+Build = 0 Errors
+
+Build = 0 Warnings
+
+---
+
+# AFTER COMPLETING THIS MILESTONE
+
+Immediately generate the next implementation document:
+
+Phase11A_Milestone5_SystemSettingsCompletion.md
+
+Do NOT begin implementing System Settings.
+
+Only generate the implementation instructions for the next milestone.
+
+Then stop execution.

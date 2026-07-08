@@ -1,0 +1,27 @@
+{
+  "Validation.NameRequired": "الاسم مطلوب.",
+  "Validation.NameArRequired": "الاسم باللغة العربية مطلوب.",
+  "Validation.NameEnRequired": "الاسم باللغة الإنجليزية مطلوب.",
+  "Validation.InvalidEmail": "البريد الإلكتروني غير صحيح.",
+
+  "Organization.CompanyDeactivated": "الشركة غير مفعلة.",
+  "Organization.CompanyAlreadyActive": "الشركة مفعلة مسبقاً.",
+  "Organization.CompanyAlreadyInactive": "الشركة غير مفعلة مسبقاً.",
+  "Organization.BranchAlreadyExists": "الفرع موجود مسبقاً.",
+
+  "Menu.CategoryNotFound": "القسم غير موجود.",
+  "Menu.ProductNotFound": "المنتج غير موجود.",
+
+  "Inventory.InsufficientStock": "الكمية غير متوفرة في المخزون.",
+  "Inventory.WarehouseNotFound": "المستودع غير موجود.",
+
+  "Notification.CreatedSuccessfully": "تم الإنشاء بنجاح.",
+  "Notification.UpdatedSuccessfully": "تم التحديث بنجاح.",
+  "Notification.DeletedSuccessfully": "تم الحذف بنجاح.",
+  
+  "Notification.OrderCreated": "تم إنشاء الطلب بنجاح.",
+  "Notification.OrderCancelled": "تم إلغاء الطلب.",
+  
+  "Notification.CompanyActivated": "تم تفعيل الشركة بنجاح.",
+  "Notification.CompanyDeactivated": "تم إيقاف الشركة بنجاح."
+}
