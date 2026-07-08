@@ -15,63 +15,43 @@ namespace GastroErp.Presentation.Controllers.Identity;
 [Authorize]
 public class RoleController : BaseApiController
 {
-    [HttpGet]
+    [HttpGet(ApiRoutes.Identity.Roles)]
     public async Task<IActionResult> GetRoles()
-    {
-        return HandleResult(await Mediator.Send(new GetRolesQuery()));
-    }
+        => HandleResult(await Mediator.Send(new GetRolesQuery()));
 
-    [HttpGet("{id:guid}")]
+    [HttpGet($"{ApiRoutes.Identity.Roles}/{{id:guid}}")]
     public async Task<IActionResult> GetRoleById(Guid id)
-    {
-        return HandleResult(await Mediator.Send(new GetRoleByIdQuery(id)));
-    }
+        => HandleResult(await Mediator.Send(new GetRoleByIdQuery(id)));
 
-    [HttpPost]
+    [HttpPost(ApiRoutes.Identity.Roles)]
     public async Task<IActionResult> CreateRole([FromBody] CreateRoleDto request)
-    {
-        return HandleResult(await Mediator.Send(new CreateRoleCommand(request)));
-    }
+        => HandleResult(await Mediator.Send(new CreateRoleCommand(request)));
 
-    [HttpPut("{id:guid}")]
+    [HttpPut($"{ApiRoutes.Identity.Roles}/{{id:guid}}")]
     public async Task<IActionResult> UpdateRole(Guid id, [FromBody] UpdateRoleDto request)
-    {
-        return HandleResult(await Mediator.Send(new UpdateRoleCommand(id, request)));
-    }
+        => HandleResult(await Mediator.Send(new UpdateRoleCommand(id, request)));
 
-    [HttpDelete("{id:guid}")]
+    [HttpDelete($"{ApiRoutes.Identity.Roles}/{{id:guid}}")]
     public async Task<IActionResult> DeleteRole(Guid id)
-    {
-        return HandleResult(await Mediator.Send(new DeleteRoleCommand(id)));
-    }
+        => HandleResult(await Mediator.Send(new DeleteRoleCommand(id)));
 
-    [HttpGet("permissions")]
+    [HttpGet($"{ApiRoutes.Identity.Roles}/permissions")]
     public async Task<IActionResult> GetPermissions()
-    {
-        return HandleResult(await Mediator.Send(new GetPermissionsQuery()));
-    }
+        => HandleResult(await Mediator.Send(new GetPermissionsQuery()));
 
-    [HttpPost("{id:guid}/permissions/assign")]
+    [HttpPost($"{ApiRoutes.Identity.Roles}/{{id:guid}}/permissions/assign")]
     public async Task<IActionResult> AssignPermissions(Guid id, [FromBody] List<Guid> permissionIds)
-    {
-        return HandleResult(await Mediator.Send(new AssignPermissionsCommand(id, permissionIds)));
-    }
+        => HandleResult(await Mediator.Send(new AssignPermissionsCommand(id, permissionIds)));
 
-    [HttpPost("{id:guid}/permissions/remove")]
+    [HttpPost($"{ApiRoutes.Identity.Roles}/{{id:guid}}/permissions/remove")]
     public async Task<IActionResult> RemovePermissions(Guid id, [FromBody] List<Guid> permissionIds)
-    {
-        return HandleResult(await Mediator.Send(new RemovePermissionsCommand(id, permissionIds)));
-    }
+        => HandleResult(await Mediator.Send(new RemovePermissionsCommand(id, permissionIds)));
 
-    [HttpPost("users/{userId:guid}/roles/assign/{roleId:guid}")]
+    [HttpPost($"{ApiRoutes.Identity.Users}/{{userId:guid}}/roles/assign/{{roleId:guid}}")]
     public async Task<IActionResult> AssignRoleToUser(Guid userId, Guid roleId)
-    {
-        return HandleResult(await Mediator.Send(new AssignRoleToUserCommand(userId, roleId)));
-    }
+        => HandleResult(await Mediator.Send(new AssignRoleToUserCommand(userId, roleId)));
 
-    [HttpPost("users/{userId:guid}/roles/remove/{roleId:guid}")]
+    [HttpPost($"{ApiRoutes.Identity.Users}/{{userId:guid}}/roles/remove/{{roleId:guid}}")]
     public async Task<IActionResult> RemoveRoleFromUser(Guid userId, Guid roleId)
-    {
-        return HandleResult(await Mediator.Send(new RemoveRoleFromUserCommand(userId, roleId)));
-    }
+        => HandleResult(await Mediator.Send(new RemoveRoleFromUserCommand(userId, roleId)));
 }

@@ -562,8 +562,11 @@ Document/29 — Reporting & Analytics.md
 ## Migrations
 
 ```
-AddReportingAnalytics — منشأة ⏳ غير مطبقة
+AddReportingAnalytics — مطبّقة ✅
+AddReportingForeignKeys — مطبّقة ✅
 ```
+
+📄 تقرير التحقق: [`Post Phase 29 — Verification Report.md`](Post%20Phase%2029%20—%20Verification%20Report.md)
 
 ---
 

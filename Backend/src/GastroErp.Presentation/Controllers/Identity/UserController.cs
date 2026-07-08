@@ -15,69 +15,47 @@ namespace GastroErp.Presentation.Controllers.Identity;
 [Authorize]
 public class UserController : BaseApiController
 {
-    [HttpGet]
+    [HttpGet(ApiRoutes.Identity.Users)]
     public async Task<IActionResult> GetUsers([FromQuery] int pageNumber = 1, [FromQuery] int pageSize = 10, [FromQuery] string? searchTerm = null)
-    {
-        return HandleResult(await Mediator.Send(new GetUsersQuery(pageNumber, pageSize, searchTerm)));
-    }
+        => HandleResult(await Mediator.Send(new GetUsersQuery(pageNumber, pageSize, searchTerm)));
 
-    [HttpGet("{id:guid}")]
+    [HttpGet($"{ApiRoutes.Identity.Users}/{{id:guid}}")]
     public async Task<IActionResult> GetUserById(Guid id)
-    {
-        return HandleResult(await Mediator.Send(new GetUserByIdQuery(id)));
-    }
+        => HandleResult(await Mediator.Send(new GetUserByIdQuery(id)));
 
-    [HttpPost]
+    [HttpPost(ApiRoutes.Identity.Users)]
     public async Task<IActionResult> CreateUser([FromBody] CreateUserDto request)
-    {
-        return HandleResult(await Mediator.Send(new CreateUserCommand(request)));
-    }
+        => HandleResult(await Mediator.Send(new CreateUserCommand(request)));
 
-    [HttpPut("{id:guid}")]
+    [HttpPut($"{ApiRoutes.Identity.Users}/{{id:guid}}")]
     public async Task<IActionResult> UpdateUser(Guid id, [FromBody] UpdateUserDto request)
-    {
-        return HandleResult(await Mediator.Send(new UpdateUserCommand(id, request)));
-    }
+        => HandleResult(await Mediator.Send(new UpdateUserCommand(id, request)));
 
-    [HttpDelete("{id:guid}")]
+    [HttpDelete($"{ApiRoutes.Identity.Users}/{{id:guid}}")]
     public async Task<IActionResult> DeleteUser(Guid id)
-    {
-        return HandleResult(await Mediator.Send(new DeleteUserCommand(id)));
-    }
+        => HandleResult(await Mediator.Send(new DeleteUserCommand(id)));
 
-    [HttpPost("{id:guid}/restore")]
+    [HttpPost($"{ApiRoutes.Identity.Users}/{{id:guid}}/restore")]
     public async Task<IActionResult> RestoreUser(Guid id)
-    {
-        return HandleResult(await Mediator.Send(new RestoreUserCommand(id)));
-    }
+        => HandleResult(await Mediator.Send(new RestoreUserCommand(id)));
 
-    [HttpPost("{id:guid}/activate")]
+    [HttpPost($"{ApiRoutes.Identity.Users}/{{id:guid}}/activate")]
     public async Task<IActionResult> ActivateUser(Guid id)
-    {
-        return HandleResult(await Mediator.Send(new ActivateUserCommand(id)));
-    }
+        => HandleResult(await Mediator.Send(new ActivateUserCommand(id)));
 
-    [HttpPost("{id:guid}/deactivate")]
+    [HttpPost($"{ApiRoutes.Identity.Users}/{{id:guid}}/deactivate")]
     public async Task<IActionResult> DeactivateUser(Guid id)
-    {
-        return HandleResult(await Mediator.Send(new DeactivateUserCommand(id)));
-    }
+        => HandleResult(await Mediator.Send(new DeactivateUserCommand(id)));
 
-    [HttpPost("{id:guid}/lock")]
+    [HttpPost($"{ApiRoutes.Identity.Users}/{{id:guid}}/lock")]
     public async Task<IActionResult> LockUser(Guid id, [FromQuery] DateTimeOffset until)
-    {
-        return HandleResult(await Mediator.Send(new LockUserCommand(id, until)));
-    }
+        => HandleResult(await Mediator.Send(new LockUserCommand(id, until)));
 
-    [HttpPost("{id:guid}/unlock")]
+    [HttpPost($"{ApiRoutes.Identity.Users}/{{id:guid}}/unlock")]
     public async Task<IActionResult> UnlockUser(Guid id)
-    {
-        return HandleResult(await Mediator.Send(new UnlockUserCommand(id)));
-    }
+        => HandleResult(await Mediator.Send(new UnlockUserCommand(id)));
 
-    [HttpPost("{id:guid}/reset-password")]
+    [HttpPost($"{ApiRoutes.Identity.Users}/{{id:guid}}/reset-password")]
     public async Task<IActionResult> ResetPassword(Guid id, [FromBody] string newPassword)
-    {
-        return HandleResult(await Mediator.Send(new AdminResetUserPasswordCommand(id, newPassword)));
-    }
+        => HandleResult(await Mediator.Send(new AdminResetUserPasswordCommand(id, newPassword)));
 }

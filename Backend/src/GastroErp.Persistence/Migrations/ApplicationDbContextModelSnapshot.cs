@@ -10145,6 +10145,8 @@ namespace GastroErp.Persistence.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("KpiDefinitionId");
+
                     b.HasIndex("TenantId", "KpiDefinitionId", "SnapshotDate");
 
                     b.ToTable("KpiSnapshots", (string)null);
@@ -10291,6 +10293,8 @@ namespace GastroErp.Persistence.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("ReportDefinitionId");
+
                     b.HasIndex("TenantId", "ReportDefinitionId", "ExecutionDate");
 
                     b.ToTable("ReportExecutions", (string)null);
@@ -10359,6 +10363,10 @@ namespace GastroErp.Persistence.Migrations
                         .HasColumnType("nvarchar(200)");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("ReportDefinitionId");
+
+                    b.HasIndex("TenantId", "ReportDefinitionId");
 
                     b.ToTable("ScheduledReports", (string)null);
                 });
@@ -13124,6 +13132,33 @@ namespace GastroErp.Persistence.Migrations
                         .WithMany("Widgets")
                         .HasForeignKey("DashboardId")
                         .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("GastroErp.Domain.Entities.Reporting.KpiSnapshot", b =>
+                {
+                    b.HasOne("GastroErp.Domain.Entities.Reporting.KpiDefinition", null)
+                        .WithMany()
+                        .HasForeignKey("KpiDefinitionId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("GastroErp.Domain.Entities.Reporting.ReportExecution", b =>
+                {
+                    b.HasOne("GastroErp.Domain.Entities.Reporting.ReportDefinition", null)
+                        .WithMany()
+                        .HasForeignKey("ReportDefinitionId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("GastroErp.Domain.Entities.Reporting.ScheduledReport", b =>
+                {
+                    b.HasOne("GastroErp.Domain.Entities.Reporting.ReportDefinition", null)
+                        .WithMany()
+                        .HasForeignKey("ReportDefinitionId")
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
                 });
 

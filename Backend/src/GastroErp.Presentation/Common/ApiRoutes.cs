@@ -165,4 +165,11 @@ public static class ApiRoutes
         public const string Charts = $"{Base}/charts";
         public const string PowerBi = $"{Base}/powerbi";
     }
+
+    public static class Identity
+    {
+        public const string Base = $"{Root}/identity";
+        public const string Users = $"{Base}/users";
+        public const string Roles = $"{Base}/roles";
+    }
 }

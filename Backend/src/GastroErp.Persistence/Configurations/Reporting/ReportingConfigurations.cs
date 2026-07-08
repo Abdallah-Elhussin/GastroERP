@@ -70,6 +70,10 @@ public sealed class ReportExecutionConfiguration : IEntityTypeConfiguration<Repo
         builder.Property(x => x.ErrorMessage).HasMaxLength(2000);
         ReportingConfigHelper.ConfigureAuditable(builder);
         builder.HasIndex(x => new { x.TenantId, x.ReportDefinitionId, x.ExecutionDate });
+        builder.HasOne<ReportDefinition>()
+            .WithMany()
+            .HasForeignKey(x => x.ReportDefinitionId)
+            .OnDelete(DeleteBehavior.Restrict);
     }
 }
 
@@ -82,6 +86,11 @@ public sealed class ScheduledReportConfiguration : IEntityTypeConfiguration<Sche
         builder.Property(x => x.CronExpression).HasMaxLength(100);
         builder.Property(x => x.EmailRecipients).HasMaxLength(2000);
         ReportingConfigHelper.ConfigureAuditable(builder);
+        builder.HasIndex(x => new { x.TenantId, x.ReportDefinitionId });
+        builder.HasOne<ReportDefinition>()
+            .WithMany()
+            .HasForeignKey(x => x.ReportDefinitionId)
+            .OnDelete(DeleteBehavior.Restrict);
     }
 }
 
@@ -111,5 +120,9 @@ public sealed class KpiSnapshotConfiguration : IEntityTypeConfiguration<KpiSnaps
         builder.Property(x => x.Value).HasPrecision(18, 4);
         ReportingConfigHelper.ConfigureAuditable(builder);
         builder.HasIndex(x => new { x.TenantId, x.KpiDefinitionId, x.SnapshotDate });
+        builder.HasOne<KpiDefinition>()
+            .WithMany()
+            .HasForeignKey(x => x.KpiDefinitionId)
+            .OnDelete(DeleteBehavior.Restrict);
     }
 }
