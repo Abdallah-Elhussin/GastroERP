@@ -19,32 +19,9 @@ public sealed class OrganizationMasterDataSeeder : IDataSeeder
 
     public async Task SeedAsync(Guid tenantId, IApplicationDbContext context, CancellationToken ct = default)
     {
-        Company? company = await context.Companies.FirstOrDefaultAsync(c => c.TenantId == tenantId, ct);
-        if (company is null)
-        {
-            company = new Company(tenantId, "مطعم جاسترو الرئيسي", "300000000000003", "Gastro Main Restaurant");
-            context.Companies.Add(company);
-            await context.SaveChangesAsync(ct);
-        }
-
-        if (!await context.Branches.AnyAsync(b => b.TenantId == tenantId, ct))
-        {
-            var branch = new Branch(tenantId, company.Id, "الفرع الرئيسي", BranchType.Restaurant, "Main Branch", "BR-001");
-            branch.SetAsDefault();
-            context.Branches.Add(branch);
-            await context.SaveChangesAsync(ct);
-
-            if (!await context.Warehouses.AnyAsync(w => w.TenantId == tenantId, ct))
-            {
-                var warehouse = new Warehouse(tenantId, "المستودع الرئيسي", "Main Warehouse", "WH-001", branch.Id);
-                warehouse.AddZone("منطقة التبريد", "Cold Zone", "COLD");
-                warehouse.AddZone("منطقة جافة", "Dry Zone", "DRY");
-                context.Warehouses.Add(warehouse);
-            }
-        }
-
-        await context.SaveChangesAsync(ct);
+        // Company, branch, and warehouses are provisioned by the restaurant onboarding service.
         _logger.LogInformation("Organization master data seeded for tenant {TenantId}", tenantId);
+        await Task.CompletedTask;
     }
 }
 
@@ -78,7 +55,9 @@ public sealed class InventoryMasterDataSeeder : IDataSeeder
             ("pc", "حبة", "Piece"),
             ("box", "صندوق", "Box"),
             ("tray", "صينية", "Tray"),
-            ("portion", "حصة", "Portion")
+            ("portion", "حصة", "Portion"),
+            ("bottle", "زجاجة", "Bottle"),
+            ("cup", "كوب", "Cup")
         };
 
         var map = new Dictionary<string, Guid>();
@@ -108,13 +87,16 @@ public sealed class InventoryMasterDataSeeder : IDataSeeder
         if (await context.InventoryCategories.AnyAsync(c => c.TenantId == tenantId, ct))
             return;
 
-        var meats = new InventoryCategory(tenantId, "لحوم", "Meats");
+        var meats = new InventoryCategory(tenantId, "لحوم", "Meat");
+        var chicken = new InventoryCategory(tenantId, "دجاج", "Chicken");
+        var seafood = new InventoryCategory(tenantId, "مأكولات بحرية", "Seafood");
         var vegetables = new InventoryCategory(tenantId, "خضروات", "Vegetables");
         var dairy = new InventoryCategory(tenantId, "ألبان", "Dairy");
+        var beverages = new InventoryCategory(tenantId, "مشروبات", "Beverages");
         var packaging = new InventoryCategory(tenantId, "تغليف", "Packaging");
-        var beverages = new InventoryCategory(tenantId, "مشروبات خام", "Beverage Ingredients");
+        var cleaning = new InventoryCategory(tenantId, "تنظيف", "Cleaning");
 
-        context.InventoryCategories.AddRange(meats, vegetables, dairy, packaging, beverages);
+        context.InventoryCategories.AddRange(meats, chicken, seafood, vegetables, dairy, beverages, packaging, cleaning);
         await context.SaveChangesAsync(ct);
     }
 
@@ -125,12 +107,10 @@ public sealed class InventoryMasterDataSeeder : IDataSeeder
 
         var reasons = new (string Ar, string En)[]
         {
-            ("فقدان", "Loss"),
             ("تلف", "Damage"),
-            ("خطأ يدوي", "Manual Error"),
-            ("فرق جرد", "Stock Count Variance"),
-            ("انتهاء صلاحية", "Expiry"),
-            ("هدر مطبخ", "Kitchen Waste")
+            ("هدر", "Waste"),
+            ("انتهاء صلاحية", "Expired"),
+            ("تسوية جرد", "Adjustment")
         };
 
         foreach (var (ar, en) in reasons)

@@ -1,0 +1,12 @@
+:host {
+  display: block;
+  width: 100vw;
+  height: 100vh;
+}
+
+// Checkbox custom label override for consistency
+::ng-deep .mat-mdc-checkbox {
+  .mdc-form-field {
+    color: var(--text-secondary) !important;
+  }
+}

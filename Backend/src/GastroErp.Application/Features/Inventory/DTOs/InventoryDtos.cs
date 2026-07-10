@@ -77,12 +77,16 @@ public record InventoryItemDto(
     string? DescriptionEn,
     string? Sku,
     string? Barcode,
+    string? ImageUrl,
+    InventoryItemKind ItemKind,
     Guid BaseUnitId,
     string BaseUnitNameAr,
     Guid? DefaultPurchaseUnitId,
     Guid? DefaultRecipeUnitId,
     decimal ReorderLevel,
     decimal ReorderQuantity,
+    decimal? AverageUnitCost,
+    decimal? LastPurchaseUnitCost,
     bool IsActive,
     DateTime CreatedAt
 );
@@ -93,8 +97,16 @@ public record CreateInventoryItemDto(
     string NameAr,
     Guid BaseUnitId,
     string? NameEn = null,
+    string? DescriptionAr = null,
+    string? DescriptionEn = null,
     string? Sku = null,
-    string? Barcode = null
+    string? Barcode = null,
+    string? ImageUrl = null,
+    InventoryItemKind ItemKind = InventoryItemKind.Raw,
+    Guid? DefaultPurchaseUnitId = null,
+    Guid? DefaultRecipeUnitId = null,
+    decimal ReorderLevel = 0,
+    decimal ReorderQuantity = 0
 );
 
 public record UpdateInventoryItemDto(
@@ -103,7 +115,15 @@ public record UpdateInventoryItemDto(
     string? DescriptionAr,
     string? DescriptionEn,
     string? Sku,
-    string? Barcode
+    string? Barcode,
+    string? ImageUrl,
+    InventoryItemKind ItemKind,
+    Guid? CategoryId,
+    Guid? BaseUnitId,
+    Guid? DefaultPurchaseUnitId,
+    Guid? DefaultRecipeUnitId,
+    decimal? ReorderLevel,
+    decimal? ReorderQuantity
 );
 
 public record SetReorderInfoDto(

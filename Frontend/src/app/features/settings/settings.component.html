@@ -1,0 +1,391 @@
+<div class="h-full flex flex-col gap-6 -m-6 p-6 overflow-y-auto">
+  
+  <!-- Header Title -->
+  <div class="flex justify-between items-center select-none text-left flex-shrink-0">
+    <div>
+      <h2 class="text-xl font-bold tracking-tight text-[var(--text-primary)]">{{ t('settings.title') }}</h2>
+      <p class="text-xs text-[var(--text-secondary)] mt-0.5">{{ t('settings.subtitle') }}</p>
+    </div>
+  </div>
+
+  <!-- Settings Reactive Form Card -->
+  <app-card [title]="t('settings.preferences')" [hasHeader]="true">
+    
+    <!-- Draft undo/redo controls inside card actions -->
+    <div header-actions class="flex items-center gap-2 select-none">
+      <span class="text-[10px] text-[var(--text-muted)] italic mr-2">{{ t('settings.draftSaved') }}</span>
+      <button 
+        type="button"
+        (click)="draftManager.undo()"
+        [disabled]="!draftManager.canUndo()"
+        class="bg-[var(--bg-canvas)] border border-[var(--border-color)] disabled:opacity-50 text-[var(--text-primary)] hover:bg-[var(--bg-surface-hover)] p-1 rounded cursor-pointer flex items-center justify-center"
+        [title]="t('settings.undo')"
+      >
+        <mat-icon class="text-xs">undo</mat-icon>
+      </button>
+      <button 
+        type="button"
+        (click)="draftManager.redo()"
+        [disabled]="!draftManager.canRedo()"
+        class="bg-[var(--bg-canvas)] border border-[var(--border-color)] disabled:opacity-50 text-[var(--text-primary)] hover:bg-[var(--bg-surface-hover)] p-1 rounded cursor-pointer flex items-center justify-center"
+        [title]="t('settings.redo')"
+      >
+        <mat-icon class="text-xs">redo</mat-icon>
+      </button>
+    </div>
+
+    <!-- Form contents -->
+    <form [formGroup]="settingsForm" (ngSubmit)="onSubmit()" class="flex flex-col gap-6 text-left max-w-xl py-2">
+      
+      <!-- Company name -->
+      <div class="flex flex-col gap-1.5">
+        <label class="text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-wider">{{ t('settings.companyName') }}</label>
+        <input 
+          type="text" 
+          formControlName="companyName"
+          class="w-full bg-[var(--bg-canvas)] text-[var(--text-primary)] px-4 py-2.5 rounded-xl border border-[var(--border-color)] focus:outline-none focus:ring-1 focus:ring-[var(--accent-color)] text-xs shadow-sm"
+        />
+        <span *ngIf="settingsForm.get('companyName')?.touched && settingsForm.get('companyName')?.invalid" class="text-[10px] text-red-500 font-semibold">
+          {{ t('settings.companyNameRequired') }}
+        </span>
+      </div>
+
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-6">
+        <!-- Tax rate -->
+        <div class="flex flex-col gap-1.5">
+          <label class="text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-wider">{{ t('settings.taxRate') }}</label>
+          <input 
+            type="number" 
+            formControlName="taxRate"
+            class="w-full bg-[var(--bg-canvas)] text-[var(--text-primary)] px-4 py-2.5 rounded-xl border border-[var(--border-color)] focus:outline-none focus:ring-1 focus:ring-[var(--accent-color)] text-xs shadow-sm"
+          />
+          <span *ngIf="settingsForm.get('taxRate')?.touched && settingsForm.get('taxRate')?.invalid" class="text-[10px] text-red-500 font-semibold">
+            {{ t('settings.taxRateInvalid') }}
+          </span>
+        </div>
+
+        <!-- Security session timeout -->
+        <div class="flex flex-col gap-1.5">
+          <label class="text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-wider">{{ t('settings.securityTimeout') }}</label>
+          <input 
+            type="number" 
+            formControlName="securityTimeout"
+            class="w-full bg-[var(--bg-canvas)] text-[var(--text-primary)] px-4 py-2.5 rounded-xl border border-[var(--border-color)] focus:outline-none focus:ring-1 focus:ring-[var(--accent-color)] text-xs shadow-sm"
+          />
+          <span *ngIf="settingsForm.get('securityTimeout')?.touched && settingsForm.get('securityTimeout')?.invalid" class="text-[10px] text-red-500 font-semibold">
+            {{ t('settings.timeoutInvalid') }}
+          </span>
+        </div>
+
+        <!-- Fiscal Year -->
+        <div class="flex flex-col gap-1.5">
+          <label class="text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-wider">{{ t('settings.activeFiscalYear') }}</label>
+          <select 
+            formControlName="fiscalYear"
+            class="w-full bg-[var(--bg-canvas)] text-[var(--text-primary)] px-4 py-2.5 rounded-xl border border-[var(--border-color)] focus:outline-none focus:ring-1 focus:ring-[var(--accent-color)] text-xs shadow-sm cursor-pointer"
+          >
+            <option value="2025 (Closed)">2025 (Closed)</option>
+            <option value="2026 (Active)">2026 (Active)</option>
+            <option value="2027 (Future)">2027 (Future)</option>
+          </select>
+        </div>
+
+        <!-- Base Currency -->
+        <div class="flex flex-col gap-1.5">
+          <label class="text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-wider">{{ t('settings.baseCurrency') }}</label>
+          <select 
+            formControlName="currency"
+            class="w-full bg-[var(--bg-canvas)] text-[var(--text-primary)] px-4 py-2.5 rounded-xl border border-[var(--border-color)] focus:outline-none focus:ring-1 focus:ring-[var(--accent-color)] text-xs shadow-sm cursor-pointer"
+          >
+            <option value="USD ($)">USD ($) - US Dollar</option>
+            <option value="SAR (SR)">SAR (SR) - Saudi Riyal</option>
+            <option value="AED (DH)">AED (DH) - UAE Dirham</option>
+          </select>
+        </div>
+
+        <!-- Branch Address -->
+        <div class="flex flex-col gap-1.5">
+          <label class="text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-wider">{{ t('settings.branchAddress') }}</label>
+          <input 
+            type="text" 
+            formControlName="branchAddress"
+            class="w-full bg-[var(--bg-canvas)] text-[var(--text-primary)] px-4 py-2.5 rounded-xl border border-[var(--border-color)] focus:outline-none focus:ring-1 focus:ring-[var(--accent-color)] text-xs shadow-sm"
+          />
+        </div>
+
+        <!-- Tax Registration Number -->
+        <div class="flex flex-col gap-1.5">
+          <label class="text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-wider">{{ t('settings.vatTrn') }}</label>
+          <input 
+            type="text" 
+            formControlName="taxRegistrationNumber"
+            class="w-full bg-[var(--bg-canvas)] text-[var(--text-primary)] px-4 py-2.5 rounded-xl border border-[var(--border-color)] focus:outline-none focus:ring-1 focus:ring-[var(--accent-color)] text-xs shadow-sm"
+          />
+        </div>
+      </div>
+
+      <!-- Checkout POS workflow selection -->
+      <div class="flex flex-col gap-1.5">
+        <label class="text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-wider">{{ t('settings.checkoutWorkflow') }}</label>
+        <select 
+          formControlName="checkoutWorkflow"
+          class="w-full bg-[var(--bg-canvas)] text-[var(--text-primary)] px-4 py-2.5 rounded-xl border border-[var(--border-color)] focus:outline-none focus:ring-1 focus:ring-[var(--accent-color)] text-xs shadow-sm cursor-pointer"
+        >
+          <option value="Redirect to POS">Redirect to POS Terminal</option>
+          <option value="Redirect to Dashboard">Redirect to Admin Dashboard</option>
+          <option value="Print Receipt Only">Stay on POS & Print Receipt Only</option>
+        </select>
+      </div>
+
+      <!-- Submit button -->
+      <div class="pt-2">
+        <app-button 
+          type="submit" 
+          variant="primary" 
+          icon="save" 
+          [disabled]="settingsForm.invalid"
+        >
+          {{ t('settings.save') }}
+        </app-button>
+      </div>
+
+    </form>
+  </app-card>
+
+  <!-- Step 10.2: RBAC Matrix Card -->
+  <app-card [title]="t('settings.rbacTitle')">
+    <div class="flex flex-col gap-1 select-none text-left mb-4">
+      <span class="text-xs font-bold text-[var(--text-primary)]">{{ t('settings.manageRoles') }}</span>
+      <span class="text-[10px] text-[var(--text-muted)]">{{ t('settings.rbacDesc') }}</span>
+    </div>
+
+    <div class="bg-[var(--bg-surface)] border border-[var(--border-color)] rounded-xl overflow-hidden shadow-sm">
+      <table class="w-full text-left border-collapse">
+        <thead>
+          <tr class="bg-[var(--bg-canvas)] border-b border-[var(--border-color)] text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-wider select-none">
+            <th class="p-3">{{ t('settings.role') }}</th>
+            <th class="p-3 text-center">{{ t('settings.readReports') }}</th>
+            <th class="p-3 text-center">{{ t('settings.voidTickets') }}</th>
+            <th class="p-3 text-center">{{ t('settings.editSettings') }}</th>
+            <th class="p-3 text-center">{{ t('settings.viewHrPayroll') }}</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-[var(--border-color-muted)] text-xs text-[var(--text-primary)] font-semibold select-none">
+          <tr *ngFor="let role of roles()" class="hover:bg-[var(--bg-surface-hover)]">
+            <td class="p-3 font-bold">{{ role.name }}</td>
+            
+            <td class="p-3 text-center">
+              <input 
+                type="checkbox" 
+                [checked]="role.permissions.reports" 
+                (change)="togglePermission(role.name, 'reports')"
+                class="w-4 h-4 text-[var(--accent-color)] bg-[var(--bg-canvas)] border-[var(--border-color)] rounded focus:ring-0 focus:ring-offset-0 cursor-pointer"
+              />
+            </td>
+            
+            <td class="p-3 text-center">
+              <input 
+                type="checkbox" 
+                [checked]="role.permissions.voids" 
+                (change)="togglePermission(role.name, 'voids')"
+                class="w-4 h-4 text-[var(--accent-color)] bg-[var(--bg-canvas)] border-[var(--border-color)] rounded focus:ring-0 focus:ring-offset-0 cursor-pointer"
+              />
+            </td>
+            
+            <td class="p-3 text-center">
+              <input 
+                type="checkbox" 
+                [checked]="role.permissions.settings" 
+                (change)="togglePermission(role.name, 'settings')"
+                class="w-4 h-4 text-[var(--accent-color)] bg-[var(--bg-canvas)] border-[var(--border-color)] rounded focus:ring-0 focus:ring-offset-0 cursor-pointer"
+              />
+            </td>
+            
+            <td class="p-3 text-center">
+              <input 
+                type="checkbox" 
+                [checked]="role.permissions.hr" 
+                (change)="togglePermission(role.name, 'hr')"
+                class="w-4 h-4 text-[var(--accent-color)] bg-[var(--bg-canvas)] border-[var(--border-color)] rounded focus:ring-0 focus:ring-offset-0 cursor-pointer"
+              />
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </app-card>
+
+  <!-- Step 10.3: Subscription License & Audit Logs -->
+  <div class="grid grid-cols-1 xl:grid-cols-3 gap-6 items-start text-left select-none">
+    
+    <app-card [title]="t('settings.subscriptionTitle')" class="xl:col-span-1">
+      <div class="flex flex-col gap-4 py-2">
+        <div class="flex items-center justify-between border-b border-[var(--border-color-muted)] pb-3">
+          <div class="flex flex-col">
+            <span class="text-xs font-extrabold text-[var(--text-primary)]">{{ t('settings.tierName') }}</span>
+            <span class="text-[9px] text-emerald-500 font-bold uppercase tracking-wider mt-0.5">{{ t('settings.licenseActive') }}</span>
+          </div>
+          <mat-icon class="text-3xl text-emerald-500">verified</mat-icon>
+        </div>
+
+        <div class="flex flex-col gap-2 text-xs">
+          <div class="flex justify-between">
+            <span class="text-[var(--text-secondary)] font-medium">{{ t('settings.terminalsLimit') }}</span>
+            <span class="font-bold text-[var(--text-primary)]">4 / 10 Active</span>
+          </div>
+          <div class="flex justify-between">
+            <span class="text-[var(--text-secondary)] font-medium">{{ t('settings.tenantId') }}</span>
+            <span class="font-bold text-[var(--text-primary)]">tenant_9102_riyadh</span>
+          </div>
+          <div class="flex justify-between">
+            <span class="text-[var(--text-secondary)] font-medium">{{ t('settings.expiration') }}</span>
+            <span class="font-bold text-[var(--text-primary)]">Dec 31, 2027</span>
+          </div>
+        </div>
+
+        <button 
+          type="button"
+          class="w-full mt-2 bg-[var(--bg-canvas)] hover:bg-[var(--bg-surface-hover)] border border-[var(--border-color)] text-[var(--text-primary)] py-2 rounded-xl text-[10px] font-bold cursor-pointer"
+        >
+          {{ t('settings.manageBilling') }}
+        </button>
+      </div>
+    </app-card>
+
+    <app-card [title]="t('settings.auditTitle')" class="xl:col-span-2">
+      <div class="flex flex-col gap-1 select-none text-left mb-4">
+        <span class="text-[10px] text-[var(--text-muted)]">{{ t('settings.auditDesc') }}</span>
+      </div>
+
+      <div class="bg-[var(--bg-surface)] border border-[var(--border-color)] rounded-xl overflow-hidden shadow-sm">
+        <table class="w-full text-left border-collapse text-xs">
+          <thead>
+            <tr class="bg-[var(--bg-canvas)] border-b border-[var(--border-color)] text-[9px] font-bold text-[var(--text-muted)] uppercase tracking-wider">
+              <th class="p-3">{{ t('settings.operator') }}</th>
+              <th class="p-3">{{ t('settings.activity') }}</th>
+              <th class="p-3">{{ t('settings.ipAddress') }}</th>
+              <th class="p-3 text-right">{{ t('settings.time') }}</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-[var(--border-color-muted)] font-semibold text-[var(--text-primary)]">
+            <tr *ngFor="let log of auditLogs()" class="hover:bg-[var(--bg-surface-hover)]">
+              <td class="p-3 font-bold text-[var(--text-primary)]">{{ log.operator }}</td>
+              <td class="p-3 text-[var(--text-secondary)]">{{ log.action }}</td>
+              <td class="p-3 font-mono text-[9px] text-[var(--text-muted)]">{{ log.ip }}</td>
+              <td class="p-3 text-right text-[9px] text-[var(--text-muted)]">{{ log.time }}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </app-card>
+
+  </div>
+
+  <!-- Step 10.4: Feature Flags & Templates -->
+  <div class="grid grid-cols-1 md:grid-cols-2 gap-6 items-start text-left select-none">
+    
+    <app-card [title]="t('settings.featureFlagsTitle')">
+      <div class="flex flex-col gap-5 py-2">
+        <div class="flex flex-col">
+          <span class="text-[10px] text-[var(--text-muted)]">{{ t('settings.featureFlagsDesc') }}</span>
+        </div>
+
+        <div class="flex flex-col gap-4 text-xs font-semibold">
+          <div class="flex justify-between items-center bg-[var(--bg-canvas)] border border-[var(--border-color)] p-4 rounded-xl">
+            <div class="flex flex-col">
+              <span class="text-[var(--text-primary)]">{{ t('settings.offlineCache') }}</span>
+              <span class="text-[9px] text-[var(--text-muted)] mt-0.5">{{ t('settings.offlineCacheDesc') }}</span>
+            </div>
+            <button 
+              type="button" 
+              (click)="toggleFlag('offline')"
+              [class.bg-emerald-500]="offlineCacheFlag()"
+              [class.bg-gray-400]="!offlineCacheFlag()"
+              class="w-12 h-6 rounded-full relative transition-colors duration-200 cursor-pointer"
+            >
+              <span 
+                [style.left.px]="offlineCacheFlag() ? 26 : 4" 
+                class="absolute top-1 w-4 h-4 rounded-full bg-white transition-all duration-200"
+              ></span>
+            </button>
+          </div>
+
+          <div class="flex justify-between items-center bg-[var(--bg-canvas)] border border-[var(--border-color)] p-4 rounded-xl">
+            <div class="flex flex-col">
+              <span class="text-[var(--text-primary)]">{{ t('settings.kdsPush') }}</span>
+              <span class="text-[9px] text-[var(--text-muted)] mt-0.5">{{ t('settings.kdsPushDesc') }}</span>
+            </div>
+            <button 
+              type="button" 
+              (click)="toggleFlag('kds')"
+              [class.bg-emerald-500]="kdsPushFlag()"
+              [class.bg-gray-400]="!kdsPushFlag()"
+              class="w-12 h-6 rounded-full relative transition-colors duration-200 cursor-pointer"
+            >
+              <span 
+                [style.left.px]="kdsPushFlag() ? 26 : 4" 
+                class="absolute top-1 w-4 h-4 rounded-full bg-white transition-all duration-200"
+              ></span>
+            </button>
+          </div>
+
+          <div class="flex justify-between items-center bg-[var(--bg-canvas)] border border-[var(--border-color)] p-4 rounded-xl">
+            <div class="flex flex-col">
+              <span class="text-[var(--text-primary)]">{{ t('settings.smsReceipts') }}</span>
+              <span class="text-[9px] text-[var(--text-muted)] mt-0.5">{{ t('settings.smsReceiptsDesc') }}</span>
+            </div>
+            <button 
+              type="button" 
+              (click)="toggleFlag('sms')"
+              [class.bg-emerald-500]="smsReceiptsFlag()"
+              [class.bg-gray-400]="!smsReceiptsFlag()"
+              class="w-12 h-6 rounded-full relative transition-colors duration-200 cursor-pointer"
+            >
+              <span 
+                [style.left.px]="smsReceiptsFlag() ? 26 : 4" 
+                class="absolute top-1 w-4 h-4 rounded-full bg-white transition-all duration-200"
+              ></span>
+            </button>
+          </div>
+        </div>
+      </div>
+    </app-card>
+
+    <app-card [title]="t('settings.templatesTitle')">
+      <div class="flex flex-col gap-5 py-2">
+        <div class="flex flex-col">
+          <span class="text-[10px] text-[var(--text-muted)]">{{ t('settings.templatesDesc') }}</span>
+        </div>
+
+        <div class="flex flex-col gap-4 text-xs font-semibold">
+          <div class="flex flex-col gap-1.5">
+            <label class="text-[10px] text-[var(--text-secondary)] uppercase">{{ t('settings.invoiceEmail') }}</label>
+            <select 
+              [value]="selectedEmailTemplate()"
+              (change)="selectedEmailTemplate.set($any($event.target).value)"
+              class="w-full bg-[var(--bg-canvas)] text-[var(--text-primary)] px-4 py-2.5 rounded-xl border border-[var(--border-color)] focus:outline-none text-xs shadow-sm cursor-pointer"
+            >
+              <option value="Professional Corporate Receipt">Professional Corporate Receipt (Default)</option>
+              <option value="Minimalist Customer Invoice">Minimalist Customer Invoice</option>
+              <option value="Retro Gastro Design Template">Retro Gastro Design Template</option>
+            </select>
+          </div>
+
+          <div class="flex flex-col gap-1.5">
+            <label class="text-[10px] text-[var(--text-secondary)] uppercase">{{ t('settings.tableReservationSms') }}</label>
+            <select 
+              [value]="selectedSmsTemplate()"
+              (change)="selectedSmsTemplate.set($any($event.target).value)"
+              class="w-full bg-[var(--bg-canvas)] text-[var(--text-primary)] px-4 py-2.5 rounded-xl border border-[var(--border-color)] focus:outline-none text-xs shadow-sm cursor-pointer"
+            >
+              <option value="Standard Order Pick-Up SMS">Standard Order Pick-Up SMS (Default)</option>
+              <option value="Direct Discount Offer Campaign">Direct Discount Offer Campaign</option>
+            </select>
+          </div>
+        </div>
+      </div>
+    </app-card>
+
+  </div>
+
+</div>

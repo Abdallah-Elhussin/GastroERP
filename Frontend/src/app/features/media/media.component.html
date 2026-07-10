@@ -1,0 +1,94 @@
+<div class="h-full flex flex-col gap-6 -m-6 p-6 overflow-y-auto text-left relative">
+  
+  <!-- Breadcrumb Navigation -->
+  <div class="text-[10px] text-[var(--text-muted)] font-semibold uppercase tracking-wider select-none">
+    <span>{{ t('media.breadcrumb.portal') }}</span>
+    <span class="mx-2">/</span>
+    <span>{{ t('media.breadcrumb.library') }}</span>
+    <span class="mx-2">/</span>
+    <span class="text-[var(--text-primary)]">{{ t('media.breadcrumb.manage') }}</span>
+  </div>
+
+  <!-- Title Section -->
+  <div class="flex flex-col gap-1 select-none">
+    <h2 class="text-xl font-bold tracking-tight text-[var(--text-primary)]">{{ t('media.title') }}</h2>
+    <p class="text-xs text-[var(--text-secondary)]">{{ t('media.subtitle') }}</p>
+  </div>
+
+  <!-- Toolbar Control Row -->
+  <app-media-toolbar
+    [searchQuery]="searchQuery()"
+    [activeFilter]="activeFilter()"
+    [bulkSelectedIds]="bulkSelectedIds()"
+    [viewMode]="viewMode()"
+    (search)="searchQuery.set($event)"
+    (filter)="activeFilter.set($event)"
+    (toggleView)="viewMode.set($event)"
+    (bulkCompress)="onBulkCompress()"
+    (bulkDelete)="onBulkDelete()"
+  ></app-media-toolbar>
+
+  <!-- Content Split Grid (Folders, Assets list, Details Panel) -->
+  <div class="grid grid-cols-1 lg:grid-cols-4 xl:grid-cols-5 gap-6 items-start flex-1 min-h-0">
+    
+    <!-- Left Column: Folders Directory (Span 1) -->
+    <div class="bg-[var(--bg-surface)] border border-[var(--border-color)] rounded-2xl p-5 shadow-sm">
+      <app-media-folders
+        [folders]="folders()"
+        [selectedFolderId]="selectedFolderId()"
+        (selectFolder)="onSelectFolder($event)"
+        (createFolder)="onCreateFolder($event)"
+        (renameFolder)="onRenameFolder($event)"
+        (deleteFolder)="onDeleteFolder($event)"
+      ></app-media-folders>
+    </div>
+
+    <!-- Center Column: Main Assets Grid / Upload slot (Span 3) -->
+    <div class="lg:col-span-2 xl:col-span-3 flex flex-col gap-6">
+      <!-- Upload Drop Zone -->
+      <app-media-upload (filesUploaded)="onFilesUploaded($event)"></app-media-upload>
+
+      <!-- Asset Files View Mode (Grid vs List) -->
+      <div *ngIf="viewMode() === 'grid'">
+        <app-media-grid
+          [files]="filteredFiles()"
+          [selectedFileId]="selectedFile()?.id || null"
+          [bulkSelectedIds]="bulkSelectedIds()"
+          (selectFile)="onSelectFile($event)"
+          (toggleBulkSelect)="onToggleBulk($event)"
+        ></app-media-grid>
+      </div>
+
+      <div *ngIf="viewMode() === 'list'">
+        <app-media-list
+          [files]="filteredFiles()"
+          [selectedFileId]="selectedFile()?.id || null"
+          [bulkSelectedIds]="bulkSelectedIds()"
+          (selectFile)="onSelectFile($event)"
+          (toggleBulkSelect)="onToggleBulk($event)"
+        ></app-media-list>
+      </div>
+    </div>
+
+    <!-- Right Column: Details Side Panel (Span 1) -->
+    <div class="lg:col-span-1">
+      <app-media-details
+        [file]="selectedFile()"
+        (rotate)="onRotateImage($event)"
+        (compress)="onCompressToWebP($event)"
+        (crop)="onCropImage($event)"
+        (delete)="onDeleteFile($event)"
+      ></app-media-details>
+    </div>
+
+  </div>
+
+  <!-- Simulated Image Cropper Dialog overlay -->
+  <app-media-crop-dialog
+    *ngIf="isCropping() && selectedFile()"
+    [file]="selectedFile()!"
+    (close)="isCropping.set(false)"
+    (cropApplied)="onCropApplied($event)"
+  ></app-media-crop-dialog>
+
+</div>

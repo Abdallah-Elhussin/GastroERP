@@ -32,7 +32,8 @@ public class ItemController : BaseApiController
     [HasPermission(Permissions.Inventory.Manage)]
     public async Task<IActionResult> CreateItem([FromBody] CreateInventoryItemDto dto)
     {
-        return HandleResult(await Mediator.Send(new CreateInventoryItemCommand(dto)));
+        var payload = dto with { TenantId = TenantId };
+        return HandleResult(await Mediator.Send(new CreateInventoryItemCommand(payload)));
     }
 
     [HttpPut($"{ApiRoutes.Inventory.Items}/{{id:guid}}")]

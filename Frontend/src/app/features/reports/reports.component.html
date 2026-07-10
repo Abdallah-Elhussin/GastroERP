@@ -1,0 +1,288 @@
+<div class="h-full flex flex-col gap-6 -m-6 p-6 overflow-y-auto">
+  
+  <!-- Header Title -->
+  <div class="flex justify-between items-center select-none text-left flex-shrink-0">
+    <div>
+      <h2 class="text-xl font-bold tracking-tight text-[var(--text-primary)]">{{ t('reports.title') }}</h2>
+      <p class="text-xs text-[var(--text-secondary)] mt-0.5">{{ t('reports.subtitle') }}</p>
+    </div>
+    <button 
+      (click)="showScheduler.set(!showScheduler())"
+      class="bg-[var(--primary-color)] text-[var(--primary-contrast)] hover:bg-[var(--primary-color-hover)] px-4 py-2 rounded-xl text-xs font-bold shadow-md cursor-pointer flex items-center gap-1.5"
+    >
+      <mat-icon class="text-sm">schedule_send</mat-icon>
+      <span>{{ t('reports.schedule') }}</span>
+    </button>
+  </div>
+
+  <!-- Step 9.3: Scheduled Reports Form -->
+  <div *ngIf="showScheduler()" class="bg-[var(--bg-surface)] border border-[var(--border-color)] rounded-2xl p-5 flex flex-col gap-4 shadow-sm text-left select-none animate-scale-up">
+    <span class="text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-wider">{{ t('reports.scheduleTitle') }}</span>
+    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+      <div class="flex flex-col gap-1.5">
+        <label class="text-[10px] font-semibold text-[var(--text-secondary)]">{{ t('reports.reportType') }}</label>
+        <select 
+          [value]="selectedReportType()"
+          (change)="selectedReportType.set($any($event.target).value)"
+          class="w-full bg-[var(--bg-canvas)] text-[var(--text-primary)] px-3 py-2 rounded-xl border border-[var(--border-color)] text-xs focus:outline-none"
+        >
+          <option [value]="t('reports.type.sales')">{{ t('reports.type.sales') }}</option>
+          <option [value]="t('reports.type.inventory')">{{ t('reports.type.inventory') }}</option>
+          <option [value]="t('reports.type.tax')">{{ t('reports.type.tax') }}</option>
+        </select>
+      </div>
+
+      <div class="flex flex-col gap-1.5">
+        <label class="text-[10px] font-semibold text-[var(--text-secondary)]">{{ t('reports.frequency') }}</label>
+        <select 
+          [value]="selectedScheduleFrequency()"
+          (change)="selectedScheduleFrequency.set($any($event.target).value)"
+          class="w-full bg-[var(--bg-canvas)] text-[var(--text-primary)] px-3 py-2 rounded-xl border border-[var(--border-color)] text-xs focus:outline-none"
+        >
+          <option [value]="t('reports.freq.daily')">{{ t('reports.freq.daily') }}</option>
+          <option [value]="t('reports.freq.weekly')">{{ t('reports.freq.weekly') }}</option>
+          <option [value]="t('reports.freq.monthly')">{{ t('reports.freq.monthly') }}</option>
+        </select>
+      </div>
+
+      <div class="flex flex-col gap-1.5">
+        <label class="text-[10px] font-semibold text-[var(--text-secondary)]">{{ t('reports.recipients') }}</label>
+        <input 
+          type="email" 
+          [value]="recipientEmails()"
+          (input)="recipientEmails.set($any($event.target).value)"
+          [placeholder]="t('reports.recipientPlaceholder')"
+          class="w-full bg-[var(--bg-canvas)] text-[var(--text-primary)] px-3 py-2 rounded-xl border border-[var(--border-color)] text-xs focus:outline-none"
+        />
+      </div>
+    </div>
+
+    <div class="flex justify-end gap-2 mt-2">
+      <button 
+        type="button" 
+        (click)="showScheduler.set(false)"
+        class="bg-[var(--bg-canvas)] text-[var(--text-primary)] border border-[var(--border-color)] hover:bg-[var(--bg-surface-hover)] px-4 py-2 rounded-xl text-xs font-bold shadow-sm cursor-pointer"
+      >
+        {{ t('common.cancel') }}
+      </button>
+      <button 
+        type="button" 
+        (click)="saveSchedule()"
+        class="bg-[var(--primary-color)] text-[var(--primary-contrast)] hover:bg-[var(--primary-color-hover)] px-5 py-2 rounded-xl text-xs font-bold shadow-md cursor-pointer"
+      >
+        {{ t('reports.saveSchedule') }}
+      </button>
+    </div>
+  </div>
+
+  <!-- Analytics Stats Cards (KPI Engine) -->
+  <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6 select-none">
+    <app-stat-card 
+      [title]="t('reports.totalRevenue')" 
+      value="$24,850.00" 
+      [subtitle]="t('reports.kpi.revenueSub')" 
+      icon="payments"
+      [trend]="t('reports.kpi.revenueTrend')"
+      trendType="up"
+    ></app-stat-card>
+    
+    <app-stat-card 
+      [title]="t('reports.grossProfit')" 
+      value="68.4%" 
+      [subtitle]="t('reports.kpi.profitSub')" 
+      icon="trending_up"
+      [trend]="t('reports.kpi.profitTrend')"
+      trendType="up"
+    ></app-stat-card>
+
+    <app-stat-card 
+      [title]="t('reports.avgTicket')" 
+      value="$34.50" 
+      [subtitle]="t('reports.kpi.ticketSub')" 
+      icon="receipt"
+      [trend]="t('reports.kpi.ticketTrend')"
+      trendType="up"
+    ></app-stat-card>
+
+    <app-stat-card 
+      [title]="t('reports.voidRate')" 
+      value="1.2%" 
+      [subtitle]="t('reports.kpi.voidSub')" 
+      icon="cancel"
+      [trend]="t('reports.kpi.voidTrend')"
+      trendType="down"
+    ></app-stat-card>
+  </div>
+
+  <!-- Charts & Stats Grid -->
+  <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+    <app-card [title]="t('reports.operationalTrends')" class="col-span-2">
+      @defer (on viewport) {
+        <app-chart></app-chart>
+      } @placeholder {
+        <div class="h-48 flex items-center justify-center text-[var(--text-muted)] text-xs select-none">
+          <span>{{ t('reports.loadingChart') }}</span>
+        </div>
+      }
+    </app-card>
+
+    <app-card [title]="t('reports.distribution')" class="col-span-1">
+      <div class="flex flex-col gap-3 py-2 text-xs select-none">
+        <div class="flex justify-between items-center border-b border-[var(--border-color-muted)] pb-2" *ngFor="let stat of channelStats()">
+          <div class="flex items-center gap-2">
+            <span [ngClass]="['w-2 h-2 rounded-full', stat.color]"></span>
+            <span class="font-medium text-[var(--text-primary)]">{{ stat.name }}</span>
+          </div>
+          <span class="font-bold text-[var(--text-secondary)]">{{ stat.share }}</span>
+        </div>
+      </div>
+    </app-card>
+  </div>
+
+  <!-- Step 9.2: Interactive Pivot Table & Drill-Down -->
+  @defer (on idle) {
+    <app-card [title]="t('reports.pivot.title')">
+      <div class="bg-[var(--bg-surface)] border border-[var(--border-color)] rounded-xl overflow-hidden shadow-sm">
+        <table class="w-full text-left border-collapse">
+          <thead>
+            <tr class="bg-[var(--bg-canvas)] border-b border-[var(--border-color)] text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-wider select-none">
+              <th class="p-3 w-10"></th>
+              <th class="p-3">{{ t('reports.pivot.category') }}</th>
+              <th class="p-3">{{ t('reports.pivot.qty') }}</th>
+              <th class="p-3 text-right">{{ t('reports.pivot.revenue') }}</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-[var(--border-color-muted)]">
+            <ng-container *ngFor="let group of pivotData()">
+              <!-- Parent Row -->
+              <tr 
+                (click)="toggleCategory(group.category)"
+                class="hover:bg-[var(--bg-surface-hover)] cursor-pointer text-xs font-bold transition-colors select-none"
+              >
+                <td class="p-3 text-center">
+                  <mat-icon class="text-xs transition-transform duration-200" [style.transform]="isExpanded(group.category) ? 'rotate(90deg)' : 'none'">
+                    chevron_right
+                  </mat-icon>
+                </td>
+                <td class="p-3 text-[var(--text-primary)]">{{ group.category }}</td>
+                <td class="p-3 text-[var(--text-secondary)]">{{ group.quantity }} {{ t('reports.pivot.units') }}</td>
+                <td class="p-3 text-right text-[var(--primary-color)] font-extrabold">${{ group.totalSales.toFixed(2) }}</td>
+              </tr>
+
+              <!-- Child Drill-Down Details -->
+              <tr *ngIf="isExpanded(group.category)">
+                <td colspan="4" class="p-0 bg-[var(--bg-canvas)] bg-opacity-40">
+                  <div class="divide-y divide-[var(--border-color-muted)] pl-10">
+                    <div 
+                      *ngFor="let item of group.items"
+                      class="flex justify-between items-center py-2.5 px-4 text-[11px] text-[var(--text-secondary)]"
+                    >
+                      <span>{{ item.name }}</span>
+                      <div class="flex gap-10">
+                        <span>{{ item.qty }} {{ t('reports.pivot.units') }}</span>
+                        <span class="font-bold text-[var(--text-primary)]">${{ item.sales.toFixed(2) }}</span>
+                      </div>
+                    </div>
+                  </div>
+                </td>
+              </tr>
+            </ng-container>
+          </tbody>
+        </table>
+      </div>
+    </app-card>
+  } @placeholder {
+    <div class="h-20 bg-[var(--bg-surface)] border border-[var(--border-color)] rounded-xl flex items-center justify-center text-[var(--text-muted)] text-xs select-none">
+      <span>{{ t('reports.pivot.loading') }}</span>
+    </div>
+  }
+
+  <!-- Generated Reports Table -->
+  <app-card [title]="t('reports.statements')">
+    <app-table [columns]="columns()" [data]="reportsData()" [pagination]="true" [defaultPageSize]="5">
+      <ng-template #rowTemplate let-report let-column="column">
+        <ng-container [ngSwitch]="column.key">
+          
+          <!-- Format Badges -->
+          <span *ngSwitchCase="'format'">
+            <span 
+              [class.bg-red-500]="report.format === 'PDF'"
+              [class.bg-emerald-500]="report.format === 'Excel'"
+              [class.bg-blue-500]="report.format === 'CSV'"
+              class="px-2 py-0.5 rounded text-white font-bold text-[9px] uppercase tracking-wider"
+            >
+              {{ report.format }}
+            </span>
+          </span>
+
+          <!-- Actions -->
+          <div *ngSwitchCase="'actions'" class="text-center select-none flex gap-2 justify-center">
+            <button (click)="triggerPdfExport(report.name)" class="text-[var(--text-muted)] hover:text-red-500 cursor-pointer" [title]="t('reports.exportPdf')">
+              <mat-icon class="text-sm">picture_as_pdf</mat-icon>
+            </button>
+            <button (click)="triggerExcelExport(report.name)" class="text-[var(--text-muted)] hover:text-emerald-500 cursor-pointer" [title]="t('reports.exportExcel')">
+              <mat-icon class="text-sm">grid_on</mat-icon>
+            </button>
+            <button (click)="triggerPrint(report.name)" class="text-[var(--text-muted)] hover:text-blue-500 cursor-pointer" [title]="t('reports.printDoc')">
+              <mat-icon class="text-sm">print</mat-icon>
+            </button>
+          </div>
+
+          <!-- Fallback -->
+          <span *ngSwitchDefault>
+            {{ report[column.key] }}
+          </span>
+
+        </ng-container>
+      </ng-template>
+    </app-table>
+  </app-card>
+
+  <!-- Step 9.4: Power BI Integration Placeholder -->
+  <app-card [title]="t('reports.powerBiTitle')">
+    <div class="bg-slate-900 border border-[var(--border-color)] rounded-xl h-96 relative overflow-hidden flex flex-col justify-between p-6 text-white select-none">
+      
+      <!-- Top header bar -->
+      <div class="flex justify-between items-center z-10">
+        <div class="flex items-center gap-2">
+          <span class="w-2.5 h-2.5 rounded-full bg-amber-500 animate-pulse"></span>
+          <span class="text-xs font-bold tracking-wide uppercase">{{ t('reports.powerBiOnline') }}</span>
+        </div>
+        <button 
+          type="button"
+          class="bg-slate-800 hover:bg-slate-700 text-gray-300 px-3.5 py-1.5 rounded-lg text-[10px] font-bold cursor-pointer flex items-center gap-1 border border-slate-700"
+        >
+          <mat-icon class="text-sm">open_in_new</mat-icon>
+          <span>{{ t('reports.openWorkspace') }}</span>
+        </button>
+      </div>
+
+      <!-- Center Mock Graph graphics -->
+      <div class="flex-1 flex flex-col items-center justify-center gap-4 z-10 text-center py-6">
+        <mat-icon class="text-6xl text-amber-500 animate-pulse">query_stats</mat-icon>
+        <div class="flex flex-col gap-1 max-w-sm">
+          <span class="text-sm font-bold">{{ t('reports.embedFrame') }}</span>
+          <p class="text-[10px] text-gray-400 leading-relaxed">{{ t('reports.embedDesc') }}</p>
+        </div>
+        
+        <!-- Mock mini bars representation -->
+        <div class="flex gap-2 items-end h-16 mt-2">
+          <span class="w-6 h-8 bg-amber-500 rounded-t-sm opacity-50"></span>
+          <span class="w-6 h-12 bg-amber-500 rounded-t-sm opacity-70"></span>
+          <span class="w-6 h-16 bg-amber-500 rounded-t-sm"></span>
+          <span class="w-6 h-10 bg-amber-500 rounded-t-sm opacity-60"></span>
+        </div>
+      </div>
+
+      <!-- Footer stats -->
+      <div class="flex justify-between items-center z-10 text-[9px] text-gray-400 border-t border-slate-800 pt-4 font-semibold">
+        <span>{{ t('reports.embedAppId') }}</span>
+        <span>{{ t('reports.lastUpdated') }}</span>
+      </div>
+
+      <!-- Backdrop grid overlay -->
+      <div class="absolute inset-0 bg-[radial-gradient(#334155_1px,transparent_1px)] [background-size:16px_16px] opacity-25 z-0"></div>
+    </div>
+  </app-card>
+
+</div>

@@ -1,0 +1,188 @@
+<div class="h-full flex flex-col gap-6 -m-6 p-6 overflow-y-auto">
+  
+  <!-- Inventory Stat Cards Grid -->
+  <div class="grid grid-cols-1 md:grid-cols-3 gap-6 select-none">
+    
+    <!-- Stat 1: Total Value -->
+    <div class="bg-[var(--bg-surface)] border border-[var(--border-color)] rounded-2xl p-6 flex items-center justify-between shadow-sm">
+      <div class="flex flex-col gap-2 text-left">
+        <span class="text-xs text-[var(--text-muted)] font-semibold uppercase tracking-wider">
+          {{ t('inventory.totalValue') }}
+        </span>
+        <span class="text-2xl font-black text-[var(--text-primary)]">
+          ${{ totalValue().toFixed(2) }}
+        </span>
+        <span class="text-[10px] text-emerald-500 font-semibold flex items-center gap-0.5">
+          <mat-icon class="text-xs">trending_up</mat-icon>
+          <span>{{ t('inventory.trendUp') }}</span>
+        </span>
+      </div>
+      <div class="w-12 h-12 rounded-xl bg-blue-500 bg-opacity-10 text-[var(--accent-color)] flex items-center justify-center">
+        <mat-icon>monetization_on</mat-icon>
+      </div>
+    </div>
+
+    <!-- Stat 2: Low Stock alerts -->
+    <div class="bg-[var(--bg-surface)] border border-[var(--border-color)] rounded-2xl p-6 flex items-center justify-between shadow-sm">
+      <div class="flex flex-col gap-2 text-left">
+        <span class="text-xs text-[var(--text-muted)] font-semibold uppercase tracking-wider">
+          {{ t('inventory.lowStockAlerts') }}
+        </span>
+        <span class="text-2xl font-black text-amber-500">
+          {{ lowStockCount() }}
+        </span>
+        <span class="text-[10px] text-amber-500 font-semibold flex items-center gap-0.5">
+          <mat-icon class="text-xs">warning</mat-icon>
+          <span>{{ t('inventory.reorder') }}</span>
+        </span>
+      </div>
+      <div class="w-12 h-12 rounded-xl bg-amber-500 bg-opacity-10 text-amber-500 flex items-center justify-center">
+        <mat-icon>notification_important</mat-icon>
+      </div>
+    </div>
+
+    <!-- Stat 3: Expiring Batches -->
+    <div class="bg-[var(--bg-surface)] border border-[var(--border-color)] rounded-2xl p-6 flex items-center justify-between shadow-sm">
+      <div class="flex flex-col gap-2 text-left">
+        <span class="text-xs text-[var(--text-muted)] font-semibold uppercase tracking-wider">
+          {{ t('inventory.expiringBatches') }}
+        </span>
+        <span class="text-2xl font-black text-red-500">
+          {{ t('inventory.batchesCount') }}
+        </span>
+        <span class="text-[10px] text-red-500 font-semibold flex items-center gap-0.5">
+          <mat-icon class="text-xs">hourglass_empty</mat-icon>
+          <span>{{ t('inventory.expiring72') }}</span>
+        </span>
+      </div>
+      <div class="w-12 h-12 rounded-xl bg-red-500 bg-opacity-10 text-red-500 flex items-center justify-center">
+        <mat-icon>event_busy</mat-icon>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Inventory Master List datatable panel -->
+  <div class="bg-[var(--bg-surface)] border border-[var(--border-color)] rounded-2xl overflow-hidden shadow-sm flex flex-col">
+    
+    <!-- Table Toolbar Header -->
+    <div class="p-6 border-b border-[var(--border-color)] flex flex-col sm:flex-row justify-between items-center gap-4 select-none">
+      <div class="flex items-center gap-2">
+        <span class="font-bold text-sm text-[var(--text-primary)] uppercase tracking-wide">
+          {{ t('inventory.masterList') }}
+        </span>
+      </div>
+
+      <!-- Controls -->
+      <div class="flex items-center gap-3 w-full sm:w-auto">
+        <!-- Table Search -->
+        <div class="relative w-full sm:w-64">
+          <span class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-[var(--text-muted)]">
+            <mat-icon class="text-sm">search</mat-icon>
+          </span>
+          <input 
+            type="text" 
+            [placeholder]="t('inventory.search')" 
+            (input)="onSearch($any($event.target).value)"
+            class="w-full bg-[var(--bg-canvas)] text-[var(--text-primary)] pl-9 pr-4 py-2 rounded-xl border border-[var(--border-color)] focus:outline-none focus:ring-1 focus:ring-[var(--accent-color)] text-xs transition-all shadow-sm"
+          />
+        </div>
+        <button mat-icon-button class="border border-[var(--border-color)] rounded-xl bg-[var(--bg-surface)]" [title]="t('inventory.filterColumns')">
+          <mat-icon class="text-sm">filter_list</mat-icon>
+        </button>
+        <button 
+          routerLink="/inventory/items/new"
+          class="bg-[var(--accent-color)] text-white hover:opacity-90 px-4 py-2 rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-sm cursor-pointer"
+        >
+          <mat-icon class="text-sm">add</mat-icon>
+          <span>{{ t('inventory.addItem') }}</span>
+        </button>
+        <button 
+          (click)="exportCSV()"
+          class="bg-[var(--primary-color)] text-[var(--primary-contrast)] hover:bg-[var(--primary-color-hover)] px-4 py-2 rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-sm cursor-pointer"
+        >
+          <mat-icon class="text-sm">download</mat-icon>
+          <span>{{ t('inventory.export') }}</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Data Table -->
+    <div class="p-6">
+      <div *ngIf="inventoryService.loading()" class="text-center text-xs text-[var(--text-muted)] py-8">
+        {{ t('inventory.loading') }}
+      </div>
+      <div *ngIf="inventoryService.error()" class="text-center text-xs text-red-500 py-4">
+        {{ inventoryService.error() }}
+      </div>
+      <app-table [columns]="columns()" [data]="filteredItems()" [pagination]="true" [defaultPageSize]="10">
+        <ng-template #rowTemplate let-item let-column="column">
+          <ng-container [ngSwitch]="column.key">
+
+            <div *ngSwitchCase="'name'" class="flex items-center gap-2">
+              <img *ngIf="item.imageUrl" [src]="item.imageUrl" class="w-8 h-8 rounded-lg object-cover border border-[var(--border-color)]" alt="" />
+              <span>{{ item.name }}</span>
+            </div>
+
+            <span *ngSwitchCase="'sku'" class="font-mono text-[var(--text-secondary)] text-xs">
+              {{ item.sku }}
+            </span>
+
+            <span *ngSwitchCase="'kind'" class="text-[var(--text-secondary)] text-xs">
+              {{ item.kind }}
+            </span>
+
+            <span *ngSwitchCase="'unitPrice'" class="text-[var(--text-secondary)]">
+              ${{ item.unitPrice.toFixed(2) }}
+            </span>
+
+            <!-- Total Value -->
+            <span *ngSwitchCase="'totalValue'" class="font-bold text-[var(--text-primary)]">
+              ${{ item.totalValue.toFixed(2) }}
+            </span>
+
+            <!-- Status badges -->
+            <span *ngSwitchCase="'status'">
+              <span 
+                *ngIf="item.status === 'in_stock'"
+                class="px-2.5 py-0.5 rounded bg-[var(--success-color-bg)] text-[var(--success-color-text)] font-semibold text-[10px]"
+              >
+                {{ t('inventory.status.inStock') }}
+              </span>
+              <span 
+                *ngIf="item.status === 'low_stock'"
+                class="px-2.5 py-0.5 rounded bg-[var(--warning-color-bg)] text-[var(--warning-color-text)] font-semibold text-[10px]"
+              >
+                {{ t('inventory.status.lowStock') }}
+              </span>
+              <span 
+                *ngIf="item.status === 'out_of_stock'"
+                class="px-2.5 py-0.5 rounded bg-[var(--danger-color-bg)] text-[var(--danger-color-text)] font-semibold text-[10px]"
+              >
+                {{ t('inventory.status.outOfStock') }}
+              </span>
+            </span>
+
+            <!-- Row edit Action -->
+            <div *ngSwitchCase="'actions'" class="text-center select-none">
+              <a 
+                [routerLink]="['/inventory/items', item.id]"
+                class="text-[var(--text-muted)] hover:text-[var(--accent-color)] cursor-pointer inline-flex"
+              >
+                <mat-icon class="text-sm">edit</mat-icon>
+              </a>
+            </div>
+
+            <!-- Default Fallback -->
+            <span *ngSwitchDefault>
+              {{ item[column.key] }}
+            </span>
+
+          </ng-container>
+        </ng-template>
+      </app-table>
+    </div>
+
+  </div>
+
+</div>

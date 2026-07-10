@@ -1,0 +1,41 @@
+<div class="catalog-page">
+  <header class="page-header">
+    <div>
+      <h1>{{ t('catalog.title') }}</h1>
+      <p>{{ t('catalog.subtitle') }}</p>
+    </div>
+    <a routerLink="/catalog/wizard" class="btn-primary">
+      <mat-icon>add</mat-icon>
+      {{ t('catalog.newProduct') }}
+    </a>
+  </header>
+
+  <div class="toolbar">
+    <input type="search" [placeholder]="t('catalog.search')" (input)="onSearch($any($event.target).value)" />
+    <button type="button" class="btn-secondary" (click)="exportCsv()">
+      <mat-icon>download</mat-icon>{{ t('catalog.export') }}
+    </button>
+    <label class="btn-secondary import-btn">
+      <mat-icon>upload</mat-icon>{{ t('catalog.import') }}
+      <input type="file" accept=".csv,text/csv" hidden (change)="onImportFile($event)" />
+    </label>
+  </div>
+
+  <div *ngIf="importMessage()" class="state">{{ importMessage() }}</div>
+
+  <div *ngIf="catalogService.loading()" class="state">{{ t('catalog.loading') }}</div>
+  <div *ngIf="catalogService.error()" class="state error">{{ catalogService.error() }}</div>
+
+  <div class="grid" *ngIf="!catalogService.loading()">
+    <a *ngFor="let item of catalogService.definitions()" [routerLink]="['/catalog/wizard', item.id]" class="card">
+      <div class="card-top">
+        <img *ngIf="item.primaryImageUrl; else noImg" [src]="item.primaryImageUrl" alt="" />
+        <ng-template #noImg><div class="placeholder"><mat-icon>inventory_2</mat-icon></div></ng-template>
+        <span class="code">{{ item.code }}</span>
+      </div>
+      <h3>{{ item.nameAr }}</h3>
+      <p>{{ typeLabel(item.catalogType) }}</p>
+    </a>
+    <div *ngIf="catalogService.definitions().length === 0" class="empty">{{ t('catalog.empty') }}</div>
+  </div>
+</div>

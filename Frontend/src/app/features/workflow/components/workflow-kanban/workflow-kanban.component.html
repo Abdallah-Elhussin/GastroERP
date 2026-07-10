@@ -1,0 +1,101 @@
+<div class="flex flex-col gap-6 h-full">
+  
+  <!-- Add Task Bar -->
+  <div class="flex justify-between items-center select-none">
+    <div class="flex flex-col text-left">
+      <span class="text-xs font-bold text-[var(--text-primary)]">{{ t('workflow.kanban.title') }}</span>
+      <span class="text-[10px] text-[var(--text-muted)]">{{ t('workflow.kanban.subtitle') }}</span>
+    </div>
+    <button 
+      (click)="addNewTask()" 
+      class="bg-[var(--primary-color)] text-[var(--primary-contrast)] hover:bg-[var(--primary-color-hover)] px-4 py-2 rounded-xl text-xs font-bold shadow-md cursor-pointer flex items-center gap-1.5"
+    >
+      <mat-icon class="text-sm">add</mat-icon>
+      <span>{{ t('workflow.kanban.addTask') }}</span>
+    </button>
+  </div>
+
+  <!-- Columns Grid -->
+  <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6 items-start flex-1 min-h-0">
+    <div 
+      *ngFor="let col of columns"
+      [class]="col.bg"
+      class="bg-[var(--bg-surface)] border border-[var(--border-color)] rounded-2xl p-4 flex flex-col gap-4 max-h-[500px] overflow-y-auto"
+    >
+      <!-- Header -->
+      <div class="flex justify-between items-center select-none">
+        <span class="text-xs font-extrabold text-[var(--text-primary)] uppercase tracking-wider">{{ t(col.labelKey) }}</span>
+        <span class="bg-[var(--bg-canvas)] text-[var(--text-secondary)] border border-[var(--border-color)] px-2 py-0.5 rounded-full text-[9px] font-bold">
+          {{ getTasksByColumn(col.value).length }}
+        </span>
+      </div>
+
+      <!-- Cards Stack -->
+      <div class="flex flex-col gap-3">
+        <div 
+          *ngFor="let task of getTasksByColumn(col.value)"
+          class="bg-[var(--bg-canvas)] border border-[var(--border-color)] rounded-xl p-4 flex flex-col gap-3 hover:shadow-md transition-shadow relative"
+        >
+          <!-- Category badge & Shift actions -->
+          <div class="flex justify-between items-start select-none">
+            <span class="bg-[var(--bg-surface)] border border-[var(--border-color)] text-[var(--text-secondary)] px-2 py-0.5 rounded text-[8px] font-extrabold uppercase tracking-wide">
+              {{ task.category }}
+            </span>
+            
+            <!-- Shift column menu trigger -->
+            <button mat-icon-button [matMenuTriggerFor]="moveMenu" class="w-6 h-6 rounded hover:bg-[var(--bg-surface-hover)]">
+              <mat-icon class="text-xs text-[var(--text-muted)]">more_horiz</mat-icon>
+            </button>
+            <mat-menu #moveMenu="matMenu" class="custom-menu">
+              <div class="px-3 py-1 border-b border-[var(--border-color)] text-[9px] font-bold text-[var(--text-muted)] uppercase select-none">{{ t('workflow.kanban.moveTo') }}</div>
+              <button mat-menu-item *ngIf="task.status !== 'todo'" (click)="moveTask(task.id, 'todo')">{{ t('workflow.kanban.col.todo') }}</button>
+              <button mat-menu-item *ngIf="task.status !== 'in_progress'" (click)="moveTask(task.id, 'in_progress')">{{ t('workflow.kanban.col.inProgress') }}</button>
+              <button mat-menu-item *ngIf="task.status !== 'review'" (click)="moveTask(task.id, 'review')">{{ t('workflow.kanban.col.review') }}</button>
+              <button mat-menu-item *ngIf="task.status !== 'done'" (click)="moveTask(task.id, 'done')">{{ t('workflow.kanban.col.done') }}</button>
+            </mat-menu>
+          </div>
+
+          <!-- Title and Description -->
+          <div class="flex flex-col text-left">
+            <span class="text-xs font-bold text-[var(--text-primary)] leading-snug">{{ task.title }}</span>
+            <p class="text-[10px] text-[var(--text-muted)] mt-1.5 leading-relaxed">{{ task.description }}</p>
+          </div>
+
+          <!-- Progress bar -->
+          <div class="flex flex-col gap-1 text-left">
+            <div class="flex justify-between text-[8px] font-bold text-[var(--text-muted)]">
+              <span>{{ t('workflow.kanban.progress') }}</span>
+              <span>{{ task.progress }}%</span>
+            </div>
+            <div class="h-1.5 bg-[var(--bg-surface)] border border-[var(--border-color)] rounded-full overflow-hidden">
+              <div 
+                [style.width.%]="task.progress"
+                class="h-full bg-[var(--accent-color)] rounded-full transition-all duration-300"
+              ></div>
+            </div>
+          </div>
+
+          <!-- Assignee details & Deadline -->
+          <div class="flex items-center justify-between border-t border-[var(--border-color-muted)] pt-3 select-none">
+            <div class="flex items-center gap-1.5">
+              <img [src]="task.assignee.avatar" [alt]="task.assignee.name" class="w-5 h-5 rounded-full object-cover border border-[var(--border-color)]" />
+              <span class="text-[9px] font-semibold text-[var(--text-secondary)]">{{ task.assignee.name }}</span>
+            </div>
+            <div class="flex items-center gap-1 text-[var(--text-muted)]">
+              <mat-icon class="text-[10px] w-auto h-auto leading-none">calendar_today</mat-icon>
+              <span class="text-[8px] font-bold">{{ task.deadline }}</span>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- Empty state placeholder inside column -->
+        <div *ngIf="getTasksByColumn(col.value).length === 0" class="py-10 border border-dashed border-[var(--border-color-muted)] rounded-xl text-center text-[10px] text-[var(--text-muted)] select-none">
+          {{ t('workflow.kanban.empty') }}
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+</div>

@@ -1,0 +1,798 @@
+<app-pos-layout>
+  
+  <!-- Left Side Catalog Contents -->
+  <div catalog class="flex flex-col gap-4 h-full overflow-hidden">
+    
+    <!-- Offline status notification warning banner -->
+    <div 
+      *ngIf="!offlineSync.isOnline()"
+      class="bg-amber-500 text-white px-4 py-2.5 rounded-xl text-[10px] font-bold shadow-sm flex items-center gap-2 select-none flex-shrink-0 animate-pulse"
+    >
+      <mat-icon class="text-sm">wifi_off</mat-icon>
+      <span>{{ t('pos.offline') }}</span>
+    </div>
+    
+    <!-- Menu Search and Filter Controls -->
+    <div class="flex flex-col sm:flex-row justify-between items-center gap-4 flex-shrink-0 select-none">
+      <!-- Search Input -->
+      <div class="relative w-full sm:w-72">
+        <span class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-[var(--text-muted)]">
+          <mat-icon class="text-sm">search</mat-icon>
+        </span>
+        <input 
+          type="text" 
+          [placeholder]="t('shell.search')" 
+          (input)="searchQuery.set($any($event.target).value)"
+          class="w-full bg-[var(--bg-surface)] text-[var(--text-primary)] pl-9 pr-4 py-2 rounded-xl border border-[var(--border-color)] focus:outline-none focus:ring-1 focus:ring-[var(--accent-color)] text-xs transition-all shadow-sm"
+        />
+      </div>
+
+      <!-- Category Filter Pills -->
+      <div class="flex gap-2 overflow-x-auto w-full sm:w-auto pb-1 sm:pb-0">
+        <button 
+          *ngFor="let cat of categoriesDisplay()"
+          (click)="activeCategoryKey.set(cat.key)"
+          [class.bg-[var(--primary-color)]]="activeCategoryKey() === cat.key"
+          [class.text-[var(--primary-contrast)]]="activeCategoryKey() === cat.key"
+          [class.bg-[var(--bg-surface)]]="activeCategoryKey() !== cat.key"
+          [class.text-[var(--text-secondary)]]="activeCategoryKey() !== cat.key"
+          class="px-4 py-2 rounded-xl border border-[var(--border-color)] text-xs font-semibold hover:bg-[var(--bg-surface-hover)] transition-all cursor-pointer flex-shrink-0"
+        >
+          {{ cat.label }}
+        </button>
+      </div>
+    </div>
+
+    <!-- Product Cards Grid -->
+    <div class="flex-1 overflow-y-auto min-h-0 pos-catalog-scroll">
+      <div class="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-3 pb-4">
+        <article
+          *ngFor="let product of filteredProducts()"
+          (click)="selectProduct(product)"
+          class="pos-product-card group"
+        >
+          <div class="pos-product-card__media">
+            <img
+              [src]="product.image"
+              [alt]="product.name"
+              class="pos-product-card__image"
+              loading="lazy"
+            />
+            <div class="pos-product-card__price">
+              <span class="pos-product-card__price-value">{{ formatPriceAmount(product.price) }}</span>
+              <span class="pos-product-card__price-currency">{{ t('common.currency') }}</span>
+            </div>
+            <button type="button" class="pos-product-card__add" tabindex="-1" aria-hidden="true">
+              <mat-icon>add</mat-icon>
+            </button>
+          </div>
+
+          <div class="pos-product-card__body">
+            <h3 class="pos-product-card__title">{{ product.name }}</h3>
+            <span class="pos-product-card__category">{{ t('pos.cat.' + product.categoryKey) }}</span>
+          </div>
+        </article>
+      </div>
+      
+      <div *ngIf="filteredProducts().length === 0" class="text-center py-20 text-[var(--text-muted)] flex flex-col items-center gap-3">
+        <mat-icon class="text-4xl">search_off</mat-icon>
+        <span class="text-sm">{{ t('pos.noItems') }}</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Right Side Order Cart Details -->
+  <div drawer class="pos-cart-drawer">
+
+    <!-- Cart Header -->
+    <header class="pos-cart-header">
+      <div class="pos-cart-header__top">
+        <div class="pos-cart-header__title">
+          <mat-icon class="pos-cart-header__title-icon">shopping_basket</mat-icon>
+          <span>{{ t('pos.order') }}</span>
+        </div>
+        <span class="pos-cart-badge">{{ orderBadge() }}</span>
+      </div>
+
+      <div class="pos-cart-toolbar">
+        <button
+          type="button"
+          (click)="openCustomerModal()"
+          class="pos-cart-toolbar__btn"
+          [attr.title]="t('pos.customer.edit')"
+        >
+          <mat-icon>person</mat-icon>
+        </button>
+        <button
+          type="button"
+          (click)="suspendCurrentInvoice()"
+          [disabled]="dataService.cart().length === 0"
+          class="pos-cart-toolbar__btn pos-cart-toolbar__btn--amber"
+          [attr.title]="t('pos.suspendInvoice')"
+        >
+          <mat-icon>pause_circle</mat-icon>
+        </button>
+        <button
+          type="button"
+          (click)="openInvoicesModal('suspended')"
+          class="pos-cart-toolbar__btn"
+          [attr.title]="t('pos.suspendedInvoices')"
+        >
+          <mat-icon>inventory_2</mat-icon>
+          <span *ngIf="invoiceStore.suspendedCount() > 0" class="pos-cart-toolbar__count">{{ invoiceStore.suspendedCount() }}</span>
+        </button>
+        <button
+          type="button"
+          (click)="openInvoicesModal('paid')"
+          class="pos-cart-toolbar__btn"
+          [attr.title]="t('pos.paidInvoices')"
+        >
+          <mat-icon>receipt_long</mat-icon>
+          <span *ngIf="invoiceStore.paidCount() > 0" class="pos-cart-toolbar__count pos-cart-toolbar__count--green">{{ invoiceStore.paidCount() }}</span>
+        </button>
+      </div>
+
+      <div class="pos-cart-section">
+        <span class="pos-cart-label">{{ t('pos.orderType') }}</span>
+        <div class="pos-order-type-grid">
+          <button
+            *ngFor="let type of orderTypeOptions"
+            type="button"
+            (click)="setOrderType(type)"
+            class="pos-order-type-btn"
+            [class.pos-order-type-btn--active]="orderType() === type"
+          >
+            {{ orderTypeLabels()[type] }}
+          </button>
+        </div>
+      </div>
+
+      <div *ngIf="orderType() === 'dineIn'" class="pos-cart-fields">
+        <div class="pos-cart-field">
+          <label class="pos-cart-label">{{ t('pos.tableNo') }}</label>
+          <select [ngModel]="tableNumber()" (ngModelChange)="tableNumber.set($event)" class="pos-input">
+            <option *ngFor="let tbl of tableOptions" [value]="tbl">{{ tbl }}</option>
+          </select>
+        </div>
+        <div class="pos-cart-field">
+          <label class="pos-cart-label">{{ t('pos.guestCount') }}</label>
+          <input type="number" min="1" max="20" [ngModel]="guestCount()" (ngModelChange)="onGuestCountChange(+$event)" class="pos-input" />
+        </div>
+      </div>
+
+      <div *ngIf="orderType() === 'delivery'" class="pos-cart-section">
+        <div class="pos-cart-field pos-cart-field--full">
+          <label class="pos-cart-label">{{ t('pos.deliveryApp') }}</label>
+          <select [ngModel]="deliveryApp()" (ngModelChange)="deliveryApp.set($event)" class="pos-input">
+            <option *ngFor="let app of deliveryApps" [value]="app">{{ t('pos.app.' + app) }}</option>
+          </select>
+        </div>
+        <div class="pos-cart-field pos-cart-field--full">
+          <label class="pos-cart-label">{{ t('pos.deliveryRef') }}</label>
+          <input type="text" [placeholder]="t('pos.orderRef')" [ngModel]="deliveryOrderRef()" (ngModelChange)="deliveryOrderRef.set($event)" class="pos-input" />
+        </div>
+      </div>
+
+      <div *ngIf="dataService.cart().length > 0" class="pos-status-chips">
+        <span class="pos-status-chip pos-status-chip--info">{{ customerDisplayName() }}</span>
+        <span class="pos-status-chip" [class.pos-status-chip--ok]="orderSentToKitchen()" [class.pos-status-chip--warn]="!orderSentToKitchen()">
+          {{ orderSentToKitchen() ? t('pos.status.kitchenSentShort') : t('pos.status.kitchenPendingShort') }}
+        </span>
+        <span class="pos-status-chip pos-status-chip--info">{{ t('pos.status.unpaidShort') }}</span>
+      </div>
+    </header>
+
+    <!-- Scrollable Items List -->
+    <div class="pos-cart-items">
+      <article *ngFor="let item of dataService.cart()" class="pos-cart-item">
+        <div class="pos-cart-item__head">
+          <div class="pos-cart-item__info">
+            <span class="pos-cart-item__name">{{ item.product.name }}</span>
+            <span class="pos-cart-item__price">{{ formatMoney(item.product.price) }}</span>
+          </div>
+          <button type="button" (click)="dataService.removeFromCart(item.id)" class="pos-cart-item__remove">
+            <mat-icon>delete</mat-icon>
+          </button>
+        </div>
+
+        <div *ngIf="item.customizations.length > 0" class="pos-cart-item__tags">
+          <span *ngFor="let opt of item.customizations" class="pos-cart-item__tag">+ {{ opt }}</span>
+        </div>
+
+        <div *ngIf="item.notes" class="pos-cart-item__notes">"{{ item.notes }}"</div>
+
+        <div class="pos-cart-item__foot">
+          <div class="pos-qty-control">
+            <button type="button" (click)="dataService.updateQuantity(item.id, -1)">−</button>
+            <span>{{ item.quantity }}</span>
+            <button type="button" (click)="dataService.updateQuantity(item.id, 1)">+</button>
+          </div>
+          <span class="pos-cart-item__total">{{ formatMoney(item.product.price * item.quantity) }}</span>
+        </div>
+      </article>
+
+      <div *ngIf="dataService.cart().length === 0" class="pos-cart-empty">
+        <mat-icon>shopping_cart</mat-icon>
+        <span>{{ t('pos.emptyCart') }}</span>
+      </div>
+    </div>
+
+    <!-- Calculations Footer -->
+    <footer class="pos-cart-footer">
+      <div class="pos-discount-row">
+        <label class="pos-cart-label">{{ t('pos.discount') }}</label>
+        <div class="pos-discount-controls">
+          <button type="button" (click)="toggleDiscountType()" class="pos-discount-type">
+            {{ discountType() === 'percent' ? t('pos.discountPercent') : t('pos.discountFixed') }}
+          </button>
+          <input
+            type="number"
+            min="0"
+            [attr.max]="discountType() === 'percent' ? 100 : null"
+            [ngModel]="discountValue()"
+            (ngModelChange)="discountValue.set(+$event || 0)"
+            class="pos-input pos-discount-input"
+            [placeholder]="discountType() === 'percent' ? '0' : '0.00'"
+          />
+        </div>
+      </div>
+
+      <div class="pos-totals">
+        <div class="pos-totals__row">
+          <span>{{ t('pos.subtotal') }}</span>
+          <span>{{ formatMoney(dataService.cartSubtotal()) }}</span>
+        </div>
+        <div *ngIf="discountAmount() > 0" class="pos-totals__row pos-totals__row--discount">
+          <span>{{ t('pos.discountAmount') }}</span>
+          <span>− {{ formatMoney(discountAmount()) }}</span>
+        </div>
+        <div class="pos-totals__row">
+          <span>{{ t('pos.tax') }}</span>
+          <span>{{ formatMoney(orderTax()) }}</span>
+        </div>
+        <div class="pos-totals__row pos-totals__row--grand">
+          <span>{{ t('pos.total') }}</span>
+          <span>{{ formatMoney(orderTotal()) }}</span>
+        </div>
+      </div>
+
+      <div class="pos-actions">
+        <button type="button" (click)="openSplitModal()" [disabled]="dataService.cart().length === 0" class="pos-action-btn">
+          <mat-icon>call_split</mat-icon>
+          <span>{{ t('pos.splitBill') }}</span>
+        </button>
+        <button type="button" (click)="sendToKitchen()" [disabled]="dataService.cart().length === 0" class="pos-action-btn">
+          <mat-icon>flatware</mat-icon>
+          <span>{{ t('pos.kitchen') }}</span>
+        </button>
+        <button type="button" (click)="openPaymentModal()" [disabled]="dataService.cart().length === 0" class="pos-action-btn pos-action-btn--pay">
+          <mat-icon>payments</mat-icon>
+          <span>{{ t('pos.pay') }}</span>
+        </button>
+      </div>
+    </footer>
+  </div>
+
+</app-pos-layout>
+
+<!-- CUSTOMIZATION OVERLAY MODAL DIALOG -->
+<div 
+  *ngIf="isCustomizing() && activeProduct()"
+  class="fixed inset-0 bg-black bg-opacity-50 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-fade-in"
+>
+  <div class="bg-[var(--bg-surface)] border border-[var(--border-color)] max-w-md w-full rounded-2xl shadow-2xl p-6 flex flex-col gap-6 animate-scale-up">
+    <div class="flex justify-between items-center text-left border-b border-[var(--border-color)] pb-4">
+      <div>
+        <h3 class="font-extrabold text-base text-[var(--text-primary)]">{{ t('pos.customize') }}</h3>
+        <p class="text-[11px] text-[var(--text-secondary)] mt-0.5">{{ activeProduct()?.name }} · {{ formatMoney(activeProduct()?.price ?? 0) }}</p>
+      </div>
+      <button (click)="closeCustomizer()" class="text-[var(--text-muted)] hover:text-[var(--text-primary)]">
+        <mat-icon>close</mat-icon>
+      </button>
+    </div>
+
+    <div class="flex flex-col gap-3 text-left">
+      <span class="text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-wider">{{ t('pos.modifications') }}</span>
+      <div class="flex flex-col gap-2">
+        <button 
+          type="button"
+          *ngFor="let opt of availableCustomizations[activeProduct()!.categoryKey]"
+          (click)="toggleCustomization(opt)"
+          [class.bg-[var(--accent-color)]]="selectedCustomizations().includes(opt)"
+          [class.text-white]="selectedCustomizations().includes(opt)"
+          [class.bg-[var(--bg-canvas)]]="!selectedCustomizations().includes(opt)"
+          [class.text-[var(--text-primary)]]="!selectedCustomizations().includes(opt)"
+          class="px-4 py-3 rounded-xl border border-[var(--border-color)] text-xs font-semibold hover:opacity-95 transition-all text-left flex items-center justify-between cursor-pointer"
+        >
+          <span>{{ opt }}</span>
+          <mat-icon class="text-xs" *ngIf="selectedCustomizations().includes(opt)">check_circle</mat-icon>
+        </button>
+      </div>
+    </div>
+
+    <div class="flex flex-col gap-1.5 text-left">
+      <label class="text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-wider">{{ t('pos.kitchenNotes') }}</label>
+      <textarea 
+        [placeholder]="t('pos.notes')"
+        (input)="orderNotes.set($any($event.target).value)"
+        rows="2"
+        class="w-full bg-[var(--bg-canvas)] text-[var(--text-primary)] px-4 py-2.5 rounded-xl border border-[var(--border-color)] focus:outline-none focus:ring-1 focus:ring-[var(--accent-color)] text-xs resize-none"
+      ></textarea>
+    </div>
+
+    <button 
+      (click)="addCustomizedItem()"
+      class="w-full bg-[var(--primary-color)] text-[var(--primary-contrast)] hover:bg-[var(--primary-color-hover)] py-3 rounded-xl font-bold text-xs shadow-md transition-all flex items-center justify-center gap-1.5 cursor-pointer"
+    >
+      <mat-icon class="text-sm">shopping_cart</mat-icon>
+      <span>{{ t('pos.addToOrder') }}</span>
+    </button>
+  </div>
+</div>
+
+<!-- INVOICE MODAL -->
+<div
+  *ngIf="isInvoiceModalOpen() && lastInvoice() as inv"
+  class="fixed inset-0 bg-black bg-opacity-50 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-fade-in pos-invoice-overlay"
+>
+  <div class="bg-white text-gray-900 max-w-lg w-full rounded-2xl shadow-2xl flex flex-col max-h-[90vh] animate-scale-up pos-invoice-dialog">
+    <div class="p-5 border-b border-gray-200 flex justify-between items-start pos-invoice-no-print flex-shrink-0">
+      <div>
+        <h3 class="font-extrabold text-lg">{{ lastInvoice() ? resolveInvoiceTitle(lastInvoice()!) : t('pos.invoiceTitle') }}</h3>
+        <p class="text-xs text-gray-500 mt-0.5">{{ t('pos.postedSuccess') }}</p>
+      </div>
+      <button type="button" (click)="closeInvoiceModal()" class="text-gray-400 hover:text-gray-700">
+        <mat-icon>close</mat-icon>
+      </button>
+    </div>
+
+    <div id="pos-invoice-print" class="flex-1 overflow-y-auto p-5 flex flex-col gap-4 text-sm pos-invoice-body min-h-0">
+      <!-- Company header: Thermal Centered Layout -->
+      <div class="pos-invoice-company-header-centered flex flex-col items-center text-center pb-3 border-b border-dashed border-gray-300 flex-shrink-0">
+        <img *ngIf="companyProfile().logoUrl" [src]="companyProfile().logoUrl" alt="logo" class="w-12 h-12 object-contain mb-2 rounded" />
+        <div class="font-extrabold text-sm">{{ companyProfile().nameAr }}</div>
+        <div class="font-bold text-[11px] uppercase tracking-wider text-gray-700">{{ companyProfile().nameEn }}</div>
+        <div class="text-[10px] text-gray-500 mt-1.5 space-y-0.5">
+          <div>{{ companyProfile().addressAr }} / {{ companyProfile().addressEn }}</div>
+          <div><strong>الرقم الضريبي / VAT:</strong> {{ companyProfile().vatNumber }}</div>
+          <div><strong>السجل التجاري / CR:</strong> {{ companyProfile().crNumber }}</div>
+          <div><strong>الهاتف / Phone:</strong> {{ companyProfile().phone }}</div>
+        </div>
+      </div>
+
+      <div class="text-center border-b border-gray-200 pb-3 flex-shrink-0">
+        <div class="font-extrabold text-base">{{ resolveInvoiceTitle(inv) }}</div>
+        <div class="text-[10px] text-gray-500 mt-1">{{ resolveInvoiceTitleEn(inv) }}</div>
+      </div>
+
+      <div *ngIf="inv.customer.name && inv.customer.name !== createDefaultCustomer().name" class="pos-invoice-customer-block">
+        <div class="pos-invoice-customer-heading">{{ t('pos.customer.title') }} / {{ tEn('pos.customer.title') }}</div>
+        <div class="pos-invoice-customer-line"><strong>{{ t('pos.customer.name') }}:</strong> {{ inv.customer.name }}</div>
+        <div *ngIf="inv.customer.phone" class="pos-invoice-customer-line"><strong>{{ t('pos.customer.phone') }}:</strong> {{ inv.customer.phone }}</div>
+        <div *ngIf="inv.customer.taxNumber" class="pos-invoice-customer-line"><strong>{{ t('pos.customer.tax') }}:</strong> {{ inv.customer.taxNumber }}</div>
+        <div *ngIf="inv.customer.email" class="pos-invoice-customer-line"><strong>{{ t('pos.customer.email') }}:</strong> {{ inv.customer.email }}</div>
+        <div *ngIf="inv.customer.address" class="pos-invoice-customer-line"><strong>{{ t('pos.customer.address') }}:</strong> {{ inv.customer.address }}</div>
+      </div>
+
+      <div class="flex justify-between text-xs text-gray-600">
+        <div class="flex flex-col gap-0.5">
+          <span><strong>{{ t('pos.invoiceNo') }}:</strong> {{ inv.invoiceNo }}</span>
+          <span><strong>{{ t('pos.invoiceDate') }}:</strong> {{ formatInvoiceDate(inv.date) }}</span>
+          <span><strong>{{ t('pos.invoiceBranch') }}:</strong> {{ inv.branch }}</span>
+        </div>
+        <div class="text-end flex flex-col gap-0.5">
+          <span class="font-bold">{{ inv.tableLabel }}</span>
+          <span class="text-[10px]">{{ orderTypeLabels()[inv.orderType] }}</span>
+        </div>
+      </div>
+
+      <table class="w-full text-xs border-collapse">
+        <thead>
+          <tr class="border-b border-gray-300 text-gray-600">
+            <th class="text-start py-2 font-bold">{{ t('pos.invoiceItems') }}</th>
+            <th class="text-center py-2 font-bold w-10">{{ t('pos.invoiceQty') }}</th>
+            <th class="text-end py-2 font-bold w-16">{{ t('pos.invoiceUnit') }}</th>
+            <th class="text-end py-2 font-bold w-16">{{ t('pos.invoiceLineTotal') }}</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let line of inv.lines" class="border-b border-gray-100 align-top">
+            <td class="py-2 pe-2">
+              <div class="font-semibold">{{ line.name }}</div>
+              <div *ngIf="line.customizations.length" class="text-[10px] text-gray-500 mt-0.5">
+                <span *ngFor="let c of line.customizations; let last = last">+ {{ c }}<span *ngIf="!last">، </span></span>
+              </div>
+              <div *ngIf="line.notes" class="text-[10px] text-gray-400 italic">{{ line.notes }}</div>
+            </td>
+            <td class="text-center py-2">{{ line.quantity }}</td>
+            <td class="text-end py-2 tabular-nums">{{ formatPriceAmount(line.unitPrice) }}</td>
+            <td class="text-end py-2 font-semibold tabular-nums">{{ formatPriceAmount(line.lineTotal) }}</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <div class="flex flex-col gap-1.5 text-xs border-t border-gray-200 pt-3">
+        <div class="flex justify-between">
+          <span>{{ t('pos.subtotal') }}</span>
+          <span class="tabular-nums">{{ formatMoney(inv.subtotal) }}</span>
+        </div>
+        <div *ngIf="inv.discount > 0" class="flex justify-between text-emerald-700">
+          <span>{{ t('pos.discountAmount') }}</span>
+          <span class="tabular-nums">- {{ formatMoney(inv.discount) }}</span>
+        </div>
+        <div class="flex justify-between">
+          <span>{{ t('pos.tax') }}</span>
+          <span class="tabular-nums">{{ formatMoney(inv.tax) }}</span>
+        </div>
+        <div class="flex justify-between text-base font-extrabold border-t border-gray-300 pt-2 mt-1">
+          <span>{{ t('pos.total') }}</span>
+          <span class="tabular-nums">{{ formatMoney(inv.total) }}</span>
+        </div>
+      </div>
+
+      <div class="p-3 bg-gray-50 rounded-xl border border-gray-200 text-xs flex flex-col gap-1.5">
+        <div class="flex justify-between font-bold">
+          <span>{{ t('pos.paymentMethod') }}</span>
+          <span>{{ paymentMethodInvoiceLabel(inv.payment.method) }}</span>
+        </div>
+        <div *ngIf="inv.payment.cash > 0" class="flex justify-between">
+          <span>{{ t('pos.paidCash') }}</span>
+          <span class="font-semibold tabular-nums">{{ formatMoney(inv.payment.cash) }}</span>
+        </div>
+        <div *ngIf="inv.payment.card > 0" class="flex justify-between">
+          <span>{{ t('pos.paidCard') }}</span>
+          <span class="font-semibold tabular-nums">{{ formatMoney(inv.payment.card) }}</span>
+        </div>
+      </div>
+
+      <div class="flex gap-2 text-[10px] text-gray-500">
+        <span *ngIf="inv.sentToKitchen" class="px-2 py-0.5 rounded bg-emerald-100 text-emerald-800">{{ t('pos.status.kitchenSent') }}</span>
+        <span *ngIf="inv.posted" class="px-2 py-0.5 rounded bg-blue-100 text-blue-800">{{ t('pos.posted') }}</span>
+      </div>
+    </div>
+
+    <!-- ZATCA QR — bottom of invoice -->
+    <div class="pos-invoice-qr-footer flex-shrink-0 border-t border-gray-200 bg-gray-50 px-5 py-4">
+      <img *ngIf="invoiceQrDataUrl(); else qrLoading" [src]="invoiceQrDataUrl()" alt="ZATCA QR" class="pos-invoice-qr-img" />
+      <ng-template #qrLoading>
+        <div class="pos-invoice-qr-placeholder">...</div>
+      </ng-template>
+      <span class="pos-invoice-qr-label">{{ t('pos.invoice.zatcaQr') }}</span>
+    </div>
+
+    <div class="p-4 border-t border-gray-200 grid grid-cols-2 gap-2 pos-invoice-no-print flex-shrink-0">
+      <button
+        type="button"
+        (click)="printInvoice()"
+        class="bg-[var(--primary-color)] text-[var(--primary-contrast)] py-3 rounded-xl font-bold text-xs cursor-pointer flex items-center justify-center gap-1"
+      >
+        <mat-icon class="text-sm">print</mat-icon>
+        {{ t('pos.printInvoice') }}
+      </button>
+      <button
+        type="button"
+        (click)="closeInvoiceModal()"
+        class="bg-gray-100 border border-gray-200 py-3 rounded-xl font-bold text-xs cursor-pointer"
+      >
+        {{ t('pos.closeInvoice') }}
+      </button>
+    </div>
+  </div>
+</div>
+
+<div
+  *ngIf="isSplitModalOpen()"
+  class="fixed inset-0 bg-black bg-opacity-50 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-fade-in"
+>
+  <div class="bg-[var(--bg-surface)] border border-[var(--border-color)] max-w-sm w-full rounded-2xl shadow-2xl p-6 flex flex-col gap-5 animate-scale-up">
+    <div class="flex justify-between items-center border-b border-[var(--border-color)] pb-3">
+      <h3 class="font-extrabold text-sm text-[var(--text-primary)]">{{ t('pos.splitTitle') }}</h3>
+      <button type="button" (click)="closeSplitModal()" class="text-[var(--text-muted)] hover:text-[var(--text-primary)]">
+        <mat-icon>close</mat-icon>
+      </button>
+    </div>
+
+    <div class="flex flex-col gap-2">
+      <label class="text-[10px] font-bold text-[var(--text-muted)]">{{ t('pos.splitWays') }}</label>
+      <div class="flex gap-2 flex-wrap">
+        <button
+          *ngFor="let n of [2,3,4,5,6,8]"
+          type="button"
+          (click)="splitCount.set(n)"
+          [class.bg-[var(--accent-color)]]="splitCount() === n"
+          [class.text-white]="splitCount() === n"
+          [class.bg-[var(--bg-canvas)]]="splitCount() !== n"
+          class="w-10 h-10 rounded-xl border border-[var(--border-color)] text-xs font-bold cursor-pointer"
+        >
+          {{ n }}
+        </button>
+      </div>
+    </div>
+
+    <div class="p-4 bg-[var(--bg-canvas)] rounded-xl border border-[var(--border-color)] flex flex-col gap-2 text-xs">
+      <div class="flex justify-between text-[var(--text-secondary)]">
+        <span>{{ t('pos.total') }}</span>
+        <span class="font-bold">{{ formatMoney(orderTotal()) }}</span>
+      </div>
+      <div class="flex justify-between text-[var(--text-primary)]">
+        <span>{{ t('pos.perPerson') }} ({{ splitCount() }})</span>
+        <span class="font-extrabold text-[var(--accent-color)]">{{ formatMoney(splitAmount()) }}</span>
+      </div>
+    </div>
+
+    <div class="flex flex-col gap-2">
+      <button
+        type="button"
+        (click)="paySplitPortion()"
+        class="w-full bg-[var(--accent-color)] text-white py-3 rounded-xl font-bold text-xs cursor-pointer"
+      >
+        {{ t('pos.paySplit') }} — {{ formatMoney(splitAmount()) }}
+      </button>
+      <button
+        type="button"
+        (click)="openPaymentModal(orderTotal())"
+        class="w-full bg-[var(--primary-color)] text-[var(--primary-contrast)] py-3 rounded-xl font-bold text-xs cursor-pointer"
+      >
+        {{ t('pos.payAll') }} — {{ formatMoney(orderTotal()) }}
+      </button>
+      <button
+        type="button"
+        (click)="closeSplitModal()"
+        class="w-full bg-[var(--bg-canvas)] border border-[var(--border-color)] py-2.5 rounded-xl text-xs font-semibold cursor-pointer"
+      >
+        {{ t('common.cancel') }}
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- PAYMENT MODAL -->
+<div
+  *ngIf="isPaymentModalOpen()"
+  class="fixed inset-0 bg-black bg-opacity-50 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-fade-in"
+>
+  <div class="bg-[var(--bg-surface)] border border-[var(--border-color)] max-w-sm w-full rounded-2xl shadow-2xl p-6 flex flex-col gap-5 animate-scale-up">
+    <div class="flex justify-between items-center border-b border-[var(--border-color)] pb-3">
+      <h3 class="font-extrabold text-sm text-[var(--text-primary)]">{{ t('pos.paymentTitle') }}</h3>
+      <button type="button" (click)="closePaymentModal()" class="text-[var(--text-muted)] hover:text-[var(--text-primary)]">
+        <mat-icon>close</mat-icon>
+      </button>
+    </div>
+
+    <div class="flex justify-between items-center p-3 bg-[var(--bg-canvas)] rounded-xl border border-[var(--border-color)] text-sm">
+      <span class="text-[var(--text-secondary)]">{{ t('pos.total') }}</span>
+      <span class="font-extrabold text-[var(--text-primary)]">{{ formatMoney(pendingPayAmount()) }}</span>
+    </div>
+
+    <div class="grid grid-cols-3 gap-2">
+      <button
+        *ngFor="let method of paymentMethodOptions"
+        type="button"
+        (click)="setPaymentMethod(method)"
+        [class.bg-[var(--primary-color)]]="paymentMethod() === method"
+        [class.text-[var(--primary-contrast)]]="paymentMethod() === method"
+        [class.bg-[var(--bg-canvas)]]="paymentMethod() !== method"
+        [class.text-[var(--text-secondary)]]="paymentMethod() !== method"
+        class="py-2.5 rounded-xl border border-[var(--border-color)] text-[10px] font-bold cursor-pointer flex flex-col items-center gap-1"
+      >
+        <mat-icon class="text-sm">{{ method === 'cash' ? 'payments' : method === 'card' ? 'credit_card' : 'account_balance_wallet' }}</mat-icon>
+        <span>{{ paymentMethodLabel(method) }}</span>
+      </button>
+    </div>
+
+    <div *ngIf="paymentMethod() === 'mixed'" class="flex flex-col gap-3">
+      <div class="flex flex-col gap-1">
+        <label class="text-[10px] font-bold text-[var(--text-muted)]">{{ t('pos.cashAmount') }}</label>
+        <input
+          type="number"
+          min="0"
+          step="0.01"
+          [ngModel]="cashPaidAmount()"
+          (ngModelChange)="onCashAmountChange(+$event)"
+          class="pos-input"
+        />
+      </div>
+      <div class="flex justify-between items-center p-3 rounded-xl bg-emerald-500 bg-opacity-10 border border-emerald-500 border-opacity-20 text-xs">
+        <span class="text-emerald-700 font-semibold">{{ t('pos.cardAmount') }}</span>
+        <span class="font-extrabold text-emerald-700">{{ formatMoney(cardPaidAmount()) }}</span>
+      </div>
+    </div>
+
+    <div *ngIf="paymentMethod() === 'cash'" class="p-3 rounded-xl bg-[var(--bg-canvas)] border border-[var(--border-color)] text-xs flex justify-between">
+      <span>{{ t('pos.paidCash') }}</span>
+      <span class="font-bold">{{ formatMoney(pendingPayAmount()) }}</span>
+    </div>
+
+    <div *ngIf="paymentMethod() === 'card'" class="p-3 rounded-xl bg-[var(--bg-canvas)] border border-[var(--border-color)] text-xs flex justify-between">
+      <span>{{ t('pos.paidCard') }}</span>
+      <span class="font-bold">{{ formatMoney(pendingPayAmount()) }}</span>
+    </div>
+
+    <div class="flex flex-col gap-2">
+      <button
+        type="button"
+        (click)="confirmPayment()"
+        [disabled]="!isPaymentValid()"
+        class="w-full bg-[var(--success-color)] text-white py-3 rounded-xl font-bold text-xs cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+      >
+        {{ t('pos.confirmPayment') }}
+      </button>
+      <button
+        type="button"
+        (click)="closePaymentModal()"
+        class="w-full bg-[var(--bg-canvas)] border border-[var(--border-color)] py-2.5 rounded-xl text-xs font-semibold cursor-pointer"
+      >
+        {{ t('common.cancel') }}
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- INVOICES LIST MODAL (Suspended + Paid) -->
+<div
+  *ngIf="isInvoicesModalOpen()"
+  class="fixed inset-0 bg-black bg-opacity-50 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-fade-in"
+>
+  <div class="bg-[var(--bg-surface)] border border-[var(--border-color)] max-w-lg w-full rounded-2xl shadow-2xl flex flex-col max-h-[85vh] animate-scale-up">
+    <div class="p-4 border-b border-[var(--border-color)] flex justify-between items-center">
+      <h3 class="font-extrabold text-sm text-[var(--text-primary)]">{{ t('pos.invoicesDrawer') }}</h3>
+      <button type="button" (click)="closeInvoicesModal()" class="text-[var(--text-muted)] hover:text-[var(--text-primary)]">
+        <mat-icon>close</mat-icon>
+      </button>
+    </div>
+
+    <div class="grid grid-cols-2 gap-2 p-3 border-b border-[var(--border-color)]">
+      <button
+        type="button"
+        (click)="invoicesTab.set('suspended')"
+        [class.bg-amber-500]="invoicesTab() === 'suspended'"
+        [class.text-white]="invoicesTab() === 'suspended'"
+        [class.bg-[var(--bg-canvas)]]="invoicesTab() !== 'suspended'"
+        [class.text-[var(--text-secondary)]]="invoicesTab() !== 'suspended'"
+        class="py-2.5 rounded-xl border border-[var(--border-color)] text-[10px] font-bold cursor-pointer flex items-center justify-center gap-1"
+      >
+        <mat-icon class="text-sm">pause_circle</mat-icon>
+        {{ t('pos.tabSuspended') }}
+        <span *ngIf="invoiceStore.suspendedCount() > 0">({{ invoiceStore.suspendedCount() }})</span>
+      </button>
+      <button
+        type="button"
+        (click)="invoicesTab.set('paid')"
+        [class.bg-emerald-500]="invoicesTab() === 'paid'"
+        [class.text-white]="invoicesTab() === 'paid'"
+        [class.bg-[var(--bg-canvas)]]="invoicesTab() !== 'paid'"
+        [class.text-[var(--text-secondary)]]="invoicesTab() !== 'paid'"
+        class="py-2.5 rounded-xl border border-[var(--border-color)] text-[10px] font-bold cursor-pointer flex items-center justify-center gap-1"
+      >
+        <mat-icon class="text-sm">receipt_long</mat-icon>
+        {{ t('pos.tabPaid') }}
+        <span *ngIf="invoiceStore.paidCount() > 0">({{ invoiceStore.paidCount() }})</span>
+      </button>
+    </div>
+
+    <div class="flex-1 overflow-y-auto p-3 flex flex-col gap-2 min-h-[200px]">
+      <!-- Suspended -->
+      <ng-container *ngIf="invoicesTab() === 'suspended'">
+        <div *ngIf="invoiceStore.suspendedOrders().length === 0" class="flex flex-col items-center justify-center py-12 text-[var(--text-muted)] gap-2">
+          <mat-icon>pause_circle</mat-icon>
+          <span class="text-xs">{{ t('pos.noSuspended') }}</span>
+        </div>
+        <article
+          *ngFor="let order of invoiceStore.suspendedOrders()"
+          class="p-3 rounded-xl border border-[var(--border-color)] bg-[var(--bg-canvas)] flex flex-col gap-2"
+        >
+          <div class="flex justify-between items-start gap-2">
+            <div class="flex flex-col gap-0.5 text-xs">
+              <span class="font-bold text-[var(--text-primary)]">{{ order.label }}</span>
+              <span class="text-[10px] text-[var(--text-muted)]">{{ t('pos.suspendedAt') }}: {{ formatSuspendedDate(order.suspendedAt) }}</span>
+              <span class="text-[10px] text-[var(--text-secondary)]">
+                {{ order.itemCount }} {{ t('pos.itemsCount') }} · {{ formatMoney(order.total) }}
+              </span>
+              <span *ngIf="order.orderSentToKitchen" class="text-[9px] text-emerald-600 font-bold">{{ t('pos.status.kitchenSent') }}</span>
+            </div>
+            <div class="flex flex-col gap-1 flex-shrink-0">
+              <button
+                type="button"
+                (click)="recallSuspendedOrder(order)"
+                class="px-3 py-1.5 rounded-lg bg-[var(--primary-color)] text-[var(--primary-contrast)] text-[10px] font-bold cursor-pointer"
+              >
+                {{ t('pos.recallInvoice') }}
+              </button>
+              <button
+                type="button"
+                (click)="deleteSuspendedOrder(order.id)"
+                class="px-3 py-1.5 rounded-lg bg-[var(--bg-surface)] border border-[var(--border-color)] text-[10px] font-semibold text-red-600 cursor-pointer"
+              >
+                {{ t('pos.deleteSuspended') }}
+              </button>
+            </div>
+          </div>
+        </article>
+      </ng-container>
+
+      <!-- Paid -->
+      <ng-container *ngIf="invoicesTab() === 'paid'">
+        <div *ngIf="invoiceStore.paidInvoicesList().length === 0" class="flex flex-col items-center justify-center py-12 text-[var(--text-muted)] gap-2">
+          <mat-icon>receipt_long</mat-icon>
+          <span class="text-xs">{{ t('pos.noPaid') }}</span>
+        </div>
+        <article
+          *ngFor="let inv of invoiceStore.paidInvoicesList()"
+          class="p-3 rounded-xl border border-[var(--border-color)] bg-[var(--bg-canvas)] flex flex-col gap-2"
+        >
+          <div class="flex justify-between items-start gap-2">
+            <div class="flex flex-col gap-0.5 text-xs">
+              <span class="font-bold text-[var(--text-primary)]">{{ inv.invoiceNo }}</span>
+              <span class="text-[10px] text-[var(--text-muted)]">{{ formatSuspendedDate(inv.date) }}</span>
+              <span class="text-[10px] text-[var(--text-secondary)]">{{ inv.tableLabel }} · {{ formatMoney(inv.total) }}</span>
+              <span class="text-[9px] text-emerald-600 font-bold">{{ t('pos.posted') }}</span>
+            </div>
+            <div class="flex flex-col gap-1 flex-shrink-0">
+              <button
+                type="button"
+                (click)="viewPaidInvoice(inv)"
+                class="px-3 py-1.5 rounded-lg bg-[var(--bg-surface)] border border-[var(--border-color)] text-[10px] font-bold cursor-pointer"
+              >
+                {{ t('pos.viewInvoice') }}
+              </button>
+              <button
+                type="button"
+                (click)="reprintPaidInvoice(inv)"
+                class="px-3 py-1.5 rounded-lg bg-emerald-500 text-white text-[10px] font-bold cursor-pointer"
+              >
+                {{ t('pos.reprintInvoice') }}
+              </button>
+            </div>
+          </div>
+        </article>
+      </ng-container>
+    </div>
+  </div>
+</div>
+
+<!-- CUSTOMER MODAL -->
+<div
+  *ngIf="isCustomerModalOpen()"
+  class="fixed inset-0 bg-black bg-opacity-50 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-fade-in"
+>
+  <div class="bg-[var(--bg-surface)] border border-[var(--border-color)] max-w-sm w-full rounded-2xl shadow-2xl p-6 flex flex-col gap-4 animate-scale-up">
+    <div class="flex justify-between items-center border-b border-[var(--border-color)] pb-3">
+      <h3 class="font-extrabold text-sm text-[var(--text-primary)]">{{ t('pos.customer.modalTitle') }}</h3>
+      <button type="button" (click)="closeCustomerModal()" class="text-[var(--text-muted)] hover:text-[var(--text-primary)]">
+        <mat-icon>close</mat-icon>
+      </button>
+    </div>
+
+    <div class="flex flex-col gap-3 text-xs">
+      <div class="flex flex-col gap-1">
+        <label class="font-bold text-[var(--text-muted)]">{{ t('pos.customer.name') }}</label>
+        <input type="text" class="pos-input" [ngModel]="customerDraft().name" (ngModelChange)="updateCustomerDraftField('name', $event)" />
+      </div>
+      <div class="flex flex-col gap-1">
+        <label class="font-bold text-[var(--text-muted)]">{{ t('pos.customer.phone') }}</label>
+        <input type="tel" class="pos-input" [ngModel]="customerDraft().phone" (ngModelChange)="updateCustomerDraftField('phone', $event)" />
+      </div>
+      <div class="flex flex-col gap-1">
+        <label class="font-bold text-[var(--text-muted)]">{{ t('pos.customer.tax') }}</label>
+        <input type="text" class="pos-input" [ngModel]="customerDraft().taxNumber" (ngModelChange)="updateCustomerDraftField('taxNumber', $event)" [placeholder]="t('pos.customer.taxHint')" />
+      </div>
+      <div class="flex flex-col gap-1">
+        <label class="font-bold text-[var(--text-muted)]">{{ t('pos.customer.email') }}</label>
+        <input type="email" class="pos-input" [ngModel]="customerDraft().email" (ngModelChange)="updateCustomerDraftField('email', $event)" />
+      </div>
+      <div class="flex flex-col gap-1">
+        <label class="font-bold text-[var(--text-muted)]">{{ t('pos.customer.address') }}</label>
+        <input type="text" class="pos-input" [ngModel]="customerDraft().address" (ngModelChange)="updateCustomerDraftField('address', $event)" />
+      </div>
+    </div>
+
+    <div class="flex flex-col gap-2">
+      <button type="button" (click)="saveCustomerDraft()" class="w-full bg-[var(--primary-color)] text-[var(--primary-contrast)] py-3 rounded-xl font-bold text-xs cursor-pointer">
+        {{ t('pos.customer.save') }}
+      </button>
+      <button type="button" (click)="resetCustomerToDefault()" class="w-full bg-[var(--bg-canvas)] border border-[var(--border-color)] py-2.5 rounded-xl text-xs font-semibold cursor-pointer">
+        {{ t('pos.customer.reset') }}
+      </button>
+    </div>
+  </div>
+</div>

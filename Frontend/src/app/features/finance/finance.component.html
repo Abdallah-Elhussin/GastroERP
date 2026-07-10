@@ -1,0 +1,67 @@
+<div class="h-full flex flex-col gap-6 -m-6 p-6 overflow-y-auto">
+  
+  <div class="flex justify-between items-center select-none text-left flex-shrink-0">
+    <div>
+      <h2 class="text-xl font-bold tracking-tight text-[var(--text-primary)]">{{ t('finance.title') }}</h2>
+      <p class="text-xs text-[var(--text-secondary)] mt-0.5">{{ t('finance.subtitle') }}</p>
+    </div>
+  </div>
+
+  <div class="grid grid-cols-1 md:grid-cols-3 gap-6 select-none">
+    <app-stat-card 
+      [title]="t('finance.stat.ledger')" 
+      value="$42,500.00" 
+      [subtitle]="t('finance.stat.ledgerSub')" 
+      icon="account_balance"
+      [trend]="t('finance.trend.ledger')"
+      trendType="up"
+    ></app-stat-card>
+    
+    <app-stat-card 
+      [title]="t('finance.stat.profit')" 
+      value="$18,240.50" 
+      [subtitle]="t('finance.stat.profitSub')" 
+      icon="trending_up"
+      [trend]="t('finance.trend.profit')"
+      trendType="up"
+    ></app-stat-card>
+
+    <app-stat-card 
+      [title]="t('finance.stat.liability')" 
+      value="$6,000.00" 
+      [subtitle]="t('finance.stat.liabilitySub')" 
+      icon="money_off"
+      [trend]="t('finance.trend.liability')"
+      trendType="down"
+    ></app-stat-card>
+  </div>
+
+  <app-card [title]="t('finance.ledgerTitle')">
+    <app-table [columns]="columns()" [data]="ledgerData()" [pagination]="true" [defaultPageSize]="5">
+      <ng-template #rowTemplate let-tx let-column="column">
+        <ng-container [ngSwitch]="column.key">
+          
+          <span *ngSwitchCase="'type'">
+            <span 
+              [class.bg-emerald-500]="tx.type === 'Revenue'"
+              [class.bg-red-500]="tx.type === 'Expense'"
+              class="px-2 py-0.5 rounded text-white font-bold text-[9px] uppercase tracking-wider"
+            >
+              {{ tx.type === 'Revenue' ? t('finance.type.revenue') : t('finance.type.expense') }}
+            </span>
+          </span>
+
+          <span *ngSwitchCase="'amount'" [class.text-emerald-600]="tx.type === 'Revenue'" [class.text-red-500]="tx.type === 'Expense'" class="font-bold">
+            {{ tx.type === 'Revenue' ? '+' : '-' }}${{ tx.amount.toFixed(2) }}
+          </span>
+
+          <span *ngSwitchDefault>
+            {{ tx[column.key] }}
+          </span>
+
+        </ng-container>
+      </ng-template>
+    </app-table>
+  </app-card>
+
+</div>

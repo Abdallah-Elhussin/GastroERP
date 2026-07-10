@@ -91,3 +91,10 @@ public enum RecipeStatus
     Active = 2,
     Obsolete = 3
 }
+
+/// <summary>نوع الصنف المخزني — خام أو مصنع</summary>
+public enum InventoryItemKind
+{
+    Raw = 1,
+    Manufactured = 2
+}

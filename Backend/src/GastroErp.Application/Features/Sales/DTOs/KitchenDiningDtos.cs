@@ -66,6 +66,42 @@ public record KitchenTicketFilterDto(
     int PageSize = 20
 );
 
+public record KdsTicketItemViewDto(
+    Guid Id,
+    string Name,
+    decimal Quantity,
+    IReadOnlyList<string> Notes
+);
+
+public record KdsTicketViewDto(
+    Guid Id,
+    string TicketNumber,
+    string TableLabel,
+    string OrderType,
+    Guid KitchenStationId,
+    KitchenStationType StationType,
+    string StationNameAr,
+    string? StationNameEn,
+    string KdsStatus,
+    int TimerSeconds,
+    DateTimeOffset CreatedAt,
+    IReadOnlyList<KdsTicketItemViewDto> Items
+);
+
+public record DispatchPosToKitchenDto(
+    string OrderReference,
+    string TableLabel,
+    string OrderType,
+    IReadOnlyList<DispatchPosKitchenItemDto> Items
+);
+
+public record DispatchPosKitchenItemDto(
+    string Name,
+    decimal Quantity,
+    string? Notes,
+    string? CategoryKey = null
+);
+
 // ─── Floor Plan DTOs ──────────────────────────────────────────────────────────
 
 public record CreateFloorPlanDto(Guid BranchId, string NameAr, string? NameEn = null, int SortOrder = 0);

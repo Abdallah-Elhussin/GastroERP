@@ -1,0 +1,184 @@
+<div class="flex flex-col gap-4 w-full text-left">
+  
+  <!-- Table Top Control Actions Bar -->
+  <div class="flex flex-col sm:flex-row justify-between items-center gap-3 bg-[var(--bg-canvas)] bg-opacity-35 p-3 rounded-2xl border border-[var(--border-color)] select-none">
+    
+    <div class="flex items-center gap-2">
+      <!-- Density controls -->
+      <button 
+        [matMenuTriggerFor]="densityMenu"
+        class="bg-[var(--bg-surface)] hover:bg-[var(--bg-surface-hover)] border border-[var(--border-color)] text-[var(--text-primary)] px-3 py-1.5 rounded-xl text-xs font-semibold flex items-center gap-1 cursor-pointer transition-all shadow-sm"
+      >
+        <mat-icon class="text-sm">format_line_spacing</mat-icon>
+        <span>{{ t('table.density') }}: {{ densityLabel() }}</span>
+      </button>
+      <mat-menu #densityMenu="matMenu" class="custom-menu">
+        <button mat-menu-item (click)="density.set('compact')">
+          <mat-icon class="text-xs">density_medium</mat-icon>
+          <span>{{ t('table.compact') }}</span>
+        </button>
+        <button mat-menu-item (click)="density.set('standard')">
+          <mat-icon class="text-xs">density_medium</mat-icon>
+          <span>{{ t('table.standard') }}</span>
+        </button>
+        <button mat-menu-item (click)="density.set('relaxed')">
+          <mat-icon class="text-xs">density_medium</mat-icon>
+          <span>{{ t('table.relaxed') }}</span>
+        </button>
+      </mat-menu>
+
+      <!-- Column Visibility Selector -->
+      <button 
+        [matMenuTriggerFor]="columnsMenu"
+        class="bg-[var(--bg-surface)] hover:bg-[var(--bg-surface-hover)] border border-[var(--border-color)] text-[var(--text-primary)] px-3 py-1.5 rounded-xl text-xs font-semibold flex items-center gap-1 cursor-pointer transition-all shadow-sm"
+      >
+        <mat-icon class="text-sm">view_column</mat-icon>
+        <span>{{ t('table.columns') }}</span>
+      </button>
+      <mat-menu #columnsMenu="matMenu" class="custom-menu">
+        <button 
+          mat-menu-item 
+          *ngFor="let col of columns"
+          (click)="toggleColumn(col.key); $event.stopPropagation();"
+          class="flex items-center justify-between"
+        >
+          <span class="mr-6">{{ col.label }}</span>
+          <mat-icon class="text-xs" *ngIf="visibleColumns().includes(col.key)">check</mat-icon>
+        </button>
+      </mat-menu>
+    </div>
+
+    <!-- Export triggers -->
+    <div class="flex items-center gap-2">
+      <button 
+        (click)="exportCSV()"
+        class="bg-[var(--bg-surface)] hover:bg-[var(--bg-surface-hover)] border border-[var(--border-color)] text-[var(--text-primary)] px-3 py-1.5 rounded-xl text-xs font-semibold flex items-center gap-1 cursor-pointer transition-all shadow-sm"
+      >
+        <mat-icon class="text-sm">download</mat-icon>
+        <span>{{ t('table.exportCsv') }}</span>
+      </button>
+      <button 
+        (click)="printTable()"
+        class="bg-[var(--bg-surface)] hover:bg-[var(--bg-surface-hover)] border border-[var(--border-color)] text-[var(--text-primary)] px-3 py-1.5 rounded-xl text-xs font-semibold flex items-center gap-1 cursor-pointer transition-all shadow-sm"
+      >
+        <mat-icon class="text-sm">print</mat-icon>
+        <span>{{ t('table.print') }}</span>
+      </button>
+    </div>
+
+  </div>
+
+  <!-- Main Scrollable Table Wrapper -->
+  <div class="w-full overflow-x-auto border border-[var(--border-color)] rounded-2xl bg-[var(--bg-surface)] shadow-sm">
+    <table class="w-full text-left border-collapse">
+      <thead>
+        <tr class="bg-[var(--bg-canvas)] bg-opacity-45 text-[var(--text-muted)] border-b border-[var(--border-color)] text-[10px] font-bold uppercase tracking-wider select-none">
+          <th 
+            *ngFor="let col of filteredColumns()" 
+            [style.width]="col.width || 'auto'"
+            (click)="toggleSort(col)"
+            [class.cursor-pointer]="col.sortable"
+            [class.hover:bg-[var(--bg-surface-hover)]]="col.sortable"
+            class="px-6 transition-all"
+            [ngClass]="{
+              'py-2': density() === 'compact',
+              'py-4': density() === 'standard',
+              'py-6': density() === 'relaxed'
+            }"
+          >
+            <div class="flex items-center gap-1">
+              <span>{{ col.label }}</span>
+              <mat-icon 
+                class="text-xs" 
+                *ngIf="col.sortable && sortKey() === col.key"
+              >
+                {{ sortDir() === 'asc' ? 'arrow_upward' : 'arrow_downward' }}
+              </mat-icon>
+            </div>
+          </th>
+        </tr>
+      </thead>
+      
+      <tbody class="text-xs divide-y divide-[var(--border-color-muted)]">
+        <tr 
+          *ngFor="let row of processedData(); let i = index"
+          class="hover:bg-[var(--bg-surface-hover)] transition-colors cursor-pointer"
+        >
+          <td 
+            *ngFor="let col of filteredColumns()" 
+            class="px-6 text-[var(--text-primary)]"
+            [ngClass]="{
+              'py-2': density() === 'compact',
+              'py-4': density() === 'standard',
+              'py-6': density() === 'relaxed'
+            }"
+          >
+            <ng-container *ngIf="rowTemplate; else defaultCell">
+              <ng-container *ngTemplateOutlet="rowTemplate; context: { $implicit: row, column: col, index: i }"></ng-container>
+            </ng-container>
+            <ng-template #defaultCell>
+              {{ row[col.key] }}
+            </ng-template>
+          </td>
+        </tr>
+        
+        <!-- Empty State in case of no data -->
+        <tr *ngIf="processedData().length === 0">
+          <td [attr.colspan]="filteredColumns().length" class="text-center py-10 text-[var(--text-muted)]">
+            {{ t('table.noEntries') }}
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Paginator Footer controls -->
+  <div 
+    *ngIf="pagination && data.length > 0"
+    class="flex flex-col sm:flex-row justify-between items-center gap-4 bg-[var(--bg-canvas)] bg-opacity-35 px-5 py-3.5 rounded-2xl border border-[var(--border-color)] text-xs text-[var(--text-muted)] font-semibold select-none"
+  >
+    <div class="flex items-center gap-2">
+      <span>{{ t('table.show') }}</span>
+      <select 
+        [value]="pageSize()" 
+        (change)="changePageSize(+$any($event.target).value)"
+        class="bg-[var(--bg-surface)] border border-[var(--border-color)] rounded-lg px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-[var(--accent-color)] text-[var(--text-primary)] font-bold cursor-pointer"
+      >
+        <option [value]="5">5</option>
+        <option [value]="10">10</option>
+        <option [value]="25">25</option>
+      </select>
+      <span>{{ t('table.entries') }}</span>
+    </div>
+
+    <div class="flex items-center gap-4">
+      <span>
+        {{ t('table.showing') }} {{ showingStart() }} {{ t('table.to') }} 
+        {{ showingEnd() }} {{ t('table.of') }} 
+        {{ data.length }} {{ t('table.entries') }}
+      </span>
+
+      <div class="flex items-center gap-2">
+        <button 
+          (click)="prevPage()"
+          [disabled]="pageIndex() === 0"
+          class="w-8 h-8 rounded-xl border border-[var(--border-color)] bg-[var(--bg-surface)] hover:bg-[var(--bg-surface-hover)] disabled:bg-gray-100 disabled:text-gray-400 disabled:cursor-not-allowed text-[var(--text-primary)] flex items-center justify-center cursor-pointer transition-all shadow-sm"
+        >
+          <mat-icon class="text-base leading-none">chevron_left</mat-icon>
+        </button>
+        <span class="font-bold text-[var(--text-primary)]">
+          {{ pageIndex() + 1 }} / {{ totalPages() }}
+        </span>
+        <button 
+          (click)="nextPage()"
+          [disabled]="pageIndex() >= totalPages() - 1"
+          class="w-8 h-8 rounded-xl border border-[var(--border-color)] bg-[var(--bg-surface)] hover:bg-[var(--bg-surface-hover)] disabled:bg-gray-100 disabled:text-gray-400 disabled:cursor-not-allowed text-[var(--text-primary)] flex items-center justify-center cursor-pointer transition-all shadow-sm"
+        >
+          <mat-icon class="text-base leading-none">chevron_right</mat-icon>
+        </button>
+      </div>
+    </div>
+
+  </div>
+
+</div>

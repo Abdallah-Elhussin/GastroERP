@@ -1,6 +1,7 @@
 using GastroErp.Application.Common.Interfaces;
-using GastroErp.Domain.Entities.Finance;
+using GastroErp.Application.Features.Onboarding;
 using GastroErp.Domain.Entities.Invoicing;
+using GastroErp.Domain.Entities.Finance;
 using GastroErp.Domain.Enums;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
@@ -17,21 +18,53 @@ public sealed class TaxAndFiscalSeeder : IDataSeeder
 
     public async Task SeedAsync(Guid tenantId, IApplicationDbContext context, CancellationToken ct = default)
     {
+        var company = await context.Companies
+            .AsNoTracking()
+            .FirstOrDefaultAsync(c => c.TenantId == tenantId, ct);
+
+        var countryCode = company?.Address.CountryEn switch
+        {
+            "Saudi Arabia" => "SA",
+            "United Arab Emirates" => "AE",
+            "Kuwait" => "KW",
+            "Qatar" => "QA",
+            "Oman" => "OM",
+            "Bahrain" => "BH",
+            "Egypt" => "EG",
+            "Sudan" => "SD",
+            _ => "SA"
+        };
+
         if (!await context.TaxRates.AnyAsync(t => t.TenantId == tenantId, ct))
         {
-            context.TaxRates.Add(TaxRate.Create(
-                tenantId, "VAT15", "ضريبة القيمة المضافة 15%", TaxType.VAT,
-                TaxCalculationMethod.Percentage, 15m, isInclusive: false,
-                nameEn: "VAT 15%", description: "ZATCA standard VAT rate"));
+            var vatRate = RestaurantOnboardingCatalog.GetVatRate(countryCode);
+            if (vatRate > 0)
+            {
+                context.TaxRates.Add(TaxRate.Create(
+                    tenantId,
+                    RestaurantOnboardingCatalog.GetVatCode(countryCode),
+                    RestaurantOnboardingCatalog.GetVatNameAr(countryCode),
+                    TaxType.VAT,
+                    TaxCalculationMethod.Percentage,
+                    vatRate,
+                    isInclusive: false,
+                    nameEn: RestaurantOnboardingCatalog.GetVatNameEn(countryCode),
+                    description: $"Default VAT for {countryCode}"));
+            }
+
             await context.SaveChangesAsync(ct);
         }
 
         var year = DateTime.UtcNow.Year;
+        var startMonth = company?.FiscalYearStartMonth ?? 1;
+        var startDate = new DateOnly(year, startMonth, 1);
+        var endDate = startDate.AddYears(1).AddDays(-1);
+
         if (!await context.FiscalPeriods.AnyAsync(p => p.TenantId == tenantId && p.FiscalYear == year, ct))
         {
             context.FiscalPeriods.Add(FiscalPeriod.Create(
                 tenantId, year, $"السنة المالية {year}",
-                new DateOnly(year, 1, 1), new DateOnly(year, 12, 31)));
+                startDate, endDate));
             await context.SaveChangesAsync(ct);
         }
 

@@ -1,0 +1,83 @@
+<div class="grid grid-cols-1 xl:grid-cols-3 gap-6 items-start text-left">
+  
+  <!-- Left Side: Add Comment Form (Span 1) -->
+  <div class="xl:col-span-1 bg-[var(--bg-surface)] border border-[var(--border-color)] rounded-2xl p-5 flex flex-col gap-4 shadow-sm">
+    <span class="text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-wider select-none">{{ t('workflow.activity.comment') }}</span>
+    
+    <div class="flex flex-col gap-1.5">
+      <textarea 
+        #commentArea
+        rows="4"
+        [placeholder]="t('workflow.activity.placeholder')"
+        class="w-full bg-[var(--bg-canvas)] text-[var(--text-primary)] px-4 py-2.5 rounded-xl border border-[var(--border-color)] focus:outline-none focus:ring-1 focus:ring-[var(--accent-color)] text-xs"
+      ></textarea>
+    </div>
+
+    <!-- Actions -->
+    <div class="flex justify-between items-center select-none">
+      <button 
+        type="button"
+        (click)="attachFile()"
+        class="bg-[var(--bg-canvas)] hover:bg-[var(--bg-surface-hover)] border border-[var(--border-color)] text-[var(--text-secondary)] px-3 py-1.5 rounded-xl text-[10px] font-bold cursor-pointer flex items-center gap-1"
+        [title]="t('workflow.activity.addClip')"
+      >
+        <mat-icon class="text-sm">attach_file</mat-icon>
+        <span>{{ t('workflow.activity.addClip') }}</span>
+      </button>
+
+      <button 
+        type="button"
+        (click)="addComment(commentArea)"
+        class="bg-[var(--primary-color)] text-[var(--primary-contrast)] hover:bg-[var(--primary-color-hover)] px-4 py-2 rounded-xl text-[10px] font-bold shadow-md cursor-pointer flex items-center gap-1"
+      >
+        <mat-icon class="text-sm">send</mat-icon>
+        <span>{{ t('workflow.activity.post') }}</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- Right Side: Activity Timeline Feed (Span 2) -->
+  <div class="xl:col-span-2 flex flex-col gap-5">
+    <div class="flex flex-col select-none">
+      <span class="text-xs font-bold text-[var(--text-primary)]">{{ t('workflow.activity.title') }}</span>
+      <span class="text-[10px] text-[var(--text-muted)]">{{ t('workflow.activity.subtitle') }}</span>
+    </div>
+
+    <!-- Timeline Entries -->
+    <div class="flex flex-col gap-4 border-l border-[var(--border-color)] ml-4 pl-6 relative">
+      <div 
+        *ngFor="let item of feed()"
+        class="bg-[var(--bg-surface)] border border-[var(--border-color)] rounded-2xl p-5 shadow-sm relative"
+      >
+        <!-- Marker dot -->
+        <span class="absolute top-6 left-neg-8-5 w-3.5 h-3.5 rounded-full bg-[var(--bg-canvas)] border-2 border-[var(--primary-color)] flex items-center justify-center">
+          <span class="w-1.5 h-1.5 rounded-full bg-[var(--primary-color)]"></span>
+        </span>
+
+        <!-- Header -->
+        <div class="flex items-center gap-3 select-none">
+          <img [src]="item.avatar" [alt]="item.author" class="w-8 h-8 rounded-full object-cover border border-[var(--border-color)]" />
+          <div class="flex flex-col">
+            <span class="text-xs font-extrabold text-[var(--text-primary)]">{{ item.author }}</span>
+            <span class="text-[9px] text-[var(--text-muted)] font-semibold mt-0.5">{{ item.time }}</span>
+          </div>
+        </div>
+
+        <!-- Description -->
+        <p class="text-xs text-[var(--text-secondary)] mt-3 leading-relaxed">{{ item.text }}</p>
+
+        <!-- Attachment Images -->
+        <div *ngIf="item.attachments && item.attachments.length > 0" class="flex gap-2 mt-4 select-none">
+          <div 
+            *ngFor="let img of item.attachments"
+            class="w-20 h-20 rounded-xl bg-[var(--bg-canvas)] border border-[var(--border-color)] overflow-hidden flex items-center justify-center p-1.5 cursor-zoom-in"
+          >
+            <img [src]="img" class="max-h-full max-w-full object-contain rounded-lg" />
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+</div>

@@ -1,0 +1,122 @@
+<div class="h-full flex flex-col gap-6 -m-6 p-6 overflow-y-auto">
+  
+  <div class="flex flex-col sm:flex-row justify-between items-center gap-4 flex-shrink-0 select-none text-left">
+    <div>
+      <h2 class="text-xl font-bold tracking-tight text-[var(--text-primary)]">{{ t('dash.title') }}</h2>
+      <p class="text-xs text-[var(--text-secondary)] mt-0.5">{{ t('dash.subtitle') }}</p>
+    </div>
+    
+    <div class="flex items-center gap-2">
+      <app-button 
+        variant="secondary" 
+        [icon]="isCustomizing() ? 'done' : 'dashboard_customize'" 
+        (click)="toggleCustomizeMode()"
+      >
+        {{ isCustomizing() ? t('dash.saveLayout') : t('dash.customize') }}
+      </app-button>
+      <app-button 
+        *ngIf="isCustomizing()"
+        variant="outline" 
+        icon="restart_alt" 
+        (click)="resetLayout()"
+      >
+        {{ t('dash.resetGrid') }}
+      </app-button>
+    </div>
+  </div>
+
+  <div 
+    *ngIf="isCustomizing()"
+    class="p-4 bg-[var(--bg-surface)] border border-[var(--border-color)] rounded-xl flex flex-wrap gap-4 text-left animate-slide-up select-none"
+  >
+    <div class="flex items-center gap-2" *ngFor="let w of widgets()">
+      <label class="inline-flex items-center gap-2 cursor-pointer text-xs font-semibold">
+        <input 
+          type="checkbox" 
+          [checked]="w.visible"
+          (change)="toggleWidget(w.id)"
+          class="rounded text-[var(--accent-color)] border-[var(--border-color)] focus:ring-[var(--accent-color)]"
+        />
+        <span>{{ t(w.titleKey) }}</span>
+      </label>
+    </div>
+  </div>
+
+  <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+    <ng-container *ngFor="let w of activeWidgets()">
+      <app-card 
+        [title]="t(w.titleKey)"
+        [class]="w.size"
+        [hasHeader]="true"
+        [hoverElevation]="isCustomizing()"
+      >
+        <div header-actions class="flex items-center gap-1.5 select-none" *ngIf="isCustomizing()">
+          <button (click)="resizeWidget(w.id, 'col-span-1')" [class.text-[var(--accent-color)]]="w.size === 'col-span-1'" class="text-[10px] font-bold px-1 hover:underline cursor-pointer">1x</button>
+          <button (click)="resizeWidget(w.id, 'col-span-2')" [class.text-[var(--accent-color)]]="w.size === 'col-span-2'" class="text-[10px] font-bold px-1 hover:underline cursor-pointer">2x</button>
+          <button (click)="resizeWidget(w.id, 'col-span-3')" [class.text-[var(--accent-color)]]="w.size === 'col-span-3'" class="text-[10px] font-bold px-1 hover:underline cursor-pointer">3x</button>
+          <div class="h-4 w-px bg-[var(--border-color)] mx-1"></div>
+          <button (click)="togglePin(w.id)" [class.text-amber-500]="w.pinned" class="text-[var(--text-muted)] hover:text-amber-500 cursor-pointer">
+            <mat-icon class="text-sm">push_pin</mat-icon>
+          </button>
+          <button (click)="toggleWidget(w.id)" class="text-[var(--text-muted)] hover:text-red-500 cursor-pointer">
+            <mat-icon class="text-sm">visibility_off</mat-icon>
+          </button>
+        </div>
+
+        <ng-container *ngIf="w.requiredRole === 'Chef Administrator'; else publicWidget">
+          <div class="flex flex-col gap-4 text-left">
+            <div *ngIf="w.id === 'sales'">
+              <app-chart></app-chart>
+            </div>
+            <div *ngIf="w.id === 'hr'" class="flex flex-col sm:flex-row gap-6 items-center">
+              <img 
+                src="https://images.unsplash.com/photo-1577219491135-ce391730fb2c?w=150&auto=format&fit=crop&q=80" 
+                [alt]="dataService.employees[0].name" 
+                class="w-20 h-20 rounded-2xl object-cover border border-[var(--border-color)] shadow-sm"
+              />
+              <div class="flex-1 flex flex-col gap-2">
+                <div class="flex items-center gap-2">
+                  <span class="font-extrabold text-sm text-[var(--text-primary)]">{{ dataService.employees[0].name }}</span>
+                  <span class="bg-emerald-500 bg-opacity-10 text-emerald-500 text-[9px] font-bold px-2 py-0.5 rounded-full">{{ t('dash.hr.active') }}</span>
+                </div>
+                <p class="text-[10px] text-[var(--text-secondary)] leading-relaxed italic">{{ dataService.employees[0].performanceNotes }}</p>
+                <div class="grid grid-cols-2 gap-4 mt-1.5 text-xs select-none">
+                  <div class="flex flex-col"><span class="text-[10px] text-[var(--text-muted)]">{{ t('dash.hr.attendance') }}</span><span class="font-bold text-[var(--text-primary)]">{{ dataService.employees[0].attendance }}</span></div>
+                  <div class="flex flex-col"><span class="text-[10px] text-[var(--text-muted)]">{{ t('dash.hr.tenure') }}</span><span class="font-bold text-[var(--text-primary)]">{{ dataService.employees[0].tenure }}</span></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </ng-container>
+
+        <ng-template #publicWidget>
+          <div class="flex flex-col gap-4 text-left">
+            <div *ngIf="w.id === 'kds'" class="flex flex-col gap-3 select-none">
+              <div class="flex justify-between items-center text-xs border-b border-[var(--border-color-muted)] pb-2.5" *ngFor="let status of kdsStatuses()">
+                <div class="flex items-center gap-2 font-medium">
+                  <span [ngClass]="['w-2 h-2 rounded-full', status.bg]"></span>
+                  <span>{{ t(status.labelKey) }}</span>
+                </div>
+                <span [ngClass]="['font-extrabold text-xs', status.color]">{{ status.count }}</span>
+              </div>
+            </div>
+            <div *ngIf="w.id === 'stock'" class="flex flex-col gap-3 select-none">
+              <div class="flex justify-between items-center text-xs border-b border-[var(--border-color-muted)] pb-2.5" *ngFor="let item of stockAlerts()">
+                <span class="font-medium text-[var(--text-primary)]">{{ t(item.nameKey) }}</span>
+                <span 
+                  [class.bg-[var(--warning-color-bg)]]="item.status === 'low_stock'"
+                  [class.text-[var(--warning-color-text)]]="item.status === 'low_stock'"
+                  [class.bg-[var(--danger-color-bg)]]="item.status === 'out_of_stock'"
+                  [class.text-[var(--danger-color-text)]]="item.status === 'out_of_stock'"
+                  class="px-2 py-0.5 rounded font-bold text-[9px] uppercase tracking-wide"
+                >
+                  {{ t(item.badgeKey) }}
+                </span>
+              </div>
+            </div>
+          </div>
+        </ng-template>
+      </app-card>
+    </ng-container>
+  </div>
+</div>

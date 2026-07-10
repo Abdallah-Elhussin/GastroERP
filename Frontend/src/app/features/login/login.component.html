@@ -1,0 +1,120 @@
+<app-auth-layout>
+  
+  <!-- Login Form Card Container -->
+  <div class="max-w-md w-full bg-[var(--bg-surface)] border border-[var(--border-color)] p-8 rounded-2xl shadow-xl relative text-left">
+    
+    <!-- Top Card Quick Config Toggles -->
+    <div class="absolute top-4 right-4 flex items-center gap-2">
+      <button mat-icon-button (click)="langService.toggleLanguage()" [title]="langService.language() === 'en' ? 'العربية' : 'English'">
+        <mat-icon class="text-sm">translate</mat-icon>
+      </button>
+      <button mat-icon-button (click)="themeService.toggleTheme()" [title]="t('login.themeToggle')">
+        <mat-icon class="text-sm">{{ themeService.theme() === 'dark' ? 'light_mode' : 'dark_mode' }}</mat-icon>
+      </button>
+    </div>
+
+    <!-- Header Section -->
+    <div class="flex flex-col gap-2 mb-8 text-left mt-2">
+      <h1 class="text-2xl font-extrabold tracking-tight text-[var(--text-primary)]">
+        {{ t('login.title') }}
+      </h1>
+      <p class="text-xs text-[var(--text-secondary)]">
+        {{ t('login.subtitle') }}
+      </p>
+    </div>
+
+    <!-- Login Form element -->
+    <form [formGroup]="loginForm" (ngSubmit)="onSubmit()" class="flex flex-col gap-5">
+      
+      <!-- Email Input -->
+      <div class="flex flex-col gap-1.5 text-left">
+        <label for="email" class="text-xs font-semibold text-[var(--text-secondary)]">
+          {{ t('login.email') }}
+        </label>
+        <div class="relative">
+          <span class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-[var(--text-muted)]">
+            <mat-icon class="text-lg">person</mat-icon>
+          </span>
+          <input 
+            id="email"
+            type="email" 
+            formControlName="email"
+            [placeholder]="t('login.emailPlaceholder')" 
+            class="w-full bg-[var(--bg-canvas)] text-[var(--text-primary)] pl-11 pr-4 py-3 rounded-xl border border-[var(--border-color)] focus:outline-none focus:ring-2 focus:ring-[var(--accent-color)] text-sm transition-all"
+            [class.border-red-500]="loginForm.get('email')?.touched && loginForm.get('email')?.invalid"
+          />
+        </div>
+        <span 
+          *ngIf="loginForm.get('email')?.touched && loginForm.get('email')?.invalid" 
+          class="text-[10px] text-red-500 font-medium"
+        >
+          {{ t('login.emailInvalid') }}
+        </span>
+      </div>
+
+      <!-- Password Input -->
+      <div class="flex flex-col gap-1.5 text-left">
+        <div class="flex justify-between items-center">
+          <label for="password" class="text-xs font-semibold text-[var(--text-secondary)]">
+            {{ t('login.password') }}
+          </label>
+          <a href="#" class="text-xs font-semibold text-[var(--accent-color)] hover:underline">{{ t('login.forgotPassword') }}</a>
+        </div>
+        <div class="relative">
+          <span class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-[var(--text-muted)]">
+            <mat-icon class="text-lg">lock</mat-icon>
+          </span>
+          <input 
+            id="password"
+            type="password" 
+            formControlName="password"
+            placeholder="••••••••" 
+            class="w-full bg-[var(--bg-canvas)] text-[var(--text-primary)] pl-11 pr-4 py-3 rounded-xl border border-[var(--border-color)] focus:outline-none focus:ring-2 focus:ring-[var(--accent-color)] text-sm transition-all"
+            [class.border-red-500]="loginForm.get('password')?.touched && loginForm.get('password')?.invalid"
+          />
+        </div>
+        <span 
+          *ngIf="loginForm.get('password')?.touched && loginForm.get('password')?.hasError('required')" 
+          class="text-[10px] text-red-500 font-medium"
+        >
+          {{ t('login.passwordRequired') }}
+        </span>
+      </div>
+
+      <!-- Remember Me Checkbox -->
+      <div class="flex items-center text-left">
+        <mat-checkbox formControlName="rememberMe" color="primary" class="text-xs font-medium text-[var(--text-secondary)]">
+          {{ t('login.rememberMe') }}
+        </mat-checkbox>
+      </div>
+
+      <!-- Action submit button -->
+      <button 
+        type="submit" 
+        [disabled]="loginForm.invalid"
+        class="w-full bg-[var(--primary-color)] text-[var(--primary-contrast)] hover:bg-[var(--primary-color-hover)] disabled:bg-gray-400 disabled:cursor-not-allowed py-3.5 rounded-xl font-bold text-sm shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer mt-2"
+      >
+        <span>{{ t('login.signInBtn') }}</span>
+        <mat-icon class="text-sm">arrow_forward</mat-icon>
+      </button>
+
+    </form>
+
+    <!-- Contact admin prompt -->
+    <div class="mt-8 text-center text-xs text-[var(--text-muted)] border-t border-[var(--border-color)] pt-6">
+      <a routerLink="/setup" class="hover:text-[var(--text-primary)] font-semibold">{{ t('login.contactAdmin') }}</a>
+    </div>
+
+  </div>
+
+  <!-- Login Footer Links -->
+  <footer class="w-full flex flex-col sm:flex-row justify-between items-center gap-4 text-xs text-[var(--text-muted)] border-t border-[var(--border-color)] pt-6 mt-8 max-w-md select-none">
+    <div class="flex items-center gap-4">
+      <a href="#" class="hover:text-[var(--text-primary)] transition-colors">{{ t('login.privacy') }}</a>
+      <a href="#" class="hover:text-[var(--text-primary)] transition-colors">{{ t('login.terms') }}</a>
+      <a href="#" class="hover:text-[var(--text-primary)] transition-colors">{{ t('login.help') }}</a>
+    </div>
+    <span>{{ t('common.copyright') }}</span>
+  </footer>
+
+</app-auth-layout>

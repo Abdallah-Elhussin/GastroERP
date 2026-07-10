@@ -1,0 +1,178 @@
+<app-kitchen-layout>
+  
+  <!-- Actions Toolbar -->
+  <div actions class="w-full flex justify-end items-center gap-4">
+    <div class="flex items-center gap-2 text-xs text-[var(--text-muted)] font-semibold uppercase tracking-wider select-none">
+      <span class="w-2.5 h-2.5 rounded-full bg-[var(--success-color)] animate-ping"></span>
+      <span>{{ t('kds.systemActive') }}</span>
+    </div>
+  </div>
+
+  <!-- Lane 1: New -->
+  <div lane-new class="flex flex-col h-full bg-[var(--bg-surface)]">
+    <!-- Column Header -->
+    <div class="h-14 bg-blue-500 bg-opacity-10 border-b border-[var(--border-color)] px-5 flex items-center justify-between flex-shrink-0 select-none">
+      <div class="flex items-center gap-2">
+        <span class="w-2.5 h-2.5 rounded-full bg-blue-500"></span>
+        <h3 class="font-extrabold text-xs tracking-wider uppercase text-blue-500">{{ t('kds.new') }}</h3>
+      </div>
+      <span class="bg-blue-500 bg-opacity-20 text-blue-500 text-[10px] font-bold px-2 py-0.5 rounded-full">
+        {{ kdsService.newTickets().length }}
+      </span>
+    </div>
+
+    <!-- Ticket Cards List -->
+    <div class="flex-1 overflow-y-auto p-4 flex flex-col gap-4 min-h-0 bg-[var(--bg-canvas)] bg-opacity-40">
+      <div 
+        *ngFor="let ticket of kdsService.newTickets()"
+        [class.kds-ticket--overdue]="isOverdue(ticket)"
+        class="bg-[var(--bg-surface)] border border-[var(--border-color)] rounded-xl shadow-sm overflow-hidden flex flex-col transition-all duration-200"
+      >
+        <div class="p-4 border-b border-[var(--border-color-muted)] flex justify-between items-center select-none bg-[var(--bg-canvas)] bg-opacity-20">
+          <div class="flex flex-col text-left">
+            <span class="font-extrabold text-xs text-[var(--text-primary)]">#{{ ticket.ticketNumber }}</span>
+            <span class="text-[10px] text-[var(--text-muted)] mt-0.5">{{ ticket.tableNo }}</span>
+          </div>
+          <div class="flex items-center gap-1.5 text-xs font-bold font-mono" [class.text-red-500]="isOverdue(ticket)" [class.text-[var(--text-primary)]]="!isOverdue(ticket)">
+            <mat-icon class="text-sm">schedule</mat-icon>
+            <span>{{ formatTime(ticket.timer) }}</span>
+          </div>
+        </div>
+
+        <div class="p-4 flex-1 flex flex-col gap-2.5 text-left text-xs">
+          <div *ngFor="let item of ticket.items" class="flex flex-col gap-0.5">
+            <div class="flex justify-between font-semibold">
+              <span>{{ item.name }}</span>
+              <span class="bg-[var(--border-color)] px-1.5 py-0.2 rounded font-bold text-[10px]">x{{ item.quantity }}</span>
+            </div>
+            <div *ngIf="item.notes && item.notes.length > 0" class="text-[10px] text-[var(--text-muted)] leading-none italic pl-2 border-l border-blue-400 border-opacity-50">
+              <div *ngFor="let note of item.notes">- {{ note }}</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="p-3 border-t border-[var(--border-color-muted)] bg-[var(--bg-surface-hover)] bg-opacity-20 select-none">
+          <button 
+            (click)="onBump(ticket)"
+            class="w-full bg-blue-500 text-white hover:bg-blue-600 py-2 rounded-lg text-[10px] font-bold flex items-center justify-center gap-1 cursor-pointer transition-colors shadow-sm"
+          >
+            <span>{{ t('kds.bump') }}</span>
+            <mat-icon class="text-xs">arrow_forward</mat-icon>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Lane 2: Preparing -->
+  <div lane-preparing class="flex flex-col h-full bg-[var(--bg-surface)]">
+    <!-- Column Header -->
+    <div class="h-14 bg-amber-500 bg-opacity-10 border-b border-[var(--border-color)] px-5 flex items-center justify-between flex-shrink-0 select-none">
+      <div class="flex items-center gap-2">
+        <span class="w-2.5 h-2.5 rounded-full bg-amber-500"></span>
+        <h3 class="font-extrabold text-xs tracking-wider uppercase text-amber-500">{{ t('kds.preparing') }}</h3>
+      </div>
+      <span class="bg-amber-500 bg-opacity-20 text-amber-500 text-[10px] font-bold px-2 py-0.5 rounded-full">
+        {{ kdsService.preparingTickets().length }}
+      </span>
+    </div>
+
+    <!-- Ticket Cards List -->
+    <div class="flex-1 overflow-y-auto p-4 flex flex-col gap-4 min-h-0 bg-[var(--bg-canvas)] bg-opacity-40">
+      <div 
+        *ngFor="let ticket of kdsService.preparingTickets()"
+        [class.kds-ticket--overdue]="isOverdue(ticket)"
+        class="bg-[var(--bg-surface)] border border-[var(--border-color)] rounded-xl shadow-sm overflow-hidden flex flex-col transition-all duration-200"
+      >
+        <div class="p-4 border-b border-[var(--border-color-muted)] flex justify-between items-center select-none bg-[var(--bg-canvas)] bg-opacity-20">
+          <div class="flex flex-col text-left">
+            <span class="font-extrabold text-xs text-[var(--text-primary)]">#{{ ticket.ticketNumber }}</span>
+            <span class="text-[10px] text-[var(--text-muted)] mt-0.5">{{ ticket.tableNo }}</span>
+          </div>
+          <div class="flex items-center gap-1.5 text-xs font-bold font-mono" [class.text-red-500]="isOverdue(ticket)" [class.text-[var(--text-primary)]]="!isOverdue(ticket)">
+            <mat-icon class="text-sm">schedule</mat-icon>
+            <span>{{ formatTime(ticket.timer) }}</span>
+          </div>
+        </div>
+
+        <div class="p-4 flex-1 flex flex-col gap-2.5 text-left text-xs">
+          <div *ngFor="let item of ticket.items" class="flex flex-col gap-0.5">
+            <div class="flex justify-between font-semibold">
+              <span>{{ item.name }}</span>
+              <span class="bg-[var(--border-color)] px-1.5 py-0.2 rounded font-bold text-[10px]">x{{ item.quantity }}</span>
+            </div>
+            <div *ngIf="item.notes && item.notes.length > 0" class="text-[10px] text-[var(--text-muted)] leading-none italic pl-2 border-l border-amber-400 border-opacity-50">
+              <div *ngFor="let note of item.notes">- {{ note }}</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="p-3 border-t border-[var(--border-color-muted)] bg-[var(--bg-surface-hover)] bg-opacity-20 select-none">
+          <button 
+            (click)="onBump(ticket)"
+            class="w-full bg-amber-500 text-white hover:bg-amber-600 py-2 rounded-lg text-[10px] font-bold flex items-center justify-center gap-1 cursor-pointer transition-colors shadow-sm"
+          >
+            <span>{{ t('kds.bump') }}</span>
+            <mat-icon class="text-xs">arrow_forward</mat-icon>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Lane 3: Ready -->
+  <div lane-ready class="flex flex-col h-full bg-[var(--bg-surface)]">
+    <!-- Column Header -->
+    <div class="h-14 bg-emerald-500 bg-opacity-10 border-b border-[var(--border-color)] px-5 flex items-center justify-between flex-shrink-0 select-none">
+      <div class="flex items-center gap-2">
+        <span class="w-2.5 h-2.5 rounded-full bg-emerald-500"></span>
+        <h3 class="font-extrabold text-xs tracking-wider uppercase text-emerald-500">{{ t('kds.ready') }}</h3>
+      </div>
+      <span class="bg-emerald-500 bg-opacity-20 text-emerald-500 text-[10px] font-bold px-2 py-0.5 rounded-full">
+        {{ kdsService.readyTickets().length }}
+      </span>
+    </div>
+
+    <!-- Ticket Cards List -->
+    <div class="flex-1 overflow-y-auto p-4 flex flex-col gap-4 min-h-0 bg-[var(--bg-canvas)] bg-opacity-40">
+      <div 
+        *ngFor="let ticket of kdsService.readyTickets()"
+        class="bg-[var(--bg-surface)] border border-[var(--border-color)] rounded-xl shadow-sm overflow-hidden flex flex-col transition-all duration-200"
+      >
+        <div class="p-4 border-b border-[var(--border-color-muted)] flex justify-between items-center select-none bg-[var(--bg-canvas)] bg-opacity-20">
+          <div class="flex flex-col text-left">
+            <span class="font-extrabold text-xs text-[var(--text-primary)]">#{{ ticket.ticketNumber }}</span>
+            <span class="text-[10px] text-[var(--text-muted)] mt-0.5">{{ ticket.tableNo }}</span>
+          </div>
+          <div class="flex items-center gap-1.5 text-xs font-bold font-mono text-[var(--text-primary)]">
+            <mat-icon class="text-sm">schedule</mat-icon>
+            <span>{{ formatTime(ticket.timer) }}</span>
+          </div>
+        </div>
+
+        <div class="p-4 flex-1 flex flex-col gap-2.5 text-left text-xs">
+          <div *ngFor="let item of ticket.items" class="flex flex-col gap-0.5">
+            <div class="flex justify-between font-semibold">
+              <span>{{ item.name }}</span>
+              <span class="bg-[var(--border-color)] px-1.5 py-0.2 rounded font-bold text-[10px]">x{{ item.quantity }}</span>
+            </div>
+            <div *ngIf="item.notes && item.notes.length > 0" class="text-[10px] text-[var(--text-muted)] leading-none italic pl-2 border-l border-emerald-400 border-opacity-50">
+              <div *ngFor="let note of item.notes">- {{ note }}</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="p-3 border-t border-[var(--border-color-muted)] bg-[var(--bg-surface-hover)] bg-opacity-20 select-none">
+          <button 
+            (click)="onBump(ticket)"
+            class="w-full bg-emerald-500 text-white hover:bg-emerald-600 py-2 rounded-lg text-[10px] font-bold flex items-center justify-center gap-1 cursor-pointer transition-colors shadow-sm"
+          >
+            <mat-icon class="text-xs">done_all</mat-icon>
+            <span>{{ t('kds.completeOrder') }}</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</app-kitchen-layout>

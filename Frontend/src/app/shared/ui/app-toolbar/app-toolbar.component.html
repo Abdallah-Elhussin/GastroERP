@@ -1,0 +1,122 @@
+<header class="h-16 bg-[var(--bg-surface)] border-b border-[var(--border-color)] px-6 flex items-center justify-between select-none">
+  
+  <!-- Left Side: Command Search Button -->
+  <div class="flex items-center gap-4">
+    <button 
+      (click)="openPaletteCommand()" 
+      class="flex items-center gap-2 bg-[var(--bg-canvas)] border border-[var(--border-color)] px-3 py-1.5 rounded-xl text-xs text-[var(--text-muted)] font-semibold hover:bg-[var(--bg-surface-hover)] shadow-inner select-none cursor-pointer transition-colors"
+      title="{{ t('toolbar.searchHint') }}"
+    >
+      <mat-icon class="text-sm">search</mat-icon>
+      <span>{{ t('toolbar.search') }}</span>
+      <span class="text-[9px] bg-[var(--bg-surface)] border border-[var(--border-color)] px-1 rounded font-mono font-bold uppercase">Ctrl+K</span>
+    </button>
+  </div>
+
+  <!-- Right Side: Config actions dropdown -->
+  <div class="flex items-center gap-3 sm:gap-4">
+    
+    <!-- Star current route button -->
+    <button 
+      mat-icon-button 
+      (click)="toggleBookmark()" 
+      [class.text-amber-500]="hasBookmark()" 
+      class="hover:bg-[var(--bg-surface-hover)] rounded-xl"
+      title="{{ t('toolbar.starPage') }}"
+    >
+      <mat-icon class="text-base">{{ hasBookmark() ? 'star' : 'star_border' }}</mat-icon>
+    </button>
+
+    <!-- Bookmarks dropdown list -->
+    <button 
+      mat-icon-button 
+      [matMenuTriggerFor]="bookmarksMenu" 
+      class="hover:bg-[var(--bg-surface-hover)] rounded-xl"
+      title="{{ t('toolbar.bookmarksList') }}"
+    >
+      <mat-icon class="text-base text-[var(--text-secondary)]">bookmarks</mat-icon>
+    </button>
+    <mat-menu #bookmarksMenu="matMenu" class="custom-menu">
+      <div class="px-4 py-2 border-b border-[var(--border-color)] text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-wide">{{ t('toolbar.bookmarks') }}</div>
+      <button 
+        mat-menu-item 
+        *ngFor="let path of bookmarks()" 
+        [routerLink]="path"
+      >
+        <mat-icon class="text-sm text-amber-500">star</mat-icon>
+        <span>{{ getRouteLabel(path) }}</span>
+      </button>
+      <div *ngIf="bookmarks().length === 0" class="px-4 py-3 text-center text-xs text-[var(--text-muted)] font-normal">{{ t('toolbar.noBookmarks') }}</div>
+    </mat-menu>
+
+    <!-- Active branch selector -->
+    <mat-form-field appearance="outline" class="w-32 density-compact" style="margin-bottom: -1.25em;">
+      <mat-select [value]="dataService.selectedBranch()" (selectionChange)="dataService.selectedBranch.set($event.value)">
+        <mat-option *ngFor="let branch of dataService.branches" [value]="branch">
+          {{ branch }}
+        </mat-option>
+      </mat-select>
+    </mat-form-field>
+
+    <!-- Language Selector Toggle -->
+    <button mat-icon-button [matMenuTriggerFor]="langMenu" class="hover:bg-[var(--bg-surface-hover)] rounded-xl">
+      <mat-icon class="text-base text-[var(--text-secondary)]">translate</mat-icon>
+    </button>
+    <mat-menu #langMenu="matMenu" class="custom-menu">
+      <button mat-menu-item (click)="langService.setLanguage('en')">{{ t('toolbar.english') }}</button>
+      <button mat-menu-item (click)="langService.setLanguage('ar')">{{ t('toolbar.arabic') }}</button>
+    </mat-menu>
+
+    <!-- Theme toggler -->
+    <button mat-icon-button (click)="themeService.toggleTheme()" class="hover:bg-[var(--bg-surface-hover)] rounded-xl">
+      <mat-icon class="text-base text-[var(--text-secondary)]">
+        {{ themeService.isDarkMode() ? 'light_mode' : 'dark_mode' }}
+      </mat-icon>
+    </button>
+
+    <!-- Notifications bell dropdown -->
+    <button mat-icon-button [matMenuTriggerFor]="notifyMenu" (click)="markAllRead()" class="relative hover:bg-[var(--bg-surface-hover)] rounded-xl">
+      <mat-icon class="text-base text-[var(--text-secondary)]">notifications</mat-icon>
+      <span *ngIf="unreadCount() > 0" class="absolute top-1.5 right-1.5 w-2.5 h-2.5 rounded-full bg-red-500 animate-pulse"></span>
+    </button>
+    <mat-menu #notifyMenu="matMenu" class="custom-menu">
+      <div class="px-4 py-2.5 border-b border-[var(--border-color)] flex justify-between items-center text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-wide select-none">
+        <span>{{ t('toolbar.notifications') }}</span>
+        <span class="bg-red-500 text-white font-bold text-[8px] px-1.5 py-0.5 rounded-full" *ngIf="unreadCount() > 0">{{ unreadCount() }} {{ t('toolbar.new') }}</span>
+      </div>
+      <div class="w-64 max-w-xs flex flex-col divide-y divide-[var(--border-color-muted)] max-h-72 overflow-y-auto">
+        <div 
+          *ngFor="let n of notifications()" 
+          [class.bg-[var(--bg-canvas)]]="!n.read"
+          [class.bg-opacity-40]="!n.read"
+          class="px-4 py-3 text-left flex flex-col gap-1 hover:bg-[var(--bg-surface-hover)] transition-colors select-none"
+        >
+          <p class="text-xs text-[var(--text-primary)] leading-tight font-medium">{{ t(n.textKey) }}</p>
+          <span class="text-[9px] text-[var(--text-muted)] font-semibold">{{ n.time }}</span>
+        </div>
+        <div *ngIf="notifications().length === 0" class="px-4 py-6 text-center text-xs text-[var(--text-muted)] font-normal">{{ t('toolbar.noNotifications') }}</div>
+      </div>
+    </mat-menu>
+
+    <!-- User Profile details -->
+    <div class="flex items-center gap-3 border-l border-[var(--border-color)] ps-4 cursor-pointer" [matMenuTriggerFor]="profileMenu">
+      <img 
+        src="https://images.unsplash.com/photo-1577219491135-ce391730fb2c?w=80&auto=format&fit=crop&q=80" 
+        alt="Julian Profile" 
+        class="h-8 w-8 rounded-xl object-cover shadow-sm"
+      />
+      <div class="hidden md:flex flex-col text-left leading-tight">
+        <span class="text-xs font-bold text-[var(--text-primary)]">{{ t('toolbar.userName') }}</span>
+        <span class="text-[9px] text-[var(--text-secondary)]">{{ t('toolbar.role') }}</span>
+      </div>
+    </div>
+    <mat-menu #profileMenu="matMenu" class="custom-menu">
+      <button mat-menu-item>{{ t('toolbar.myProfile') }}</button>
+      <button mat-menu-item>{{ t('nav.settings') }}</button>
+      <mat-divider></mat-divider>
+      <button mat-menu-item class="text-red-500" (click)="logout()">{{ t('toolbar.logout') }}</button>
+    </mat-menu>
+
+  </div>
+
+</header>

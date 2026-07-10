@@ -1,0 +1,17 @@
+.catalog-page { padding: 1.5rem; display: flex; flex-direction: column; gap: 1.25rem; }
+.page-header { display: flex; justify-content: space-between; align-items: flex-start; gap: 1rem; flex-wrap: wrap; }
+.page-header h1 { margin: 0; font-size: 1.35rem; font-weight: 800; }
+.page-header p { margin: 0.25rem 0 0; font-size: 0.75rem; color: var(--text-muted); }
+.btn-primary { display: inline-flex; align-items: center; gap: 0.35rem; padding: 0.65rem 1rem; border-radius: 0.75rem; background: var(--primary-color); color: var(--primary-contrast); font-size: 0.75rem; font-weight: 700; text-decoration: none; }
+.toolbar input { width: 100%; max-width: 24rem; padding: 0.65rem 0.85rem; border-radius: 0.75rem; border: 1px solid var(--border-color); background: var(--bg-canvas); }
+.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 1rem; }
+.card { border: 1px solid var(--border-color); border-radius: 1rem; padding: 1rem; background: var(--bg-surface); text-decoration: none; color: inherit; transition: box-shadow 0.2s; }
+.card:hover { box-shadow: 0 8px 24px rgba(0,0,0,0.06); }
+.card-top { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 0.75rem; }
+.card img, .placeholder { width: 48px; height: 48px; border-radius: 0.65rem; object-fit: cover; background: var(--bg-canvas); display: flex; align-items: center; justify-content: center; }
+.code { font-size: 0.65rem; font-family: monospace; color: var(--accent-color); font-weight: 700; }
+.card h3 { margin: 0; font-size: 0.85rem; font-weight: 700; }
+.card p { margin: 0.35rem 0 0; font-size: 0.7rem; color: var(--text-muted); }
+.state { text-align: center; font-size: 0.75rem; color: var(--text-muted); padding: 2rem; }
+.state.error { color: var(--danger-color-text); }
+.empty { grid-column: 1 / -1; text-align: center; color: var(--text-muted); padding: 2rem; }
