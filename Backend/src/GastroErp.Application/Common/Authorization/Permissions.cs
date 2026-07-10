@@ -89,6 +89,19 @@ public static class Permissions
         public const string Manage = "Inventory.Manage";
     }
 
+    public static class Catalog
+    {
+        public const string View = "Catalog.View";
+        public const string Create = "Catalog.Create";
+        public const string Update = "Catalog.Update";
+        public const string Delete = "Catalog.Delete";
+        public const string Approve = "Catalog.Approve";
+        public const string Archive = "Catalog.Archive";
+        public const string Export = "Catalog.Export";
+        public const string Import = "Catalog.Import";
+        public const string Print = "Catalog.Print";
+    }
+
     public static class Warehouse
     {
         public const string View = "Warehouse.View";

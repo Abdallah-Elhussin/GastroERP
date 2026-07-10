@@ -12,6 +12,7 @@ using GastroErp.Domain.Entities.Inventory.Suppliers;
 using GastroErp.Domain.Entities.Inventory.Transactions;
 using GastroErp.Domain.Entities.Inventory.Warehouse;
 using GastroErp.Domain.Entities.Inventory.Waste;
+using GastroErp.Domain.Entities.Catalog;
 using GastroErp.Domain.Entities.Menu;
 using GastroErp.Domain.Entities.Organization;
 using GastroErp.Domain.Entities.Sales;
@@ -50,6 +51,8 @@ public class ApplicationDbContext : DbContext, IApplicationDbContext
     public DbSet<Device> Devices => Set<Device>();
     public DbSet<BranchDevice> BranchDevices => Set<BranchDevice>();
     public DbSet<OrganizationSettings> OrganizationSettings => Set<OrganizationSettings>();
+    public DbSet<TenantCurrency> TenantCurrencies => Set<TenantCurrency>();
+    public DbSet<TenantPaymentMethod> TenantPaymentMethods => Set<TenantPaymentMethod>();
     public DbSet<Subscription> Subscriptions => Set<Subscription>();
     public DbSet<SubscriptionPlan> SubscriptionPlans => Set<SubscriptionPlan>();
     public DbSet<Feature> Features => Set<Feature>();
@@ -79,6 +82,11 @@ public class ApplicationDbContext : DbContext, IApplicationDbContext
     public DbSet<BranchMenu> BranchMenus => Set<BranchMenu>();
     public DbSet<ComboMeal> ComboMeals => Set<ComboMeal>();
     public DbSet<Product> Products => Set<Product>();
+
+    // ─── Product Catalog Engine ─────────────────────────────────────────────
+    public DbSet<ProductCatalogDefinition> ProductCatalogDefinitions => Set<ProductCatalogDefinition>();
+    public DbSet<CatalogCodeSequence> CatalogCodeSequences => Set<CatalogCodeSequence>();
+    public DbSet<ProductPriceHistory> ProductPriceHistories => Set<ProductPriceHistory>();
 
     // ─── Inventory – Catalog ───────────────────────────────────────────────
     public DbSet<InventoryCategory> InventoryCategories => Set<InventoryCategory>();

@@ -14,6 +14,7 @@ using GastroErp.Application.Features.Platform.Services;
 using GastroErp.Application.Features.ReportingPlatform.Services;
 using GastroErp.Application.Features.Reporting.Services;
 using GastroErp.Application.Features.Invoicing.Services;
+using GastroErp.Application.Features.Catalog.Services;
 using MediatR;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -35,6 +36,9 @@ public static class DependencyInjection
         services.AddScoped<IShiftNumberGenerator, ShiftNumberGenerator>();
         services.AddScoped<IKitchenRoutingService, KitchenRoutingService>();
         services.AddScoped<ITableService, TableService>();
+        services.AddScoped<IKdsBoardProjectionService, KdsBoardProjectionService>();
+
+        services.AddScoped<ICatalogCodeGenerator, CatalogCodeGenerator>();
 
         services.AddScoped<IInvoiceNumberGenerator, InvoiceNumberGenerator>();
         services.AddScoped<ITaxCalculationService, TaxCalculationService>();

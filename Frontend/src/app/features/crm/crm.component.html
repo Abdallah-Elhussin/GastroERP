@@ -1,0 +1,77 @@
+<div class="h-full flex flex-col gap-6 -m-6 p-6 overflow-y-auto">
+  
+  <div class="flex justify-between items-center select-none text-left flex-shrink-0">
+    <div>
+      <h2 class="text-xl font-bold tracking-tight text-[var(--text-primary)]">{{ t('crm.title') }}</h2>
+      <p class="text-xs text-[var(--text-secondary)] mt-0.5">{{ t('crm.subtitle') }}</p>
+    </div>
+  </div>
+
+  <div class="grid grid-cols-1 md:grid-cols-3 gap-6 select-none">
+    <app-stat-card 
+      [title]="t('crm.stat.guests')" 
+      [value]="t('crm.stat.guestsVal')" 
+      [subtitle]="t('crm.stat.guestsSub')" 
+      icon="people"
+      [trend]="t('crm.stat.guestsTrend')"
+      trendType="up"
+    ></app-stat-card>
+    
+    <app-stat-card 
+      [title]="t('crm.stat.points')" 
+      [value]="t('crm.stat.pointsVal')" 
+      [subtitle]="t('crm.stat.pointsSub')" 
+      icon="stars"
+      [trend]="t('crm.stat.pointsTrend')"
+      trendType="up"
+    ></app-stat-card>
+
+    <app-stat-card 
+      [title]="t('crm.stat.vip')" 
+      value="12.5%" 
+      [subtitle]="t('crm.stat.vipSub')" 
+      icon="military_tech"
+      [trend]="t('crm.stat.vipVal')"
+      trendType="up"
+    ></app-stat-card>
+  </div>
+
+  <app-card [title]="t('crm.tableTitle')">
+    <app-table [columns]="columns()" [data]="customersData()" [pagination]="true" [defaultPageSize]="5">
+      <ng-template #rowTemplate let-guest let-column="column">
+        <ng-container [ngSwitch]="column.key">
+          
+          <span *ngSwitchCase="'points'" class="font-bold text-[var(--text-primary)]">
+            {{ guest.points.toLocaleString() }} {{ t('crm.pts') }}
+          </span>
+
+          <span *ngSwitchCase="'tier'">
+            <span 
+              [class.bg-amber-500]="guest.tier === 'VIP Gold'"
+              [class.bg-purple-500]="guest.tier === 'VIP Platinum'"
+              [class.bg-slate-400]="guest.tier === 'Silver Member'"
+              class="px-2.5 py-0.5 rounded text-white font-bold text-[9px] uppercase tracking-wider"
+            >
+              {{ guest.tier }}
+            </span>
+          </span>
+
+          <div *ngSwitchCase="'actions'" class="text-center select-none">
+            <button class="text-[var(--text-muted)] hover:text-[var(--accent-color)] cursor-pointer mr-2">
+              <mat-icon class="text-sm">edit</mat-icon>
+            </button>
+            <button class="text-[var(--text-muted)] hover:text-[var(--accent-color)] cursor-pointer">
+              <mat-icon class="text-sm">redeem</mat-icon>
+            </button>
+          </div>
+
+          <span *ngSwitchDefault>
+            {{ guest[column.key] }}
+          </span>
+
+        </ng-container>
+      </ng-template>
+    </app-table>
+  </app-card>
+
+</div>

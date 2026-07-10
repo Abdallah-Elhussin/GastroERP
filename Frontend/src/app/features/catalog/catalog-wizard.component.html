@@ -1,0 +1,245 @@
+<div class="wizard-page">
+  <header class="wizard-header">
+    <a routerLink="/catalog" class="back"><mat-icon>arrow_back</mat-icon>{{ t('catalog.back') }}</a>
+    <div>
+      <h1>{{ t('catalog.wizardTitle') }}</h1>
+      <p *ngIf="generatedCode()">{{ t('catalog.code') }}: <strong>{{ generatedCode() }}</strong></p>
+    </div>
+  </header>
+
+  <nav class="stepper">
+    <button *ngFor="let step of visibleSteps()" type="button"
+      [class.active]="isStepActive(step)" [class.done]="isStepDone(step)"
+      (click)="activeStep.set(step)">
+      {{ stepLabel(step) }}
+    </button>
+  </nav>
+
+  <div *ngIf="error()" class="banner error">{{ error() }}</div>
+
+  <section class="panel" *ngIf="activeStep() === 'type'">
+    <h2>{{ t('catalog.step.type') }}</h2>
+    <p class="hint">{{ t('catalog.typeHint') }}</p>
+    <div class="type-grid">
+      <button type="button" *ngFor="let type of catalogService.types()"
+        [class.selected]="selectedType()?.type === type.type"
+        (click)="selectType(type)">
+        <span class="prefix">{{ type.prefix }}</span>
+        <strong>{{ typeLabel(type) }}</strong>
+        <small>{{ type.code }}</small>
+      </button>
+    </div>
+  </section>
+
+  <section class="panel" *ngIf="activeStep() === 'general'" [formGroup]="generalForm">
+    <h2>{{ t('catalog.step.general') }}</h2>
+    <div class="form-grid">
+      <label><span>{{ t('catalog.nameAr') }} *</span><input formControlName="nameAr" /></label>
+      <label><span>{{ t('catalog.nameEn') }}</span><input formControlName="nameEn" /></label>
+      <label><span>{{ t('catalog.brand') }}</span><input formControlName="brand" /></label>
+      <label><span>{{ t('catalog.menuCategory') }}</span>
+        <select formControlName="menuCategoryId">
+          <option value="">{{ t('catalog.selectMenuCategory') }}</option>
+          <option *ngFor="let c of menuService.categories()" [value]="c.id">{{ c.nameAr }}</option>
+        </select>
+      </label>
+      <label><span>{{ t('inventoryItem.category') }}</span>
+        <select formControlName="inventoryCategoryId">
+          <option value="">{{ t('inventoryItem.selectCategory') }}</option>
+          <option *ngFor="let c of inventoryService.categories()" [value]="c.id">{{ c.nameAr }}</option>
+        </select>
+      </label>
+      <label><span>{{ t('catalog.sku') }}</span><input formControlName="sku" /></label>
+      <label><span>{{ t('catalog.barcode') }}</span><input formControlName="barcode" /></label>
+      <label class="full"><span>{{ t('catalog.shortDescAr') }}</span><textarea rows="2" formControlName="shortDescriptionAr"></textarea></label>
+      <label class="full"><span>{{ t('catalog.longDescAr') }}</span><textarea rows="3" formControlName="longDescriptionAr"></textarea></label>
+      <label class="full"><span>{{ t('catalog.imageUrl') }}</span><input formControlName="primaryImageUrl" /></label>
+      <label class="full"><span>{{ t('catalog.keywords') }}</span><input formControlName="keywords" /></label>
+    </div>
+  </section>
+
+  <section class="panel" *ngIf="activeStep() === 'inventory'" [formGroup]="inventoryForm">
+    <h2>{{ t('catalog.step.inventory') }}</h2>
+    <p class="hint">{{ t('catalog.inventoryHint') }}</p>
+    <div *ngIf="!generalForm.value.inventoryCategoryId" class="banner error">{{ t('catalog.inventoryCategoryRequired') }}</div>
+    <div *ngIf="loadedDefinition()?.inventoryItemId" class="linked-badge">
+      <mat-icon>link</mat-icon>{{ t('catalog.linkedInventoryItem') }}: {{ loadedDefinition()!.inventoryItemId }}
+    </div>
+    <div class="form-grid">
+      <label><span>{{ t('inventoryItem.baseUnit') }} *</span>
+        <select formControlName="baseUnitId">
+          <option value="">{{ t('inventoryItem.selectUnit') }}</option>
+          <option *ngFor="let u of inventoryService.units()" [value]="u.id">{{ unitLabel(u) }}</option>
+        </select>
+      </label>
+      <label><span>{{ t('catalog.costingMethod') }}</span>
+        <select formControlName="costingMethod">
+          <option *ngFor="let m of costingMethods" [value]="m">{{ costingMethodLabel(m) }}</option>
+        </select>
+      </label>
+      <label><span>{{ t('inventoryItem.purchaseUnit') }}</span>
+        <select formControlName="defaultPurchaseUnitId">
+          <option value="">{{ t('inventoryItem.sameAsBase') }}</option>
+          <option *ngFor="let u of inventoryService.units()" [value]="u.id">{{ unitLabel(u) }}</option>
+        </select>
+      </label>
+      <label><span>{{ t('inventoryItem.recipeUnit') }}</span>
+        <select formControlName="defaultRecipeUnitId">
+          <option value="">{{ t('inventoryItem.sameAsBase') }}</option>
+          <option *ngFor="let u of inventoryService.units()" [value]="u.id">{{ unitLabel(u) }}</option>
+        </select>
+      </label>
+      <label><span>{{ t('catalog.minStock') }}</span><input type="number" min="0" step="0.01" formControlName="minStock" /></label>
+      <label><span>{{ t('catalog.maxStock') }}</span><input type="number" min="0" step="0.01" formControlName="maxStock" /></label>
+      <label><span>{{ t('catalog.safetyStock') }}</span><input type="number" min="0" step="0.01" formControlName="safetyStock" /></label>
+      <label><span>{{ t('inventoryItem.reorderLevel') }}</span><input type="number" min="0" step="0.01" formControlName="reorderLevel" /></label>
+      <label><span>{{ t('inventoryItem.reorderQty') }}</span><input type="number" min="0" step="0.01" formControlName="reorderQuantity" /></label>
+    </div>
+    <div class="checkbox-row">
+      <label><input type="checkbox" formControlName="trackBatch" /> {{ t('catalog.trackBatch') }}</label>
+      <label><input type="checkbox" formControlName="trackSerial" /> {{ t('catalog.trackSerial') }}</label>
+      <label><input type="checkbox" formControlName="trackExpiry" /> {{ t('catalog.trackExpiry') }}</label>
+      <label><input type="checkbox" formControlName="allowNegativeStock" /> {{ t('catalog.allowNegativeStock') }}</label>
+    </div>
+  </section>
+
+  <section class="panel" *ngIf="activeStep() === 'recipe'" [formGroup]="recipeForm">
+    <h2>{{ t('catalog.step.recipe') }}</h2>
+    <p class="hint">{{ t('catalog.recipeHint') }}</p>
+    <div *ngIf="loadedDefinition()?.recipeId" class="linked-badge">
+      <mat-icon>link</mat-icon>{{ t('catalog.linkedRecipe') }}: {{ loadedDefinition()!.recipeId }}
+    </div>
+    <div class="form-grid">
+      <label><span>{{ t('catalog.recipeYield') }} *</span><input type="number" min="0.01" step="0.01" formControlName="yield" /></label>
+      <label><span>{{ t('catalog.recipeWaste') }}</span><input type="number" min="0" max="99" step="0.1" formControlName="wastePercentage" /></label>
+      <label><span>{{ t('catalog.recipePrepTime') }}</span><input type="number" min="0" formControlName="preparationTime" /></label>
+      <label class="full"><span>{{ t('catalog.recipeInstructions') }}</span><textarea rows="3" formControlName="instructions"></textarea></label>
+    </div>
+    <div class="ingredients-block">
+      <div class="ingredients-header">
+        <h3>{{ t('catalog.ingredients') }}</h3>
+        <button type="button" class="btn-secondary" (click)="addIngredient()"><mat-icon>add</mat-icon>{{ t('catalog.addIngredient') }}</button>
+      </div>
+      <div formArrayName="ingredients" class="ingredient-list">
+        <div *ngFor="let row of ingredients.controls; let i = index" [formGroupName]="i" class="ingredient-row">
+          <select formControlName="inventoryItemId">
+            <option value="">{{ t('catalog.selectItem') }}</option>
+            <option *ngFor="let item of inventoryService.items()" [value]="item.id">{{ itemLabel(item) }}</option>
+          </select>
+          <select formControlName="unitId">
+            <option value="">{{ t('inventoryItem.selectUnit') }}</option>
+            <option *ngFor="let u of inventoryService.units()" [value]="u.id">{{ unitLabel(u) }}</option>
+          </select>
+          <input type="number" min="0.01" step="0.01" formControlName="quantity" [placeholder]="t('catalog.qty')" />
+          <input type="number" min="0" max="99" step="0.1" formControlName="wastePercentage" [placeholder]="t('catalog.recipeWaste')" />
+          <button type="button" class="icon-btn" (click)="removeIngredient(i)"><mat-icon>delete</mat-icon></button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="panel" *ngIf="activeStep() === 'pos'" [formGroup]="posForm">
+    <h2>{{ t('catalog.step.pos') }}</h2>
+    <p class="hint">{{ t('catalog.posHint') }}</p>
+    <div *ngIf="loadedDefinition()?.productId" class="linked-badge">
+      <mat-icon>link</mat-icon>{{ t('catalog.linkedProduct') }}: {{ loadedDefinition()!.productId }}
+    </div>
+    <div class="form-grid">
+      <label><span>{{ t('catalog.menuCategory') }} *</span>
+        <select formControlName="menuCategoryId">
+          <option value="">{{ t('catalog.selectMenuCategory') }}</option>
+          <option *ngFor="let c of menuService.categories()" [value]="c.id">{{ c.nameAr }}</option>
+        </select>
+      </label>
+      <label><span>{{ t('catalog.prepTime') }}</span><input type="number" min="0" formControlName="prepTimeMinutes" /></label>
+      <label><span>{{ t('catalog.kitchenStation') }}</span>
+        <select formControlName="kitchenStationId">
+          <option value="">{{ t('catalog.none') }}</option>
+          <option *ngFor="let s of menuService.kitchenStations()" [value]="s.id">{{ s.nameAr }}</option>
+        </select>
+      </label>
+    </div>
+    <div class="checkbox-row">
+      <label><input type="checkbox" formControlName="isAvailableOnPos" /> {{ t('catalog.availableOnPos') }}</label>
+      <label><input type="checkbox" formControlName="isFeaturedOnPos" /> {{ t('catalog.featuredOnPos') }}</label>
+    </div>
+  </section>
+
+  <section class="panel" *ngIf="activeStep() === 'pricing'" [formGroup]="pricingForm">
+    <h2>{{ t('catalog.step.pricing') }}</h2>
+    <p class="hint">{{ t('catalog.pricingHint') }}</p>
+    <div class="form-grid">
+      <label><span>{{ t('catalog.basePrice') }} *</span><input type="number" min="0" step="0.01" formControlName="basePrice" /></label>
+      <label><span>{{ t('catalog.currency') }}</span><input formControlName="currency" maxlength="3" /></label>
+    </div>
+    <div class="price-levels" *ngIf="menuService.priceLevels().length">
+      <h3>{{ t('catalog.priceLevels') }}</h3>
+      <div *ngFor="let level of menuService.priceLevels()" class="price-level-row">
+        <span>{{ level.nameAr }}</span>
+        <input type="number" min="0" step="0.01"
+          [value]="priceLevelPrices()[level.id] || ''"
+          (input)="setPriceLevelPrice(level.id, +($any($event.target).value || 0))" />
+      </div>
+    </div>
+  </section>
+
+  <section class="panel" *ngIf="activeStep() === 'review'">
+    <h2>{{ t('catalog.step.review') }}</h2>
+    <ul class="review-list">
+      <li><span>{{ t('catalog.code') }}</span><strong>{{ generatedCode() }}</strong></li>
+      <li><span>{{ t('catalog.nameAr') }}</span><strong>{{ generalForm.value.nameAr }}</strong></li>
+      <li><span>{{ t('catalog.step.type') }}</span><strong>{{ selectedType() ? typeLabel(selectedType()!) : '—' }}</strong></li>
+      <li *ngIf="loadedDefinition()?.inventoryItemId"><span>{{ t('catalog.linkedInventoryItem') }}</span><strong>{{ loadedDefinition()!.inventoryItemId }}</strong></li>
+      <li *ngIf="loadedDefinition()?.recipeId"><span>{{ t('catalog.linkedRecipe') }}</span><strong>{{ loadedDefinition()!.recipeId }}</strong></li>
+      <li *ngIf="loadedDefinition()?.productId"><span>{{ t('catalog.linkedProduct') }}</span><strong>{{ loadedDefinition()!.productId }}</strong></li>
+      <li *ngIf="pricingForm.value.basePrice"><span>{{ t('catalog.basePrice') }}</span><strong>{{ pricingForm.value.basePrice }} {{ pricingForm.value.currency }}</strong></li>
+    </ul>
+
+    <div class="review-section" [formGroup]="extensionsForm">
+      <h3>{{ t('catalog.extensionsTitle') }}</h3>
+      <label class="full"><span>{{ t('catalog.supplierIds') }}</span><input formControlName="supplierIds" [placeholder]="t('catalog.supplierIdsHint')" /></label>
+      <label class="full"><span>{{ t('catalog.mediaUrls') }}</span><textarea rows="2" formControlName="mediaUrls" [placeholder]="t('catalog.mediaUrlsHint')"></textarea></label>
+      <label class="full"><span>{{ t('catalog.variants') }}</span><textarea rows="2" formControlName="variantAttributesJson" [placeholder]="t('catalog.variantsHint')"></textarea></label>
+    </div>
+
+    <div class="review-section" [formGroup]="relationshipsForm">
+      <h3>{{ t('catalog.relationshipsTitle') }}</h3>
+      <div class="relationship-add">
+        <input formControlName="relatedCatalogId" [placeholder]="t('catalog.relatedCatalogId')" />
+        <select formControlName="relationshipType">
+          <option *ngFor="let rt of relationshipTypes" [value]="rt">{{ t('catalog.rel.' + rt) }}</option>
+        </select>
+        <button type="button" class="btn-secondary" (click)="addRelationship()">{{ t('catalog.addRelationship') }}</button>
+      </div>
+      <ul class="relationship-list">
+        <li *ngFor="let rel of relatedProducts(); let i = index">
+          <span>{{ rel.relationshipType }} → {{ rel.targetCatalogId }}</span>
+          <button type="button" class="icon-btn" (click)="removeRelationship(i)"><mat-icon>close</mat-icon></button>
+        </li>
+      </ul>
+    </div>
+
+    <div class="review-section" *ngIf="auditTimeline().length">
+      <h3>{{ t('catalog.auditTimeline') }}</h3>
+      <ul class="audit-list">
+        <li *ngFor="let entry of auditTimeline()">
+          <strong>{{ entry.eventType }}</strong>
+          <span>{{ entry.description }}</span>
+          <small>{{ entry.occurredAt | date:'short' }}</small>
+        </li>
+      </ul>
+    </div>
+
+    <p class="hint">{{ t('catalog.reviewHintFinal') }}</p>
+  </section>
+
+  <footer class="wizard-footer">
+    <button type="button" class="btn-secondary" (click)="back()" [disabled]="stepIndex() === 0">{{ t('common.back') }}</button>
+    <button type="button" class="btn-primary" *ngIf="activeStep() !== 'review'" (click)="next()" [disabled]="!canGoNext() || saving()">
+      {{ saving() ? t('common.saving') : t('common.next') }}
+    </button>
+    <button type="button" class="btn-primary" *ngIf="activeStep() === 'review'" (click)="finish()" [disabled]="saving()">
+      {{ saving() ? t('common.saving') : t('catalog.activateFinish') }}
+    </button>
+  </footer>
+</div>

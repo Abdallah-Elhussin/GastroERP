@@ -180,6 +180,8 @@ public sealed class OrganizationSettingsConfiguration : IEntityTypeConfiguration
         builder.Property(x => x.Address).HasMaxLength(500);
         builder.Property(x => x.ContactEmail).HasMaxLength(256);
         builder.Property(x => x.ContactPhone).HasMaxLength(50);
+        builder.Property(x => x.AdditionalCurrencyCodes).HasMaxLength(200);
+        builder.Property(x => x.CalendarSystem).IsRequired().HasMaxLength(20).HasDefaultValue("Gregorian");
 
         builder.Property<byte[]>("RowVersion").IsRowVersion();
         builder.HasQueryFilter(x => !x.IsDeleted);
@@ -263,5 +265,35 @@ public sealed class SubscriptionConfiguration : IEntityTypeConfiguration<Subscri
         builder.Property<byte[]>("RowVersion").IsRowVersion();
         builder.HasQueryFilter(x => !x.IsDeleted);
         builder.HasIndex(x => x.TenantId).HasFilter("[IsDeleted] = 0");
+    }
+}
+
+public sealed class TenantCurrencyConfiguration : IEntityTypeConfiguration<TenantCurrency>
+{
+    public void Configure(EntityTypeBuilder<TenantCurrency> builder)
+    {
+        builder.ToTable("TenantCurrencies");
+        builder.HasKey(x => x.Id);
+        builder.Property(x => x.CurrencyCode).IsRequired().HasMaxLength(3);
+        builder.Property(x => x.ExchangeRate).HasColumnType("decimal(18,6)");
+        builder.Property<byte[]>("RowVersion").IsRowVersion();
+        builder.HasQueryFilter(x => !x.IsDeleted);
+        builder.HasIndex(x => x.TenantId).HasFilter("[IsDeleted] = 0");
+        builder.HasIndex(x => new { x.TenantId, x.CurrencyCode }).IsUnique().HasFilter("[IsDeleted] = 0");
+    }
+}
+
+public sealed class TenantPaymentMethodConfiguration : IEntityTypeConfiguration<TenantPaymentMethod>
+{
+    public void Configure(EntityTypeBuilder<TenantPaymentMethod> builder)
+    {
+        builder.ToTable("TenantPaymentMethods");
+        builder.HasKey(x => x.Id);
+        builder.Property(x => x.DisplayNameAr).IsRequired().HasMaxLength(100);
+        builder.Property(x => x.DisplayNameEn).IsRequired().HasMaxLength(100);
+        builder.Property<byte[]>("RowVersion").IsRowVersion();
+        builder.HasQueryFilter(x => !x.IsDeleted);
+        builder.HasIndex(x => x.TenantId).HasFilter("[IsDeleted] = 0");
+        builder.HasIndex(x => new { x.TenantId, x.MethodType }).IsUnique().HasFilter("[IsDeleted] = 0");
     }
 }

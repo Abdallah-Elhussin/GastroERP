@@ -1,10 +1,12 @@
 using Asp.Versioning;
+using GastroErp.Application.Common.Interfaces.Realtime;
 using GastroErp.Application.Common.Options;
 using GastroErp.Presentation.Authorization;
 using GastroErp.Presentation.Filters;
 using GastroErp.Presentation.Infrastructure.FeatureFlags;
 using GastroErp.Presentation.Infrastructure.FileUpload;
 using GastroErp.Presentation.Infrastructure.Webhooks;
+using GastroErp.Presentation.Realtime;
 using GastroErp.Presentation.Resolution;
 using GastroErp.Presentation.Swagger;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -71,6 +73,18 @@ public static class ServiceCollectionExtensions
                 ValidIssuer = configuration["Jwt:Issuer"] ?? "GastroErp",
                 ValidAudience = configuration["Jwt:Audience"] ?? "GastroErpClient",
                 IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSigningKey))
+            };
+
+            options.Events = new JwtBearerEvents
+            {
+                OnMessageReceived = context =>
+                {
+                    var accessToken = context.Request.Query["access_token"];
+                    var path = context.HttpContext.Request.Path;
+                    if (!string.IsNullOrEmpty(accessToken) && path.StartsWithSegments("/hubs"))
+                        context.Token = accessToken;
+                    return Task.CompletedTask;
+                }
             };
         });
 
@@ -152,6 +166,9 @@ public static class ServiceCollectionExtensions
         {
             options.Limits.MaxRequestBodySize = configuration.GetValue<long>("RequestLimits:MaxRequestBodySize", 10485760);
         });
+
+        services.AddSignalR();
+        services.AddScoped<IKitchenRealtimeNotifier, KitchenRealtimeNotifier>();
 
         return services;
     }

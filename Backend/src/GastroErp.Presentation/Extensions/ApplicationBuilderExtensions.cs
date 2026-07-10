@@ -1,4 +1,5 @@
 using GastroErp.Presentation.HealthChecks;
+using GastroErp.Presentation.Hubs;
 using GastroErp.Presentation.Infrastructure.ApiKeys;
 using GastroErp.Presentation.Infrastructure.Metrics;
 using GastroErp.Presentation.Middlewares;
@@ -59,6 +60,7 @@ public static class ApplicationBuilderExtensions
         app.UseEndpoints(endpoints =>
         {
             endpoints.MapControllers().RequireRateLimiting("Fixed");
+            endpoints.MapHub<GastroHub>("/hubs/gastro");
             
             // Health Checks
             endpoints.MapHealthChecks("/health/live", new HealthCheckOptions

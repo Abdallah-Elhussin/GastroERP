@@ -2,6 +2,7 @@ using AutoMapper;
 using GastroErp.Application.Common.Interfaces;
 using GastroErp.Application.Common.Responses;
 using GastroErp.Application.Features.Inventory.DTOs;
+using GastroErp.Application.Features.Inventory.Queries;
 using GastroErp.Domain.Entities.Inventory.Catalog;
 using GastroErp.Domain.Entities.Inventory.Suppliers;
 using GastroErp.Domain.Entities.Inventory.Warehouse;
@@ -141,11 +142,20 @@ public class CreateInventoryItemCommandHandler : IRequestHandler<CreateInventory
         var catExists = await _context.InventoryCategories.AnyAsync(c => c.Id == request.Dto.CategoryId, cancellationToken);
         if (!catExists) return Result<InventoryItemDto>.Failure("CategoryNotFound", "Inventory category not found.");
 
-        var item = new InventoryItem(request.Dto.TenantId, request.Dto.CategoryId, request.Dto.NameAr, request.Dto.BaseUnitId, request.Dto.NameEn, request.Dto.Sku, request.Dto.Barcode);
+        var item = new InventoryItem(request.Dto.TenantId, request.Dto.CategoryId, request.Dto.NameAr, request.Dto.BaseUnitId,
+            request.Dto.NameEn, request.Dto.Sku, request.Dto.Barcode, request.Dto.ItemKind, request.Dto.ImageUrl);
+        if (!string.IsNullOrWhiteSpace(request.Dto.DescriptionAr) || !string.IsNullOrWhiteSpace(request.Dto.DescriptionEn))
+            item.UpdateInfo(request.Dto.NameAr, request.Dto.NameEn, request.Dto.DescriptionAr, request.Dto.DescriptionEn,
+                request.Dto.Sku, request.Dto.Barcode, request.Dto.ItemKind, request.Dto.ImageUrl);
+        if (request.Dto.DefaultPurchaseUnitId.HasValue || request.Dto.DefaultRecipeUnitId.HasValue)
+            item.SetUnits(request.Dto.DefaultPurchaseUnitId, request.Dto.DefaultRecipeUnitId);
+        if (request.Dto.ReorderLevel > 0 || request.Dto.ReorderQuantity > 0)
+            item.SetReorderInfo(request.Dto.ReorderLevel, request.Dto.ReorderQuantity);
         _context.InventoryItems.Add(item);
         await _context.SaveChangesAsync(cancellationToken);
         _logger.LogInformation("InventoryItem created: {Id}", item.Id);
-        return Result<InventoryItemDto>.Success(_mapper.Map<InventoryItemDto>(item));
+        var projected = await InventoryItemDtoProjector.ProjectAsync(_context, [item], cancellationToken);
+        return Result<InventoryItemDto>.Success(projected[0]);
     }
 }
 
@@ -161,7 +171,23 @@ public class UpdateInventoryItemCommandHandler : IRequestHandler<UpdateInventory
     {
         var item = await _context.InventoryItems.FirstOrDefaultAsync(i => i.Id == request.Id, cancellationToken);
         if (item == null) return Result.Failure("ItemNotFound", "Inventory item not found.");
-        item.UpdateInfo(request.Dto.NameAr, request.Dto.NameEn, request.Dto.DescriptionAr, request.Dto.DescriptionEn, request.Dto.Sku, request.Dto.Barcode);
+        item.UpdateInfo(request.Dto.NameAr, request.Dto.NameEn, request.Dto.DescriptionAr, request.Dto.DescriptionEn,
+            request.Dto.Sku, request.Dto.Barcode, request.Dto.ItemKind, request.Dto.ImageUrl);
+        if (request.Dto.CategoryId.HasValue)
+        {
+            var catExists = await _context.InventoryCategories.AnyAsync(c => c.Id == request.Dto.CategoryId.Value, cancellationToken);
+            if (!catExists) return Result.Failure("CategoryNotFound", "Inventory category not found.");
+            item.SetCategory(request.Dto.CategoryId.Value);
+        }
+        if (request.Dto.BaseUnitId.HasValue && request.Dto.BaseUnitId.Value != Guid.Empty)
+        {
+            var unitExists = await _context.InventoryUnits.AnyAsync(u => u.Id == request.Dto.BaseUnitId.Value, cancellationToken);
+            if (!unitExists) return Result.Failure("UnitNotFound", "Inventory unit not found.");
+            item.SetBaseUnit(request.Dto.BaseUnitId.Value);
+        }
+        item.SetUnits(request.Dto.DefaultPurchaseUnitId, request.Dto.DefaultRecipeUnitId);
+        if (request.Dto.ReorderLevel.HasValue && request.Dto.ReorderQuantity.HasValue)
+            item.SetReorderInfo(request.Dto.ReorderLevel.Value, request.Dto.ReorderQuantity.Value);
         _context.InventoryItems.Update(item);
         await _context.SaveChangesAsync(cancellationToken);
         _logger.LogInformation("InventoryItem updated: {Id}", item.Id);

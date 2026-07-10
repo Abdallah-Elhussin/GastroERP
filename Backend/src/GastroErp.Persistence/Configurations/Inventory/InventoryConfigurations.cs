@@ -87,6 +87,8 @@ public sealed class InventoryItemConfiguration : IEntityTypeConfiguration<Invent
         builder.Property(x => x.DescriptionEn).HasMaxLength(500);
         builder.Property(x => x.Sku).HasMaxLength(50);
         builder.Property(x => x.Barcode).HasMaxLength(50);
+        builder.Property(x => x.ImageUrl).HasMaxLength(500);
+        builder.Property(x => x.ItemKind).HasConversion<byte>();
         builder.Property(x => x.ReorderLevel).HasPrecision(18, 4);
         builder.Property(x => x.ReorderQuantity).HasPrecision(18, 4);
         builder.Property<byte[]>("RowVersion").IsRowVersion();

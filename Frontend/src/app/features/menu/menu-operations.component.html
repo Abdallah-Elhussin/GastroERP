@@ -1,0 +1,103 @@
+<div class="h-full flex flex-col gap-6 -m-6 p-6 overflow-y-auto">
+  <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+    <div>
+      <h2 class="text-xl font-bold text-[var(--text-primary)]">{{ t('menu.title') }}</h2>
+      <p class="text-xs text-[var(--text-secondary)] mt-1">{{ t('menu.subtitle') }}</p>
+    </div>
+    <app-button *ngIf="activeTab() === 'products'" icon="add" (click)="openAddProduct()">
+      {{ t('menu.addProduct') }}
+    </app-button>
+  </div>
+
+  <div class="flex gap-2 border-b border-[var(--border-color)] pb-1">
+    <button type="button" (click)="activeTab.set('products')"
+      [class.text-[var(--accent-color)]]="activeTab() === 'products'"
+      [class.border-b-2]="activeTab() === 'products'"
+      class="px-4 py-2 text-xs font-semibold border-b-2 border-transparent">
+      {{ t('menu.tab.products') }}
+    </button>
+    <button type="button" (click)="activeTab.set('pricing')"
+      [class.text-[var(--accent-color)]]="activeTab() === 'pricing'"
+      [class.border-b-2]="activeTab() === 'pricing'"
+      class="px-4 py-2 text-xs font-semibold border-b-2 border-transparent">
+      {{ t('menu.tab.pricing') }}
+    </button>
+    <button type="button" (click)="activeTab.set('categories')"
+      [class.text-[var(--accent-color)]]="activeTab() === 'categories'"
+      [class.border-b-2]="activeTab() === 'categories'"
+      class="px-4 py-2 text-xs font-semibold border-b-2 border-transparent">
+      {{ t('menu.tab.categories') }}
+    </button>
+  </div>
+
+  <!-- Products -->
+  <ng-container *ngIf="activeTab() === 'products'">
+    <app-card *ngIf="showProductForm()" [title]="editingProductId() ? t('menu.editProduct') : t('menu.addProduct')">
+      <form [formGroup]="productForm" class="grid grid-cols-1 md:grid-cols-2 gap-4" (ngSubmit)="saveProduct()">
+        <input formControlName="nameAr" [placeholder]="t('menu.field.nameAr')" class="input-field" />
+        <input formControlName="nameEn" [placeholder]="t('menu.field.nameEn')" class="input-field" />
+        <input formControlName="category" [placeholder]="t('menu.field.category')" class="input-field" />
+        <input formControlName="sku" [placeholder]="t('menu.col.sku')" class="input-field" />
+        <input formControlName="dineIn" type="number" [placeholder]="t('menu.col.dineIn')" class="input-field" />
+        <input formControlName="takeaway" type="number" [placeholder]="t('menu.col.takeaway')" class="input-field" />
+        <input formControlName="delivery" type="number" [placeholder]="t('menu.col.delivery')" class="input-field" />
+        <div class="md:col-span-2 flex gap-2">
+          <app-button type="submit">{{ t('menu.save') }}</app-button>
+          <app-button variant="outline" type="button" (click)="showProductForm.set(false)">{{ t('menu.cancel') }}</app-button>
+        </div>
+      </form>
+    </app-card>
+
+    <app-card [title]="t('menu.productsList')">
+      <app-table [columns]="productColumns()" [data]="products()" [pagination]="true" [defaultPageSize]="10">
+        <ng-template #rowTemplate let-row let-column="column">
+          <ng-container [ngSwitch]="column.key">
+            <span *ngSwitchCase="'dineIn'">{{ row.dineIn | number:'1.2-2' }} {{ t('common.currency') }}</span>
+            <span *ngSwitchCase="'takeaway'">{{ row.takeaway | number:'1.2-2' }} {{ t('common.currency') }}</span>
+            <span *ngSwitchCase="'delivery'">{{ row.delivery | number:'1.2-2' }} {{ t('common.currency') }}</span>
+            <div *ngSwitchCase="'actions'" class="flex gap-2">
+              <button type="button" (click)="openEditProduct(row)" class="text-[var(--accent-color)] text-xs font-bold">{{ t('menu.edit') }}</button>
+              <button type="button" (click)="deleteProduct(row.id)" class="text-red-500 text-xs font-bold">{{ t('menu.delete') }}</button>
+            </div>
+            <span *ngSwitchDefault>{{ row[column.key] }}</span>
+          </ng-container>
+        </ng-template>
+      </app-table>
+    </app-card>
+  </ng-container>
+
+  <!-- Pricing -->
+  <ng-container *ngIf="activeTab() === 'pricing'">
+    <app-card [title]="t('menu.priceLevels')">
+      <form [formGroup]="priceLevelForm" class="grid grid-cols-1 md:grid-cols-4 gap-3 mb-4" (ngSubmit)="addPriceLevel()">
+        <input formControlName="nameAr" [placeholder]="t('menu.field.nameAr')" class="input-field" />
+        <input formControlName="nameEn" [placeholder]="t('menu.field.nameEn')" class="input-field" />
+        <select formControlName="channel" class="input-field">
+          <option value="DineIn">{{ t('menu.channel.dineIn') }}</option>
+          <option value="TakeAway">{{ t('menu.channel.takeaway') }}</option>
+          <option value="Delivery">{{ t('menu.channel.delivery') }}</option>
+        </select>
+        <app-button type="submit" icon="add">{{ t('menu.addPriceLevel') }}</app-button>
+      </form>
+      <div class="flex flex-col gap-2">
+        <div *ngFor="let pl of priceLevels()" class="flex justify-between items-center p-3 rounded-lg border border-[var(--border-color)] text-sm">
+          <span>{{ pl.nameAr }} / {{ pl.nameEn }}</span>
+          <span class="text-xs text-[var(--text-muted)]">{{ pl.channel }}</span>
+        </div>
+      </div>
+    </app-card>
+  </ng-container>
+
+  <!-- Categories -->
+  <ng-container *ngIf="activeTab() === 'categories'">
+    <app-card [title]="t('menu.categories')">
+      <form [formGroup]="categoryForm" class="flex gap-3 mb-4" (ngSubmit)="addCategory()">
+        <input formControlName="name" [placeholder]="t('menu.field.category')" class="input-field flex-1" />
+        <app-button type="submit" icon="add">{{ t('menu.addCategory') }}</app-button>
+      </form>
+      <div class="flex flex-wrap gap-2">
+        <span *ngFor="let cat of categories()" class="px-3 py-1.5 rounded-full bg-[var(--bg-canvas)] border border-[var(--border-color)] text-xs font-semibold">{{ cat }}</span>
+      </div>
+    </app-card>
+  </ng-container>
+</div>

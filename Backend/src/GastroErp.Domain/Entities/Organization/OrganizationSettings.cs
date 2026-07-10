@@ -24,6 +24,9 @@ public sealed class OrganizationSettings : AuditableBaseEntity
     public string? Address { get; private set; }
     public string? ContactEmail { get; private set; }
     public string? ContactPhone { get; private set; }
+    public bool MultiCurrencyEnabled { get; private set; }
+    public string? AdditionalCurrencyCodes { get; private set; }
+    public string CalendarSystem { get; private set; }
 
     private OrganizationSettings()
     {
@@ -41,6 +44,17 @@ public sealed class OrganizationSettings : AuditableBaseEntity
         LegalName = legalName;
         CommercialRegistration = commercialRegistration;
         TaxNumber = taxNumber;
+        CalendarSystem = "Gregorian";
+    }
+
+    public void ConfigureOnboarding(
+        bool multiCurrencyEnabled,
+        string calendarSystem,
+        string? additionalCurrencyCodes = null)
+    {
+        MultiCurrencyEnabled = multiCurrencyEnabled;
+        CalendarSystem = string.IsNullOrWhiteSpace(calendarSystem) ? "Gregorian" : calendarSystem;
+        AdditionalCurrencyCodes = additionalCurrencyCodes;
     }
 
     public void UpdateGeneralInfo(string companyName, string? legalName, string? commercialRegistration, string? taxNumber)

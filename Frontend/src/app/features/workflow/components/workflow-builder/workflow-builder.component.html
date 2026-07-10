@@ -1,0 +1,100 @@
+<div class="flex flex-col gap-6 h-full">
+  
+  <!-- Header Bar -->
+  <div class="flex justify-between items-center select-none">
+    <div class="flex flex-col text-left">
+      <span class="text-xs font-bold text-[var(--text-primary)]">{{ t('workflow.builder.title') }}</span>
+      <span class="text-[10px] text-[var(--text-muted)]">{{ t('workflow.builder.subtitle') }}</span>
+    </div>
+    <button 
+      (click)="addNewRule()" 
+      class="bg-[var(--primary-color)] text-[var(--primary-contrast)] hover:bg-[var(--primary-color-hover)] px-4 py-2 rounded-xl text-xs font-bold shadow-md cursor-pointer flex items-center gap-1.5"
+    >
+      <mat-icon class="text-sm">add</mat-icon>
+      <span>{{ t('workflow.builder.create') }}</span>
+    </button>
+  </div>
+
+  <!-- Rules Grid List -->
+  <div class="flex flex-col gap-4">
+    <div 
+      *ngFor="let rule of rules()"
+      class="bg-[var(--bg-surface)] border border-[var(--border-color)] rounded-2xl p-5 flex flex-col gap-4 shadow-sm"
+    >
+      <!-- Top info -->
+      <div class="flex justify-between items-center select-none">
+        <div class="flex items-center gap-3">
+          <span 
+            [class.bg-emerald-500]="rule.isActive"
+            [class.bg-slate-400]="!rule.isActive"
+            class="w-2.5 h-2.5 rounded-full"
+          ></span>
+          <span class="text-xs font-extrabold text-[var(--text-primary)]">{{ rule.name }}</span>
+        </div>
+        
+        <div class="flex gap-2">
+          <!-- Active switch -->
+          <button 
+            type="button"
+            (click)="toggleRule(rule.id)"
+            [class.bg-emerald-500]="rule.isActive"
+            [class.text-white]="rule.isActive"
+            [class.bg-[var(--bg-canvas)]]="!rule.isActive"
+            [class.text-[var(--text-muted)]]="!rule.isActive"
+            class="border border-[var(--border-color)] px-3 py-1 rounded-lg text-[9px] font-bold cursor-pointer"
+          >
+            {{ rule.isActive ? t('workflow.builder.active') : t('workflow.builder.inactive') }}
+          </button>
+          
+          <button 
+            type="button"
+            (click)="deleteRule(rule.id)"
+            class="bg-[var(--bg-canvas)] text-red-500 border border-[var(--border-color)] hover:bg-[var(--bg-surface-hover)] px-2.5 py-1 rounded-lg text-[9px] font-bold cursor-pointer"
+            [title]="t('workflow.builder.delete')"
+          >
+            <mat-icon class="text-xs">delete</mat-icon>
+          </button>
+        </div>
+      </div>
+
+      <!-- Flow visualizer -->
+      <div class="bg-[var(--bg-canvas)] border border-[var(--border-color)] rounded-xl p-4 flex flex-col md:flex-row items-center gap-4 text-xs font-medium">
+        
+        <!-- Step 1: Trigger -->
+        <div class="flex flex-col text-left flex-1 w-full">
+          <span class="text-[8px] font-bold text-[var(--text-muted)] uppercase">{{ t('workflow.builder.when') }}</span>
+          <div class="flex items-center gap-2 mt-1">
+            <mat-icon class="text-blue-500 text-sm">notifications_active</mat-icon>
+            <span class="text-[var(--text-primary)] font-semibold">{{ rule.trigger }}</span>
+          </div>
+        </div>
+
+        <!-- Arrow indicator -->
+        <mat-icon class="text-[var(--text-muted)] text-sm rotate-90 md:rotate-0">east</mat-icon>
+
+        <!-- Step 2: Condition -->
+        <div class="flex flex-col text-left flex-1 w-full">
+          <span class="text-[8px] font-bold text-[var(--text-muted)] uppercase">{{ t('workflow.builder.if') }}</span>
+          <div class="flex items-center gap-2 mt-1">
+            <mat-icon class="text-amber-500 text-sm">filter_alt</mat-icon>
+            <span class="text-[var(--text-primary)] font-semibold">{{ rule.condition }}</span>
+          </div>
+        </div>
+
+        <!-- Arrow indicator -->
+        <mat-icon class="text-[var(--text-muted)] text-sm rotate-90 md:rotate-0">east</mat-icon>
+
+        <!-- Step 3: Action -->
+        <div class="flex flex-col text-left flex-1 w-full">
+          <span class="text-[8px] font-bold text-[var(--text-muted)] uppercase">{{ t('workflow.builder.then') }}</span>
+          <div class="flex items-center gap-2 mt-1">
+            <mat-icon class="text-emerald-500 text-sm">offline_bolt</mat-icon>
+            <span class="text-[var(--text-primary)] font-semibold">{{ rule.action }}</span>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+</div>

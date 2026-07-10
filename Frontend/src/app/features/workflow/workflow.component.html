@@ -1,0 +1,96 @@
+<div class="h-full flex flex-col gap-6 -m-6 p-6 overflow-y-auto text-left select-none">
+  
+  <!-- Breadcrumb Navigation -->
+  <div class="text-[10px] text-[var(--text-muted)] font-semibold uppercase tracking-wider">
+    <span>{{ t('media.breadcrumb.portal') }}</span>
+    <span class="mx-2">/</span>
+    <span>{{ t('nav.workflow') }}</span>
+    <span class="mx-2">/</span>
+    <span class="text-[var(--text-primary)]">{{ t('workflow.breadcrumb.center') }}</span>
+  </div>
+
+  <!-- Title Section -->
+  <div class="flex flex-col gap-1">
+    <h2 class="text-xl font-bold tracking-tight text-[var(--text-primary)]">{{ t('workflow.title') }}</h2>
+    <p class="text-xs text-[var(--text-secondary)]">{{ t('workflow.subtitle') }}</p>
+  </div>
+
+  <!-- Tab Switcher Controls -->
+  <div class="flex gap-2 border-b border-[var(--border-color)] pb-3">
+    <button 
+      (click)="setActiveTab('kanban')"
+      [class.bg-[var(--primary-color)]]="activeTab() === 'kanban'"
+      [class.text-[var(--primary-contrast)]]="activeTab() === 'kanban'"
+      [class.bg-[var(--bg-canvas)]]="activeTab() !== 'kanban'"
+      [class.text-[var(--text-secondary)]]="activeTab() !== 'kanban'"
+      [class.border]="activeTab() !== 'kanban'"
+      [class.border-[var(--border-color)]]="activeTab() !== 'kanban'"
+      class="px-4 py-2 rounded-xl text-xs font-semibold hover:opacity-90 transition-all cursor-pointer flex items-center gap-1.5"
+    >
+      <mat-icon class="text-sm">view_week</mat-icon>
+      <span>{{ t('workflow.tab.kanban') }}</span>
+    </button>
+
+    <button 
+      (click)="setActiveTab('builder')"
+      [class.bg-[var(--primary-color)]]="activeTab() === 'builder'"
+      [class.text-[var(--primary-contrast)]]="activeTab() === 'builder'"
+      [class.bg-[var(--bg-canvas)]]="activeTab() !== 'builder'"
+      [class.text-[var(--text-secondary)]]="activeTab() !== 'builder'"
+      [class.border]="activeTab() !== 'builder'"
+      [class.border-[var(--border-color)]]="activeTab() !== 'builder'"
+      class="px-4 py-2 rounded-xl text-xs font-semibold hover:opacity-90 transition-all cursor-pointer flex items-center gap-1.5"
+    >
+      <mat-icon class="text-sm">settings_input_component</mat-icon>
+      <span>{{ t('workflow.tab.builder') }}</span>
+    </button>
+
+    <button 
+      (click)="setActiveTab('approvals')"
+      [class.bg-[var(--primary-color)]]="activeTab() === 'approvals'"
+      [class.text-[var(--primary-contrast)]]="activeTab() === 'approvals'"
+      [class.bg-[var(--bg-canvas)]]="activeTab() !== 'approvals'"
+      [class.text-[var(--text-secondary)]]="activeTab() !== 'approvals'"
+      [class.border]="activeTab() !== 'approvals'"
+      [class.border-[var(--border-color)]]="activeTab() !== 'approvals'"
+      class="px-4 py-2 rounded-xl text-xs font-semibold hover:opacity-90 transition-all cursor-pointer flex items-center gap-1.5"
+    >
+      <mat-icon class="text-sm">fact_check</mat-icon>
+      <span>{{ t('workflow.tab.approvals') }}</span>
+    </button>
+
+    <button 
+      (click)="setActiveTab('activity')"
+      [class.bg-[var(--primary-color)]]="activeTab() === 'activity'"
+      [class.text-[var(--primary-contrast)]]="activeTab() === 'activity'"
+      [class.bg-[var(--bg-canvas)]]="activeTab() !== 'activity'"
+      [class.text-[var(--text-secondary)]]="activeTab() !== 'activity'"
+      [class.border]="activeTab() !== 'activity'"
+      [class.border-[var(--border-color)]]="activeTab() !== 'activity'"
+      class="px-4 py-2 rounded-xl text-xs font-semibold hover:opacity-90 transition-all cursor-pointer flex items-center gap-1.5"
+    >
+      <mat-icon class="text-sm">history</mat-icon>
+      <span>{{ t('workflow.tab.activity') }}</span>
+    </button>
+  </div>
+
+  <!-- Dynamic Views -->
+  <div class="flex-1 min-h-0">
+    <div *ngIf="activeTab() === 'kanban'" class="h-full">
+      <app-workflow-kanban></app-workflow-kanban>
+    </div>
+
+    <div *ngIf="activeTab() === 'builder'" class="h-full">
+      <app-workflow-builder></app-workflow-builder>
+    </div>
+
+    <div *ngIf="activeTab() === 'approvals'" class="h-full">
+      <app-approval-center></app-approval-center>
+    </div>
+
+    <div *ngIf="activeTab() === 'activity'" class="h-full">
+      <app-activity-feed></app-activity-feed>
+    </div>
+  </div>
+
+</div>

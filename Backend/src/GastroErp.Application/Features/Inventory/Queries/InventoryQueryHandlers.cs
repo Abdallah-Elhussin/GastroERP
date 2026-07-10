@@ -24,8 +24,10 @@ public class GetInventoryCategoriesQueryHandler : IRequestHandler<GetInventoryCa
 
         var total = await query.CountAsync(cancellationToken);
         var items = await query.OrderBy(c => c.NameAr).Skip((request.PageNumber - 1) * request.PageSize).Take(request.PageSize).ToListAsync(cancellationToken);
+        var dtos = items.Select(c => new InventoryCategoryDto(
+            c.Id, c.TenantId, c.NameAr, c.NameEn, null, c.IsActive, c.CreatedAt.UtcDateTime)).ToList();
 
-        return PagedResult<InventoryCategoryDto>.Success(_mapper.Map<List<InventoryCategoryDto>>(items), total, request.PageNumber, request.PageSize);
+        return PagedResult<InventoryCategoryDto>.Success(dtos, total, request.PageNumber, request.PageSize);
     }
 }
 
@@ -41,7 +43,8 @@ public class GetInventoryCategoryByIdQueryHandler : IRequestHandler<GetInventory
     {
         var cat = await _context.InventoryCategories.AsNoTracking().FirstOrDefaultAsync(c => c.Id == request.Id, cancellationToken);
         if (cat == null) return Result<InventoryCategoryDto>.Failure("CategoryNotFound", "Inventory category not found.");
-        return Result<InventoryCategoryDto>.Success(_mapper.Map<InventoryCategoryDto>(cat));
+        return Result<InventoryCategoryDto>.Success(new InventoryCategoryDto(
+            cat.Id, cat.TenantId, cat.NameAr, cat.NameEn, null, cat.IsActive, cat.CreatedAt.UtcDateTime));
     }
 }
 
@@ -84,8 +87,9 @@ public class GetInventoryItemsQueryHandler : IRequestHandler<GetInventoryItemsQu
 
         var total = await query.CountAsync(cancellationToken);
         var items = await query.OrderBy(i => i.NameAr).Skip((request.PageNumber - 1) * request.PageSize).Take(request.PageSize).ToListAsync(cancellationToken);
+        var projected = await InventoryItemDtoProjector.ProjectAsync(_context, items, cancellationToken);
 
-        return PagedResult<InventoryItemDto>.Success(_mapper.Map<List<InventoryItemDto>>(items), total, request.PageNumber, request.PageSize);
+        return PagedResult<InventoryItemDto>.Success(projected, total, request.PageNumber, request.PageSize);
     }
 }
 
@@ -101,7 +105,8 @@ public class GetInventoryItemByIdQueryHandler : IRequestHandler<GetInventoryItem
     {
         var item = await _context.InventoryItems.AsNoTracking().FirstOrDefaultAsync(i => i.Id == request.Id, cancellationToken);
         if (item == null) return Result<InventoryItemDto>.Failure("ItemNotFound", "Inventory item not found.");
-        return Result<InventoryItemDto>.Success(_mapper.Map<InventoryItemDto>(item));
+        var projected = await InventoryItemDtoProjector.ProjectAsync(_context, [item], cancellationToken);
+        return Result<InventoryItemDto>.Success(projected[0]);
     }
 }
 

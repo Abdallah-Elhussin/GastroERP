@@ -1,0 +1,106 @@
+<aside 
+  [class.w-64]="!isCollapsed()"
+  [class.w-20]="isCollapsed()"
+  class="h-full bg-[var(--bg-surface)] border-r border-[var(--border-color)] flex flex-col justify-between transition-all duration-300 overflow-hidden flex-shrink-0"
+>
+  
+  <div class="flex flex-col gap-6">
+    
+    <div class="h-16 border-b border-[var(--border-color)] px-6 flex items-center justify-between overflow-hidden select-none flex-shrink-0">
+      <div class="flex items-center gap-3">
+        <img 
+          [src]="dataService.branding().logoUrl" 
+          alt="GastroERP Logo" 
+          class="h-7 w-7 rounded-lg object-cover flex-shrink-0"
+        />
+        <span 
+          *ngIf="!isCollapsed()"
+          class="font-black text-sm tracking-wider uppercase text-[var(--text-primary)] truncate transition-all duration-200"
+        >
+          {{ dataService.branding().name }}
+        </span>
+      </div>
+      <button 
+        *ngIf="!isCollapsed()"
+        (click)="toggleCollapse()"
+        class="text-[var(--text-muted)] hover:text-[var(--text-primary)] cursor-pointer"
+        title="{{ t('sidebar.collapse') }}"
+      >
+        <mat-icon class="text-sm">menu_open</mat-icon>
+      </button>
+    </div>
+
+    <nav class="flex flex-col gap-1 px-4 select-none overflow-y-auto">
+      <ng-container *ngFor="let item of navItems">
+        <!-- Simple link -->
+        <a 
+          *ngIf="!item.children"
+          [routerLink]="item.path"
+          routerLinkActive="bg-[var(--bg-canvas)] text-[var(--accent-color)] font-bold border-l-4 border-l-[var(--accent-color)]"
+          [class.justify-center]="isCollapsed()"
+          class="flex items-center gap-3 px-4 py-3 rounded-lg text-xs text-[var(--text-secondary)] hover:bg-[var(--bg-surface-hover)] hover:text-[var(--text-primary)] transition-all cursor-pointer"
+        >
+          <mat-icon class="text-base flex-shrink-0">{{ item.icon }}</mat-icon>
+          <span *ngIf="!isCollapsed()" class="truncate transition-opacity duration-200">{{ t(item.labelKey) }}</span>
+        </a>
+
+        <!-- Inventory group -->
+        <div *ngIf="item.children" class="flex flex-col gap-1">
+          <button
+            type="button"
+            (click)="toggleInventory()"
+            [class.bg-[var(--bg-canvas)]="inventoryActive()"
+            [class.text-[var(--accent-color)]="inventoryActive()"
+            [class.font-bold]="inventoryActive()"
+            [class.justify-center]="isCollapsed()"
+            class="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-xs text-[var(--text-secondary)] hover:bg-[var(--bg-surface-hover)] hover:text-[var(--text-primary)] transition-all cursor-pointer"
+          >
+            <mat-icon class="text-base flex-shrink-0">{{ item.icon }}</mat-icon>
+            <span *ngIf="!isCollapsed()" class="truncate flex-1 text-start">{{ t(item.labelKey) }}</span>
+            <mat-icon *ngIf="!isCollapsed()" class="text-sm">{{ inventoryExpanded() ? 'expand_less' : 'expand_more' }}</mat-icon>
+          </button>
+
+          <div *ngIf="inventoryExpanded() && !isCollapsed()" class="flex flex-col gap-0.5 ms-3 border-s border-[var(--border-color)] ps-2">
+            <a
+              *ngFor="let child of item.children"
+              [routerLink]="child.path"
+              routerLinkActive="bg-[var(--bg-canvas)] text-[var(--accent-color)] font-bold"
+              class="flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-[11px] text-[var(--text-secondary)] hover:bg-[var(--bg-surface-hover)] hover:text-[var(--text-primary)] transition-all cursor-pointer"
+            >
+              <mat-icon class="text-sm flex-shrink-0">{{ child.icon }}</mat-icon>
+              <span class="truncate">{{ t(child.labelKey) }}</span>
+            </a>
+          </div>
+
+          <!-- Collapsed: show first child icon as shortcut -->
+          <a
+            *ngIf="isCollapsed()"
+            routerLink="/inventory"
+            routerLinkActive="text-[var(--accent-color)]"
+            class="flex items-center justify-center py-2 text-[var(--text-muted)] hover:text-[var(--accent-color)]"
+            [title]="t('nav.inventory')"
+          >
+            <mat-icon class="text-base">inventory_2</mat-icon>
+          </a>
+        </div>
+      </ng-container>
+    </nav>
+
+  </div>
+
+  <div class="p-4 border-t border-[var(--border-color)] select-none flex-shrink-0">
+    <button 
+      *ngIf="isCollapsed()"
+      (click)="toggleCollapse()"
+      class="w-full bg-[var(--bg-canvas)] hover:bg-[var(--bg-surface-hover)] border border-[var(--border-color)] py-2 rounded-xl text-[var(--text-primary)] flex items-center justify-center cursor-pointer"
+      title="{{ t('sidebar.expand') }}"
+    >
+      <mat-icon class="text-base">chevron_right</mat-icon>
+    </button>
+    
+    <div *ngIf="!isCollapsed()" class="text-[9px] text-[var(--text-muted)] text-center font-semibold uppercase tracking-wider">
+      <span>{{ t('common.version') }}</span>
+    </div>
+  </div>
+
+</aside>

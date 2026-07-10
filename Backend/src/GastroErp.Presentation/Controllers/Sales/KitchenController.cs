@@ -11,6 +11,20 @@ namespace GastroErp.Presentation.Controllers.Sales;
 [ApiVersion("1.0")]
 public class KitchenController : BaseApiController
 {
+    [HttpGet($"{ApiRoutes.Sales.Kitchen}/board")]
+    [HasPermission(Permissions.Kitchen.View)]
+    public async Task<IActionResult> GetKdsBoard([FromQuery] Guid? branchId, [FromQuery] Guid? stationId)
+        => HandleResult(await Mediator.Send(new GetKdsBoardQuery(TenantId, branchId, stationId)));
+
+    [HttpPost($"{ApiRoutes.Sales.Kitchen}/dispatch")]
+    [HasPermission(Permissions.Sales.Update)]
+    public async Task<IActionResult> DispatchFromPos([FromBody] DispatchPosToKitchenDto dto)
+    {
+        var userId = HttpContext.RequestServices
+            .GetRequiredService<GastroErp.Application.Common.Interfaces.ICurrentUser>().Id ?? Guid.Empty;
+        return HandleResult(await Mediator.Send(new DispatchPosToKitchenCommand(TenantId, userId, dto)));
+    }
+
     [HttpGet($"{ApiRoutes.Sales.Kitchen}/stations")]
     [HasPermission(Permissions.Kitchen.View)]
     public async Task<IActionResult> GetStations([FromQuery] Guid? branchId)

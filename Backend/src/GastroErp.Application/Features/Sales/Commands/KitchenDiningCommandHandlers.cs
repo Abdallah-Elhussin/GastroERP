@@ -1,5 +1,6 @@
 using AutoMapper;
 using GastroErp.Application.Common.Interfaces;
+using GastroErp.Application.Common.Interfaces.Realtime;
 using GastroErp.Application.Common.Responses;
 using GastroErp.Application.Features.Delivery.Services;
 using GastroErp.Application.Features.Sales.DTOs;
@@ -53,8 +54,14 @@ public class UpdateKitchenStationCommandHandler : IRequestHandler<UpdateKitchenS
 public class StartKitchenTicketCommandHandler : IRequestHandler<StartKitchenTicketCommand, Result>
 {
     private readonly IApplicationDbContext _context;
+    private readonly IKdsBoardProjectionService _boardProjection;
+    private readonly IKitchenRealtimeNotifier _realtimeNotifier;
 
-    public StartKitchenTicketCommandHandler(IApplicationDbContext context) => _context = context;
+    public StartKitchenTicketCommandHandler(
+        IApplicationDbContext context,
+        IKdsBoardProjectionService boardProjection,
+        IKitchenRealtimeNotifier realtimeNotifier)
+        => (_context, _boardProjection, _realtimeNotifier) = (context, boardProjection, realtimeNotifier);
 
     public async Task<Result> Handle(StartKitchenTicketCommand request, CancellationToken cancellationToken)
     {
@@ -63,6 +70,11 @@ public class StartKitchenTicketCommandHandler : IRequestHandler<StartKitchenTick
         ticket.Start();
         _context.KitchenTickets.Update(ticket);
         await _context.SaveChangesAsync(cancellationToken);
+
+        var view = await _boardProjection.ProjectTicketAsync(ticket.Id, cancellationToken);
+        if (view is not null)
+            await _realtimeNotifier.NotifyTicketUpdatedAsync(view, cancellationToken);
+
         return Result.Success();
     }
 }
@@ -71,10 +83,15 @@ public class MarkKitchenTicketReadyCommandHandler : IRequestHandler<MarkKitchenT
 {
     private readonly IApplicationDbContext _context;
     private readonly IDeliveryKitchenIntegrationService _deliveryKitchen;
+    private readonly IKdsBoardProjectionService _boardProjection;
+    private readonly IKitchenRealtimeNotifier _realtimeNotifier;
 
     public MarkKitchenTicketReadyCommandHandler(
-        IApplicationDbContext context, IDeliveryKitchenIntegrationService deliveryKitchen)
-        => (_context, _deliveryKitchen) = (context, deliveryKitchen);
+        IApplicationDbContext context,
+        IDeliveryKitchenIntegrationService deliveryKitchen,
+        IKdsBoardProjectionService boardProjection,
+        IKitchenRealtimeNotifier realtimeNotifier)
+        => (_context, _deliveryKitchen, _boardProjection, _realtimeNotifier) = (context, deliveryKitchen, boardProjection, realtimeNotifier);
 
     public async Task<Result> Handle(MarkKitchenTicketReadyCommand request, CancellationToken cancellationToken)
     {
@@ -86,6 +103,11 @@ public class MarkKitchenTicketReadyCommandHandler : IRequestHandler<MarkKitchenT
         await _deliveryKitchen.CheckAndMarkReadyForPickupAsync(ticket.SalesOrderId, cancellationToken);
 
         await _context.SaveChangesAsync(cancellationToken);
+
+        var view = await _boardProjection.ProjectTicketAsync(ticket.Id, cancellationToken);
+        if (view is not null)
+            await _realtimeNotifier.NotifyTicketUpdatedAsync(view, cancellationToken);
+
         return Result.Success();
     }
 }
@@ -93,8 +115,12 @@ public class MarkKitchenTicketReadyCommandHandler : IRequestHandler<MarkKitchenT
 public class CompleteKitchenTicketCommandHandler : IRequestHandler<CompleteKitchenTicketCommand, Result>
 {
     private readonly IApplicationDbContext _context;
+    private readonly IKitchenRealtimeNotifier _realtimeNotifier;
 
-    public CompleteKitchenTicketCommandHandler(IApplicationDbContext context) => _context = context;
+    public CompleteKitchenTicketCommandHandler(
+        IApplicationDbContext context,
+        IKitchenRealtimeNotifier realtimeNotifier)
+        => (_context, _realtimeNotifier) = (context, realtimeNotifier);
 
     public async Task<Result> Handle(CompleteKitchenTicketCommand request, CancellationToken cancellationToken)
     {
@@ -103,6 +129,8 @@ public class CompleteKitchenTicketCommandHandler : IRequestHandler<CompleteKitch
         ticket.Complete();
         _context.KitchenTickets.Update(ticket);
         await _context.SaveChangesAsync(cancellationToken);
+
+        await _realtimeNotifier.NotifyTicketRemovedAsync(ticket.Id, cancellationToken);
         return Result.Success();
     }
 }

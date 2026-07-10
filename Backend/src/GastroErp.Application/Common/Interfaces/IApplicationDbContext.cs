@@ -2,6 +2,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore;
 using GastroErp.Domain.Entities.Organization;
+using GastroErp.Domain.Entities.Catalog;
 using GastroErp.Domain.Entities.Menu;
 using GastroErp.Domain.Entities.Inventory.Catalog;
 using GastroErp.Domain.Entities.Inventory.Suppliers;
@@ -37,6 +38,8 @@ public interface IApplicationDbContext
     DbSet<Device> Devices { get; }
     DbSet<BranchDevice> BranchDevices { get; }
     DbSet<OrganizationSettings> OrganizationSettings { get; }
+    DbSet<TenantCurrency> TenantCurrencies { get; }
+    DbSet<TenantPaymentMethod> TenantPaymentMethods { get; }
     DbSet<Subscription> Subscriptions { get; }
     DbSet<SubscriptionPlan> SubscriptionPlans { get; }
     DbSet<Feature> Features { get; }
@@ -66,6 +69,11 @@ public interface IApplicationDbContext
     DbSet<BranchMenu> BranchMenus { get; }
     DbSet<ComboMeal> ComboMeals { get; }
     DbSet<Product> Products { get; }
+
+    // ─── Product Catalog Engine ───────────────────────────────────────────────
+    DbSet<ProductCatalogDefinition> ProductCatalogDefinitions { get; }
+    DbSet<CatalogCodeSequence> CatalogCodeSequences { get; }
+    DbSet<ProductPriceHistory> ProductPriceHistories { get; }
 
     // ─── Inventory – Catalog ──────────────────────────────────────────────────
     DbSet<InventoryCategory> InventoryCategories { get; }

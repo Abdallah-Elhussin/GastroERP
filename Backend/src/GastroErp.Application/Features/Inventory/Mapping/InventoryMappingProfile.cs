@@ -17,7 +17,8 @@ public class InventoryMappingProfile : Profile
     {
         // InventoryCategory
         CreateMap<InventoryCategory, InventoryCategoryDto>()
-            .ForMember(d => d.Color, opt => opt.Ignore()); // Color not in entity, handled via description
+            .ForMember(d => d.Color, opt => opt.Ignore())
+            .ForMember(d => d.CreatedAt, opt => opt.MapFrom(src => src.CreatedAt.UtcDateTime));
 
         // InventoryUnit
         CreateMap<InventoryUnit, InventoryUnitDto>()

@@ -20,6 +20,7 @@ public static class ApiRoutes
     public static class Onboarding
     {
         public const string RegisterCompany = $"{Root}/onboarding/register-company";
+        public const string SetupRestaurant = $"{Root}/onboarding/setup-restaurant";
     }
 
     public static class Organization
@@ -44,9 +45,17 @@ public static class ApiRoutes
         public const string BranchMenus = $"{Root}/menu/branch-menus";
     }
 
+    public static class Catalog
+    {
+        public const string Types = $"{Root}/catalog/types";
+        public const string Definitions = $"{Root}/catalog/definitions";
+    }
+
     public static class Inventory
     {
         public const string Items = $"{Root}/inventory/items";
+        public const string Categories = $"{Root}/inventory/categories";
+        public const string Units = $"{Root}/inventory/units";
         public const string Warehouses = $"{Root}/inventory/warehouses";
         public const string Suppliers = $"{Root}/inventory/suppliers";
         public const string Purchases = $"{Root}/inventory/purchases";

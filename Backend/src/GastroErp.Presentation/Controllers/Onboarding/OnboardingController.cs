@@ -14,10 +14,18 @@ namespace GastroErp.Presentation.Controllers.Onboarding;
 public class OnboardingController : BaseApiController
 {
     /// <summary>
-    /// Register a new company, tenant, admin user, and trial subscription
+    /// Register a new restaurant company via the 4-step onboarding wizard
     /// </summary>
     [HttpPost(ApiRoutes.Onboarding.RegisterCompany)]
     [AllowAnonymous]
     public async Task<IActionResult> RegisterCompany([FromBody] RegisterCompanyDto request)
+        => HandleResult(await Mediator.Send(new RegisterCompanyCommand(request)));
+
+    /// <summary>
+    /// Alias for the restaurant setup wizard (same payload as register-company)
+    /// </summary>
+    [HttpPost(ApiRoutes.Onboarding.SetupRestaurant)]
+    [AllowAnonymous]
+    public async Task<IActionResult> SetupRestaurant([FromBody] RegisterCompanyDto request)
         => HandleResult(await Mediator.Send(new RegisterCompanyCommand(request)));
 }

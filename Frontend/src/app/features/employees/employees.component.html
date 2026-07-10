@@ -1,0 +1,122 @@
+<div class="h-full flex flex-col -m-6 bg-[var(--bg-canvas)] overflow-y-auto">
+
+  <!-- HR Operations Header -->
+  <div class="bg-[var(--bg-surface)] border-b border-[var(--border-color)] px-8 py-6 flex flex-col gap-4">
+    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+      <div>
+        <h2 class="text-xl font-bold text-[var(--text-primary)]">{{ t('hr.title') }}</h2>
+        <p class="text-xs text-[var(--text-secondary)] mt-1">{{ t('hr.subtitle') }}</p>
+      </div>
+      <app-button *ngIf="mainView() === 'list'" icon="person_add" (click)="openAddEmployee()">{{ t('hr.addEmployee') }}</app-button>
+    </div>
+
+    <div class="flex gap-4 border-b border-transparent">
+      <button type="button" (click)="mainView.set('list')"
+        [class.text-[var(--accent-color)]]="mainView() === 'list'"
+        [class.border-b-2]="mainView() === 'list'"
+        class="pb-2 text-xs font-semibold border-b-2 border-transparent">{{ t('hr.tab.list') }}</button>
+      <button type="button" (click)="mainView.set('profile')"
+        [class.text-[var(--accent-color)]]="mainView() === 'profile'"
+        [class.border-b-2]="mainView() === 'profile'"
+        class="pb-2 text-xs font-semibold border-b-2 border-transparent">{{ t('hr.tab.profile') }}</button>
+    </div>
+  </div>
+
+  <!-- Employee List Operations -->
+  <div *ngIf="mainView() === 'list'" class="p-6 flex flex-col gap-6">
+    <app-card *ngIf="showEmployeeForm()" [title]="t('hr.addEmployee')">
+      <form [formGroup]="employeeForm" class="grid grid-cols-1 md:grid-cols-2 gap-4" (ngSubmit)="saveEmployee()">
+        <input formControlName="name" [placeholder]="t('hr.field.name')" class="hr-input" />
+        <input formControlName="title" [placeholder]="t('hr.field.title')" class="hr-input" />
+        <input formControlName="department" [placeholder]="t('hr.field.department')" class="hr-input" />
+        <input formControlName="email" [placeholder]="t('hr.col.email')" class="hr-input" />
+        <input formControlName="phone" [placeholder]="t('hr.field.phone')" class="hr-input" />
+        <div class="md:col-span-2 flex gap-2">
+          <app-button type="submit">{{ t('menu.save') }}</app-button>
+          <app-button variant="outline" type="button" (click)="showEmployeeForm.set(false)">{{ t('menu.cancel') }}</app-button>
+        </div>
+      </form>
+    </app-card>
+
+    <app-card [title]="t('hr.employeesList')">
+      <app-table [columns]="columns()" [data]="employees()" [pagination]="true" [defaultPageSize]="10">
+        <ng-template #rowTemplate let-row let-column="column">
+          <ng-container [ngSwitch]="column.key">
+            <div *ngSwitchCase="'actions'" class="flex gap-2">
+              <button type="button" (click)="selectEmployee(row)" class="text-[var(--accent-color)] text-xs font-bold">{{ t('hr.viewProfile') }}</button>
+            </div>
+            <span *ngSwitchDefault>{{ row[column.key] }}</span>
+          </ng-container>
+        </ng-template>
+      </app-table>
+    </app-card>
+  </div>
+
+  <!-- Employee Profile (existing view) -->
+  <ng-container *ngIf="mainView() === 'profile'">
+    <div class="bg-[var(--bg-surface)] border-b border-[var(--border-color)] px-8 pt-6 flex flex-col gap-6 flex-shrink-0 select-none">
+      <div class="flex items-center gap-5 text-left">
+        <img [src]="employee().avatar" [alt]="employee().name" class="h-16 w-16 rounded-full border-2 border-[var(--accent-color)] object-cover shadow-sm" />
+        <div class="flex flex-col">
+          <h2 class="text-xl font-extrabold tracking-tight text-[var(--text-primary)]">{{ employee().name }}</h2>
+          <div class="flex items-center gap-3 text-xs text-[var(--text-secondary)] mt-1">
+            <span class="font-semibold text-[var(--accent-color)]">{{ employee().title }}</span>
+            <span class="w-1.5 h-1.5 rounded-full bg-[var(--border-color)]"></span>
+            <span>{{ employee().department }}</span>
+            <span class="w-1.5 h-1.5 rounded-full bg-[var(--border-color)]"></span>
+            <span class="bg-[var(--bg-canvas)] px-2 py-0.5 rounded border border-[var(--border-color)] text-[10px] font-semibold text-[var(--text-muted)]">
+              {{ employee().tenure }} {{ t('emp.tenure') }}
+            </span>
+          </div>
+        </div>
+      </div>
+
+      <div class="flex gap-6 border-b border-transparent overflow-x-auto">
+        <button *ngFor="let tab of tabKeys" (click)="activeTab.set(tab)"
+          [class.border-b-2]="activeTab() === tab" [class.border-[var(--accent-color)]]="activeTab() === tab"
+          [class.text-[var(--text-primary)]]="activeTab() === tab" [class.font-semibold]="activeTab() === tab"
+          [class.text-[var(--text-muted)]]="activeTab() !== tab"
+          class="pb-3 text-xs tracking-wide hover:text-[var(--text-primary)] transition-all cursor-pointer flex-shrink-0">
+          {{ t(tab) }}
+        </button>
+      </div>
+    </div>
+
+    <div class="flex-1 flex overflow-hidden min-h-0">
+      <div class="w-72 bg-[var(--bg-surface)] border-r border-[var(--border-color)] p-6 flex flex-col gap-6 overflow-y-auto hidden sm:flex select-none">
+        <div class="flex flex-col gap-3">
+          <span class="text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-wider text-left">{{ t('emp.departments') }}</span>
+          <div class="flex flex-col gap-1.5">
+            <div *ngFor="let dept of departments" [class.bg-[var(--bg-canvas)]]="dept.active" [class.font-bold]="dept.active"
+              class="flex justify-between items-center px-3 py-2.5 rounded-lg text-xs text-[var(--text-secondary)]">
+              <span>{{ t(dept.key) }}</span>
+              <span class="bg-[var(--border-color)] px-2 py-0.5 rounded font-semibold text-[10px]">{{ dept.count }}</span>
+            </div>
+          </div>
+        </div>
+        <div class="flex flex-col gap-3">
+          <span class="text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-wider text-left">{{ t('emp.teamMembers') }}</span>
+          <div *ngFor="let member of teamMembers()" (click)="selectEmployee(member.employee)"
+            class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-xs cursor-pointer hover:bg-[var(--bg-surface-hover)]"
+            [class.bg-[var(--bg-canvas)]]="member.active">
+            <img [src]="member.avatar" [alt]="member.name" class="w-7 h-7 rounded-full object-cover" />
+            <div class="flex flex-col text-left">
+              <span class="font-semibold text-[var(--text-primary)]">{{ member.name }}</span>
+              <span class="text-[10px] text-[var(--text-muted)]">{{ member.title }}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="flex-1 p-6 overflow-y-auto">
+        <div *ngIf="activeTab() === 'emp.personalInfo'" class="text-sm text-[var(--text-secondary)]">
+          {{ t('hr.profileHint') }}
+        </div>
+        <div *ngIf="activeTab() === 'emp.attendance'" class="text-sm text-[var(--text-secondary)]">{{ t('emp.attendance') }} — {{ employee().name }}</div>
+        <div *ngIf="activeTab() === 'emp.leaves'" class="text-sm text-[var(--text-secondary)]">{{ t('emp.leaves') }} — {{ employee().name }}</div>
+        <div *ngIf="activeTab() === 'emp.contracts'" class="text-sm text-[var(--text-secondary)]">{{ t('emp.contracts') }} — {{ employee().name }}</div>
+        <div *ngIf="activeTab() === 'emp.performance'" class="text-sm text-[var(--text-secondary)]">{{ t('emp.performance') }} — {{ employee().name }}</div>
+      </div>
+    </div>
+  </ng-container>
+</div>

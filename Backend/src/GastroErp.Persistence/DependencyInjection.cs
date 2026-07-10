@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore;
 using GastroErp.Application.Common.Interfaces;
 using GastroErp.Application.Common.Interfaces.Platform;
 using GastroErp.Application.Common.Options;
+using GastroErp.Application.Features.Onboarding;
 using GastroErp.Persistence.Platform;
 using GastroErp.Persistence.Seeders;
 
@@ -29,6 +30,8 @@ public static class DependencyInjection
         });
 
         services.AddScoped<IApplicationDbContext>(provider => provider.GetRequiredService<ApplicationDbContext>());
+        services.AddScoped<IUnitOfWork, UnitOfWork>();
+        services.AddScoped<IRestaurantOnboardingService, Services.RestaurantOnboardingService>();
         services.AddScoped<ApplicationDbContextInitializer>();
         services.AddScoped<TenantMasterDataSeeder>();
         services.AddScoped<ITenantMasterDataSeedService, TenantMasterDataSeedService>();
@@ -38,7 +41,10 @@ public static class DependencyInjection
         services.AddScoped<IDataSeeder, ChartOfAccountsSeeder>();
         services.AddScoped<IDataSeeder, InventoryMasterDataSeeder>();
         services.AddScoped<IDataSeeder, MenuMasterDataSeeder>();
+        services.AddScoped<IDataSeeder, KitchenOperationalSeeder>();
         services.AddScoped<IDataSeeder, WorkflowDefinitionsSeeder>();
+        services.AddScoped<IDataSeeder, RestaurantPaymentMethodSeeder>();
+        services.AddScoped<IDataSeeder, RestaurantReportingSeeder>();
 
         return services;
     }
