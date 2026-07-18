@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("GastroErp.Application.UnitTests")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+d2b907d41935dbf568a0a5dbf54df2b86a85e47e")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+2316080cad192340fb047fc63bfa1257465aef54")]
 [assembly: System.Reflection.AssemblyProductAttribute("GastroErp.Application.UnitTests")]
 [assembly: System.Reflection.AssemblyTitleAttribute("GastroErp.Application.UnitTests")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

@@ -9,6 +9,7 @@ public class FinanceMappingProfile : Profile
     public FinanceMappingProfile()
     {
         CreateMap<ChartOfAccount, AccountDto>();
+        CreateMap<AccountingSettings, AccountingSettingsDto>();
         CreateMap<FiscalPeriod, FiscalPeriodDto>();
         CreateMap<CostCenter, CostCenterDto>();
         CreateMap<JournalEntry, JournalDto>()
