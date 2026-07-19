@@ -1,0 +1,214 @@
+<app-inventory-page-shell
+  [breadcrumbs]="breadcrumbs"
+  titleKey="inv.nav.extensions"
+  subtitleKey="inv.extensions.subtitle"
+>
+  <button shellActions type="button" class="btn-primary" (click)="openCreate()">
+    <mat-icon>add</mat-icon>
+    {{ t('common.add') }}
+  </button>
+
+  <div class="tabs">
+    @for (tab of tabs; track tab.id) {
+      <button
+        type="button"
+        class="tab"
+        [class.on]="activeTab() === tab.id"
+        (click)="setTab(tab.id)"
+      >
+        {{ t(tab.labelKey) }}
+      </button>
+    }
+  </div>
+
+  @if (loading()) {
+    <app-inventory-skeleton [count]="5" />
+  } @else if (error()) {
+    <app-inventory-error-state [message]="error()!" (retry)="reload()" />
+  } @else {
+    @if (activeTab() === 'brands') {
+      @if (brands().length === 0) {
+        <app-inventory-empty-state icon="sell" [title]="t('inv.empty.title')" [message]="t('inv.brands.empty')" actionLabelKey="common.add" (action)="openCreate()" />
+      } @else {
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>{{ t('inv.field.code') }}</th><th>{{ t('inv.field.nameAr') }}</th><th>{{ t('inv.field.status') }}</th><th></th></tr></thead>
+            <tbody>
+              @for (row of brands(); track row.id) {
+                <tr [class.inactive]="!row.isActive">
+                  <td><code>{{ row.code }}</code></td>
+                  <td><strong>{{ row.nameAr }}</strong>@if (row.nameEn) { <div class="muted">{{ row.nameEn }}</div> }</td>
+                  <td><span class="badge" [class.on]="row.isActive">{{ row.isActive ? t('inv.status.active') : t('inv.status.inactive') }}</span></td>
+                  <td class="actions">
+                    <button type="button" class="icon-btn" (click)="openEdit(row)"><mat-icon>edit</mat-icon></button>
+                    <button type="button" class="icon-btn" (click)="toggleActive(row)"><mat-icon>{{ row.isActive ? 'toggle_on' : 'toggle_off' }}</mat-icon></button>
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      }
+    }
+
+    @if (activeTab() === 'manufacturers') {
+      @if (manufacturers().length === 0) {
+        <app-inventory-empty-state icon="factory" [title]="t('inv.empty.title')" [message]="t('inv.manufacturers.empty')" actionLabelKey="common.add" (action)="openCreate()" />
+      } @else {
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>{{ t('inv.field.code') }}</th><th>{{ t('inv.field.nameAr') }}</th><th>{{ t('inv.field.country') }}</th><th>{{ t('inv.field.status') }}</th><th></th></tr></thead>
+            <tbody>
+              @for (row of manufacturers(); track row.id) {
+                <tr [class.inactive]="!row.isActive">
+                  <td><code>{{ row.code }}</code></td>
+                  <td><strong>{{ row.nameAr }}</strong></td>
+                  <td>{{ row.country || '—' }}</td>
+                  <td><span class="badge" [class.on]="row.isActive">{{ row.isActive ? t('inv.status.active') : t('inv.status.inactive') }}</span></td>
+                  <td class="actions">
+                    <button type="button" class="icon-btn" (click)="openEdit(row)"><mat-icon>edit</mat-icon></button>
+                    <button type="button" class="icon-btn" (click)="toggleActive(row)"><mat-icon>{{ row.isActive ? 'toggle_on' : 'toggle_off' }}</mat-icon></button>
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      }
+    }
+
+    @if (activeTab() === 'attributes') {
+      @if (attributes().length === 0) {
+        <app-inventory-empty-state icon="tune" [title]="t('inv.empty.title')" [message]="t('inv.attributes.empty')" actionLabelKey="common.add" (action)="openCreate()" />
+      } @else {
+        <div class="attr-list">
+          @for (row of attributes(); track row.id) {
+            <article class="attr-card" [class.inactive]="!row.isActive">
+              <header>
+                <div>
+                  <strong>{{ row.nameAr }}</strong>
+                  <div class="muted"><code>{{ row.code }}</code> · {{ dataTypeLabel(row.dataType) }}</div>
+                </div>
+                <div class="actions">
+                  <button type="button" class="icon-btn" (click)="openEdit(row)"><mat-icon>edit</mat-icon></button>
+                  <button type="button" class="icon-btn" (click)="toggleActive(row)"><mat-icon>{{ row.isActive ? 'toggle_on' : 'toggle_off' }}</mat-icon></button>
+                </div>
+              </header>
+              @if (dataTypeLabel(row.dataType).includes('List') || row.dataType === 4 || row.dataType === 'List') {
+                <div class="values">
+                  @for (v of row.values; track v.id) {
+                    <span class="chip">
+                      {{ v.valueAr }}
+                      <button type="button" (click)="removeListValue(row, v.id)"><mat-icon>close</mat-icon></button>
+                    </span>
+                  }
+                  <div class="value-add">
+                    <input [(ngModel)]="valueDraft" [placeholder]="t('inv.attributes.value')" />
+                    <button type="button" class="btn-secondary" (click)="addListValue(row)">{{ t('common.add') }}</button>
+                  </div>
+                </div>
+              }
+            </article>
+          }
+        </div>
+      }
+    }
+
+    @if (activeTab() === 'priceLists') {
+      @if (priceLists().length === 0) {
+        <app-inventory-empty-state icon="price_change" [title]="t('inv.empty.title')" [message]="t('inv.priceLists.empty')" actionLabelKey="common.add" (action)="openCreate()" />
+      } @else {
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>{{ t('inv.field.code') }}</th><th>{{ t('inv.field.nameAr') }}</th><th>{{ t('inv.field.currency') }}</th><th>{{ t('inv.priceLists.lines') }}</th><th>{{ t('inv.field.status') }}</th><th></th></tr></thead>
+            <tbody>
+              @for (row of priceLists(); track row.id) {
+                <tr [class.inactive]="!row.isActive">
+                  <td><code>{{ row.code }}</code></td>
+                  <td><strong>{{ row.nameAr }}</strong></td>
+                  <td>{{ row.currency }}</td>
+                  <td>{{ row.lineCount }}</td>
+                  <td><span class="badge" [class.on]="row.isActive">{{ row.isActive ? t('inv.status.active') : t('inv.status.inactive') }}</span></td>
+                  <td class="actions">
+                    <button type="button" class="icon-btn" (click)="openEdit(row)"><mat-icon>edit</mat-icon></button>
+                    <button type="button" class="icon-btn" (click)="toggleActive(row)"><mat-icon>{{ row.isActive ? 'toggle_on' : 'toggle_off' }}</mat-icon></button>
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      }
+    }
+
+    @if (activeTab() === 'taxGroups') {
+      @if (taxGroups().length === 0) {
+        <app-inventory-empty-state icon="receipt_long" [title]="t('inv.empty.title')" [message]="t('inv.taxGroups.empty')" actionLabelKey="common.add" (action)="openCreate()" />
+      } @else {
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>{{ t('inv.field.nameAr') }}</th><th>{{ t('inv.taxGroups.rates') }}</th><th>{{ t('inv.field.status') }}</th><th></th></tr></thead>
+            <tbody>
+              @for (row of taxGroups(); track row.id) {
+                <tr [class.inactive]="!row.isActive">
+                  <td>
+                    <strong>{{ row.nameAr }}</strong>
+                    @if (row.description) { <div class="muted">{{ row.description }}</div> }
+                  </td>
+                  <td>{{ row.rates.length }}</td>
+                  <td><span class="badge" [class.on]="row.isActive">{{ row.isActive ? t('inv.status.active') : t('inv.status.inactive') }}</span></td>
+                  <td class="actions">
+                    <button type="button" class="icon-btn" (click)="openEdit(row)"><mat-icon>edit</mat-icon></button>
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      }
+    }
+  }
+
+  @if (showForm()) {
+    <div class="drawer-backdrop" (click)="closeForm()"></div>
+    <aside class="drawer" role="dialog">
+      <header>
+        <h2>{{ editingId() ? t('inv.form.editTitle') : t('inv.form.createTitle') }}</h2>
+        <button type="button" class="icon-btn" (click)="closeForm()"><mat-icon>close</mat-icon></button>
+      </header>
+      <div class="form-grid">
+        <label><span>{{ t('inv.field.nameAr') }}</span><input [(ngModel)]="form['nameAr']" name="nameAr" /></label>
+        <label><span>{{ t('inv.field.nameEn') }}</span><input [(ngModel)]="form['nameEn']" name="nameEn" /></label>
+        @if (activeTab() !== 'taxGroups') {
+          <label><span>{{ t('inv.field.code') }}</span><input [(ngModel)]="form['code']" name="code" /></label>
+        }
+        @if (activeTab() === 'manufacturers') {
+          <label><span>{{ t('inv.field.country') }}</span><input [(ngModel)]="form['country']" name="country" /></label>
+        }
+        @if (activeTab() === 'attributes') {
+          <label>
+            <span>{{ t('inv.attributes.dataType') }}</span>
+            <select [(ngModel)]="form['dataType']" name="dataType">
+              @for (d of dataTypes; track d.value) {
+                <option [ngValue]="d.value">{{ t('inv.attr.type.' + d.key) }}</option>
+              }
+            </select>
+          </label>
+        }
+        @if (activeTab() === 'priceLists') {
+          <label><span>{{ t('inv.field.currency') }}</span><input [(ngModel)]="form['currency']" name="currency" /></label>
+          <label><span>{{ t('inv.priceLists.validFrom') }}</span><input type="date" [(ngModel)]="form['validFrom']" name="validFrom" /></label>
+          <label><span>{{ t('inv.priceLists.validTo') }}</span><input type="date" [(ngModel)]="form['validTo']" name="validTo" /></label>
+        }
+        @if (activeTab() === 'taxGroups') {
+          <label><span>{{ t('inv.field.description') }}</span><input [(ngModel)]="form['description']" name="description" /></label>
+        }
+      </div>
+      @if (formError()) { <div class="banner danger">{{ formError() }}</div> }
+      <footer>
+        <button type="button" class="btn-secondary" (click)="closeForm()">{{ t('common.cancel') }}</button>
+        <button type="button" class="btn-primary" [disabled]="saving()" (click)="save()">{{ t('common.save') }}</button>
+      </footer>
+    </aside>
+  }
+</app-inventory-page-shell>

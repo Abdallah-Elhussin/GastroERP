@@ -1,0 +1,242 @@
+<app-inventory-page-shell
+  [breadcrumbs]="breadcrumbs"
+  titleKey="inv.nav.settings"
+  subtitleKey="inv.settings.subtitle"
+>
+  <section class="settings-header" shellActions>
+    <div class="title-line">
+      <h1>
+        {{ t('inv.nav.settings') }}
+        <span class="sep">|</span>
+        <span class="branch-label">{{ t('inv.settings.branch') }}: {{ selectedBranchName() }}</span>
+      </h1>
+    </div>
+
+    <div class="header-actions">
+      <label class="branch-select">
+        <span>{{ t('inv.settings.branch') }}:</span>
+        <select
+          [ngModel]="branchId()"
+          (ngModelChange)="branchId.set($event); reload()"
+        >
+          <option [ngValue]="null">{{ t('inv.settings.allBranches') }}</option>
+          @for (b of branches(); track b.id) {
+            <option [ngValue]="b.id">{{ b.nameAr }}</option>
+          }
+        </select>
+      </label>
+      <button type="button" class="btn ghost" [disabled]="loading()" (click)="reload()">
+        <mat-icon>download</mat-icon>
+        {{ t('inv.settings.load') }}
+      </button>
+      <button
+        type="button"
+        class="btn ghost"
+        [disabled]="!canReset() || saving() || loading()"
+        (click)="resetDefaults()"
+      >
+        {{ t('inv.settings.default') }}
+      </button>
+      <button
+        type="button"
+        class="btn primary"
+        [disabled]="!canEdit() || saving() || loading()"
+        (click)="save()"
+      >
+        <mat-icon>save</mat-icon>
+        {{ t('common.save') }}
+      </button>
+    </div>
+  </section>
+
+  @if (loading()) {
+    <app-inventory-skeleton [count]="5" />
+  } @else if (!loaded()) {
+    <app-inventory-error-state [message]="error() ?? t('inv.settings.loadError')" (retry)="reload()" />
+  } @else {
+    @if (error()) {
+      <div class="banner danger" role="alert">{{ error() }}</div>
+    }
+    @if (success()) {
+      <div class="banner ok" role="status">{{ t('inv.settings.saved') }}</div>
+    }
+    @if (branchesLoading()) {
+      <p class="status-hint">{{ t('inv.settings.loadingBranches') }}</p>
+    }
+
+    <nav class="tab-grid" aria-label="Settings tabs">
+      @for (tab of tabs; track tab.id) {
+        <button
+          type="button"
+          class="tab-chip"
+          [class.active]="activeTab() === tab.id"
+          (click)="selectTab(tab.id)"
+        >
+          {{ t(tab.labelKey) }}
+        </button>
+      }
+    </nav>
+
+    <section class="panel">
+      @switch (activeTab()) {
+        @case ('general') {
+          <div class="form-grid">
+            <label>
+              <span>{{ t('inv.settings.defaultWarehouse') }}</span>
+              <select [(ngModel)]="form.defaultWarehouseId">
+                <option [ngValue]="null">{{ t('inv.settings.noDefaultWarehouse') }}</option>
+                @for (w of inventory.warehouses(); track w.id) {
+                  <option [ngValue]="w.id">{{ w.nameAr }}</option>
+                }
+              </select>
+            </label>
+            <label>
+              <span>{{ t('inv.settings.defaultUnit') }}</span>
+              <select [(ngModel)]="form.defaultUnitId">
+                <option [ngValue]="null">{{ t('inv.settings.noDefaultUnit') }}</option>
+                @for (u of inventory.units(); track u.id) {
+                  <option [ngValue]="u.id">{{ u.nameAr }}</option>
+                }
+              </select>
+            </label>
+            <label>
+              <span>{{ t('inv.settings.defaultCurrency') }}</span>
+              <input [(ngModel)]="form.defaultCurrencyCode" maxlength="10" />
+            </label>
+          </div>
+          <div class="toggle-list">
+            <label class="toggle-row"><input type="checkbox" [(ngModel)]="form.autoGenerateItemCode" /> <span>{{ t('inv.settings.autoSku') }}</span></label>
+            <label class="toggle-row"><input type="checkbox" [(ngModel)]="form.enableMultiWarehouse" /> <span>{{ t('inv.settings.enableMultiWarehouse') }}</span></label>
+            <label class="toggle-row"><input type="checkbox" [(ngModel)]="form.enableWarehouseHierarchy" /> <span>{{ t('inv.settings.enableWarehouseHierarchy') }}</span></label>
+            <label class="toggle-row"><input type="checkbox" [(ngModel)]="form.enableBatchTracking" /> <span>{{ t('inv.settings.requireBatch') }}</span></label>
+            <label class="toggle-row"><input type="checkbox" [(ngModel)]="form.enableSerialTracking" /> <span>{{ t('inv.settings.enableSerial') }}</span></label>
+            <label class="toggle-row"><input type="checkbox" [(ngModel)]="form.enableExpiryTracking" /> <span>{{ t('inv.settings.requireExpiry') }}</span></label>
+            <label class="toggle-row"><input type="checkbox" [(ngModel)]="form.enableBarcode" /> <span>{{ t('inv.settings.enableBarcode') }}</span></label>
+            <label class="toggle-row"><input type="checkbox" [(ngModel)]="form.enableQrCode" /> <span>{{ t('inv.settings.enableQr') }}</span></label>
+          </div>
+        }
+
+        @case ('costing') {
+          <div class="form-grid">
+            <label>
+              <span>{{ t('inv.settings.costingMethod') }}</span>
+              <select [(ngModel)]="form.costingMethod">
+                @for (m of costingMethods; track m.value) {
+                  <option [ngValue]="m.value" [disabled]="!m.enabled">
+                    {{ t('inv.settings.costing.' + m.key) }}
+                    @if (!m.enabled) { ({{ t('inv.settings.comingSoon') }}) }
+                  </option>
+                }
+              </select>
+            </label>
+            <label>
+              <span>{{ t('inv.settings.costPrecision') }}</span>
+              <input type="number" min="0" max="6" [(ngModel)]="form.costPrecision" />
+            </label>
+          </div>
+          <div class="toggle-list">
+            <label class="toggle-row"><input type="checkbox" [(ngModel)]="form.roundCost" /> <span>{{ t('inv.settings.roundCost') }}</span></label>
+            <label class="toggle-row"><input type="checkbox" [(ngModel)]="form.autoRecalculateCost" /> <span>{{ t('inv.settings.autoRecalculateCost') }}</span></label>
+          </div>
+        }
+
+        @case ('control') {
+          <div class="toggle-list">
+            <label class="toggle-row"><input type="checkbox" [(ngModel)]="form.allowNegativeStock" /> <span>{{ t('inv.settings.allowNegative') }}</span></label>
+            <label class="toggle-row"><input type="checkbox" [(ngModel)]="form.checkAvailableQuantity" /> <span>{{ t('inv.settings.checkAvailable') }}</span></label>
+            <label class="toggle-row"><input type="checkbox" [(ngModel)]="form.enableReservation" /> <span>{{ t('inv.settings.autoReserve') }}</span></label>
+            <label class="toggle-row"><input type="checkbox" [(ngModel)]="form.autoReleaseReservation" /> <span>{{ t('inv.settings.autoReleaseReservation') }}</span></label>
+            <label class="toggle-row"><input type="checkbox" [(ngModel)]="form.freezeDuringCount" /> <span>{{ t('inv.settings.freezeDuringCount') }}</span></label>
+            <label class="toggle-row"><input type="checkbox" [(ngModel)]="form.allowZeroCost" /> <span>{{ t('inv.settings.allowZeroCost') }}</span></label>
+            <label class="toggle-row"><input type="checkbox" [(ngModel)]="form.allowNegativeCost" /> <span>{{ t('inv.settings.allowNegativeCost') }}</span></label>
+            <label class="toggle-row"><input type="checkbox" [(ngModel)]="form.validateWarehouseBeforePosting" /> <span>{{ t('inv.settings.validateWarehouse') }}</span></label>
+            <label class="toggle-row"><input type="checkbox" [(ngModel)]="form.autoIssueRecipe" /> <span>{{ t('inv.settings.autoIssue') }}</span></label>
+          </div>
+        }
+
+        @case ('posting') {
+          <div class="toggle-list">
+            <label class="toggle-row"><input type="checkbox" [(ngModel)]="form.requireApprovalBeforePosting" /> <span>{{ t('inv.settings.requireApproval') }}</span></label>
+            <label class="toggle-row"><input type="checkbox" [(ngModel)]="form.autoPostAfterApproval" /> <span>{{ t('inv.settings.autoPost') }}</span></label>
+            <label class="toggle-row"><input type="checkbox" [(ngModel)]="form.allowUnpost" /> <span>{{ t('inv.settings.allowUnpost') }}</span></label>
+            <label class="toggle-row"><input type="checkbox" [(ngModel)]="form.createReverseEntry" /> <span>{{ t('inv.settings.createReverse') }}</span></label>
+            <label class="toggle-row"><input type="checkbox" [(ngModel)]="form.lockPostedDocuments" /> <span>{{ t('inv.settings.lockPosted') }}</span></label>
+            <label class="toggle-row"><input type="checkbox" [(ngModel)]="form.allowEditDraft" /> <span>{{ t('inv.settings.allowEditDraft') }}</span></label>
+            <label class="toggle-row"><input type="checkbox" [(ngModel)]="form.allowDeleteDraft" /> <span>{{ t('inv.settings.allowDeleteDraft') }}</span></label>
+          </div>
+        }
+
+        @case ('numbering') {
+          <div class="series-list">
+            @for (dt of docTypes; track dt.value) {
+              <div class="series-row">
+                <label class="series-label">{{ t(dt.labelKey) }}</label>
+                <div class="series-fields">
+                  <input
+                    class="prefix"
+                    [(ngModel)]="seriesFor(dt.value).prefix"
+                    [placeholder]="t('inv.settings.prefix')"
+                  />
+                  <input
+                    class="len"
+                    type="number"
+                    min="1"
+                    max="12"
+                    [(ngModel)]="seriesFor(dt.value).numberLength"
+                    [title]="t('inv.settings.numberLength')"
+                  />
+                  <input
+                    class="next"
+                    type="number"
+                    min="1"
+                    [(ngModel)]="seriesFor(dt.value).nextNumber"
+                    [title]="t('inv.settings.nextNumber')"
+                  />
+                  <label class="mini-check">
+                    <input type="checkbox" [(ngModel)]="seriesFor(dt.value).autoIncrement" />
+                    {{ t('inv.settings.autoIncrement') }}
+                  </label>
+                </div>
+              </div>
+            }
+          </div>
+        }
+
+        @case ('integrations') {
+          <div class="toggle-list">
+            <label class="toggle-row"><input type="checkbox" [(ngModel)]="form.enablePurchasingIntegration" /> <span>{{ t('inv.settings.int.purchasing') }}</span></label>
+            <label class="toggle-row"><input type="checkbox" [(ngModel)]="form.enablePosIntegration" /> <span>{{ t('inv.settings.int.pos') }}</span></label>
+            <label class="toggle-row"><input type="checkbox" [(ngModel)]="form.enableProductionIntegration" /> <span>{{ t('inv.settings.int.production') }}</span></label>
+            <label class="toggle-row"><input type="checkbox" [(ngModel)]="form.enableAccountingIntegration" /> <span>{{ t('inv.settings.int.accounting') }}</span></label>
+            <label class="toggle-row"><input type="checkbox" [(ngModel)]="form.enableKitchenIntegration" /> <span>{{ t('inv.settings.int.kitchen') }}</span></label>
+            <label class="toggle-row"><input type="checkbox" [(ngModel)]="form.enableDeliveryIntegration" /> <span>{{ t('inv.settings.int.delivery') }}</span></label>
+          </div>
+        }
+
+        @case ('notifications') {
+          <div class="toggle-list">
+            <label class="toggle-row"><input type="checkbox" [(ngModel)]="form.lowStockAlert" /> <span>{{ t('inv.settings.alert.lowStock') }}</span></label>
+            <label class="toggle-row"><input type="checkbox" [(ngModel)]="form.outOfStockAlert" /> <span>{{ t('inv.settings.alert.outOfStock') }}</span></label>
+            <label class="toggle-row"><input type="checkbox" [(ngModel)]="form.nearExpiryAlert" /> <span>{{ t('inv.settings.alert.nearExpiry') }}</span></label>
+            <label class="toggle-row"><input type="checkbox" [(ngModel)]="form.expiredItemsAlert" /> <span>{{ t('inv.settings.alert.expired') }}</span></label>
+            <label class="toggle-row"><input type="checkbox" [(ngModel)]="form.cycleCountReminder" /> <span>{{ t('inv.settings.alert.cycleCount') }}</span></label>
+            <label class="toggle-row"><input type="checkbox" [(ngModel)]="form.emailNotifications" /> <span>{{ t('inv.settings.alert.email') }}</span></label>
+            <label class="toggle-row"><input type="checkbox" [(ngModel)]="form.pushNotifications" /> <span>{{ t('inv.settings.alert.push') }}</span></label>
+          </div>
+        }
+
+        @case ('advanced') {
+          <div class="toggle-list">
+            <label class="toggle-row"><input type="checkbox" [(ngModel)]="form.enableMultiCompany" /> <span>{{ t('inv.settings.adv.multiCompany') }}</span></label>
+            <label class="toggle-row"><input type="checkbox" [(ngModel)]="form.enableMultiBranch" /> <span>{{ t('inv.settings.adv.multiBranch') }}</span></label>
+            <label class="toggle-row"><input type="checkbox" [(ngModel)]="form.enableWarehouseZones" /> <span>{{ t('inv.settings.adv.zones') }}</span></label>
+            <label class="toggle-row"><input type="checkbox" [(ngModel)]="form.enableShelves" /> <span>{{ t('inv.settings.adv.shelves') }}</span></label>
+            <label class="toggle-row"><input type="checkbox" [(ngModel)]="form.enableBins" /> <span>{{ t('inv.settings.adv.bins') }}</span></label>
+            <label class="toggle-row"><input type="checkbox" [(ngModel)]="form.enableRfid" /> <span>{{ t('inv.settings.adv.rfid') }}</span></label>
+            <label class="toggle-row"><input type="checkbox" [(ngModel)]="form.enableMobileScanner" /> <span>{{ t('inv.settings.adv.scanner') }}</span></label>
+          </div>
+        }
+      }
+    </section>
+  }
+</app-inventory-page-shell>

@@ -1,4 +1,5 @@
 using GastroErp.Application.Common.Interfaces;
+using GastroErp.Application.Common.Interfaces.Inventory;
 using GastroErp.Application.Features.Sales.DTOs;
 using GastroErp.Domain.Entities.Inventory.Reservation;
 using GastroErp.Domain.Entities.Inventory.Recipe;
@@ -71,8 +72,10 @@ public sealed class OrderNumberGenerator : IOrderNumberGenerator
 public sealed class OrderInventoryService : IOrderInventoryService
 {
     private readonly IApplicationDbContext _context;
+    private readonly IInventoryMovementPipeline _pipeline;
 
-    public OrderInventoryService(IApplicationDbContext context) => _context = context;
+    public OrderInventoryService(IApplicationDbContext context, IInventoryMovementPipeline pipeline)
+        => (_context, _pipeline) = (context, pipeline);
 
     public async Task ReserveStockForOrderAsync(SalesOrderContext order, CancellationToken ct = default)
     {
@@ -80,7 +83,7 @@ public sealed class OrderInventoryService : IOrderInventoryService
             .AsNoTracking()
             .FirstOrDefaultAsync(s => s.TenantId == order.TenantId && (s.BranchId == null || s.BranchId == order.BranchId), ct);
 
-        if (setting is not { AutoReserveStock: true }) return;
+        if (setting is not { EnableReservation: true }) return;
 
         var warehouse = await _context.Warehouses
             .AsNoTracking()
@@ -117,6 +120,7 @@ public sealed class OrderInventoryService : IOrderInventoryService
                     DateTimeOffset.UtcNow.AddHours(4));
 
                 _context.InventoryReservations.Add(reservation);
+                await _pipeline.ReserveAsync(order.TenantId, warehouse.Id, recipeItem.InventoryItemId, qty, ct);
             }
         }
     }
@@ -129,6 +133,12 @@ public sealed class OrderInventoryService : IOrderInventoryService
 
         foreach (var reservation in reservations)
         {
+            await _pipeline.ReleaseReservationAsync(
+                reservation.TenantId,
+                reservation.WarehouseId,
+                reservation.InventoryItemId,
+                reservation.ReservedQuantity,
+                ct);
             reservation.Cancel();
             _context.InventoryReservations.Update(reservation);
         }

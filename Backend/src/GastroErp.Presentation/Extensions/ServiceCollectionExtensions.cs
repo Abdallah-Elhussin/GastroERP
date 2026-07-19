@@ -119,16 +119,31 @@ public static class ServiceCollectionExtensions
             {
                 if (allowedOrigins.Contains("*"))
                 {
-                    builder.AllowAnyOrigin().AllowAnyMethod().AllowAnyHeader();
+                    builder.AllowAnyOrigin().AllowAnyMethod().AllowAnyHeader()
+                        .WithExposedHeaders(
+                            "X-Pagination-TotalCount",
+                            "X-Pagination-PageNumber",
+                            "X-Pagination-PageSize",
+                            "X-Pagination-TotalPages");
                 }
                 else if (allowedOrigins.Any())
                 {
-                    builder.WithOrigins(allowedOrigins).AllowAnyMethod().AllowAnyHeader().AllowCredentials();
+                    builder.WithOrigins(allowedOrigins).AllowAnyMethod().AllowAnyHeader().AllowCredentials()
+                        .WithExposedHeaders(
+                            "X-Pagination-TotalCount",
+                            "X-Pagination-PageNumber",
+                            "X-Pagination-PageSize",
+                            "X-Pagination-TotalPages");
                 }
                 else
                 {
                     // Fallback
-                    builder.AllowAnyOrigin().AllowAnyMethod().AllowAnyHeader();
+                    builder.AllowAnyOrigin().AllowAnyMethod().AllowAnyHeader()
+                        .WithExposedHeaders(
+                            "X-Pagination-TotalCount",
+                            "X-Pagination-PageNumber",
+                            "X-Pagination-PageSize",
+                            "X-Pagination-TotalPages");
                 }
             });
         });

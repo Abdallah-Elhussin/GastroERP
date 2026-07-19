@@ -15,6 +15,12 @@ public sealed record CostCenterCreatedEvent(
     public DateTimeOffset OccurredAt { get; } = DateTimeOffset.UtcNow;
 }
 
+public sealed record CurrencyCreatedEvent(
+    Guid CurrencyId, Guid TenantId, string Code) : IDomainEvent
+{
+    public DateTimeOffset OccurredAt { get; } = DateTimeOffset.UtcNow;
+}
+
 public sealed record JournalPostedEvent(
     Guid JournalEntryId, Guid TenantId, string EntryNumber, PostingSource Source) : IDomainEvent
 {

@@ -1,0 +1,74 @@
+<app-inventory-page-shell
+  [breadcrumbs]="breadcrumbs"
+  titleKey="inv.nav.reports"
+  subtitleKey="inv.rpt.subtitle"
+>
+  <button shellActions type="button" class="btn-secondary" (click)="exportCsv()" [disabled]="!rows().length">
+    <mat-icon>download</mat-icon>{{ t('common.export') }}
+  </button>
+  <button shellActions type="button" class="btn-primary" (click)="load()">
+    <mat-icon>refresh</mat-icon>{{ t('common.retry') }}
+  </button>
+
+  <div class="filters">
+    <label>{{ t('inv.rpt.from') }}
+      <input type="date" [(ngModel)]="fromDate" (change)="load()" />
+    </label>
+    <label>{{ t('inv.rpt.to') }}
+      <input type="date" [(ngModel)]="toDate" (change)="load()" />
+    </label>
+  </div>
+
+  <div class="ops-tabs" role="tablist">
+    <button
+      *ngFor="let tabDef of tabs"
+      type="button"
+      class="ops-tab"
+      [class.active]="tab() === tabDef.id"
+      (click)="selectTab(tabDef.id)"
+    >
+      <mat-icon>{{ tabDef.icon }}</mat-icon>
+      <span>{{ t(tabDef.labelKey) }}</span>
+    </button>
+  </div>
+
+  <div class="valuation-banner" *ngIf="tab() === 'valuation' && valuationTotal() !== null && !loading()">
+    <div>
+      <span class="label">{{ t('inv.rpt.col.totalValue') }}</span>
+      <strong>{{ valuationTotal() | number:'1.2-2' }}</strong>
+    </div>
+    <div>
+      <span class="label">{{ t('inv.kpi.totalProducts') }}</span>
+      <strong>{{ valuationItemCount() }}</strong>
+    </div>
+  </div>
+
+  <app-inventory-skeleton *ngIf="loading()"></app-inventory-skeleton>
+  <app-inventory-error-state
+    *ngIf="!loading() && error()"
+    [message]="error()!"
+    (retry)="load()"
+  ></app-inventory-error-state>
+
+  <ng-container *ngIf="!loading() && !error()">
+    <app-inventory-empty-state
+      *ngIf="!rows().length"
+      messageKey="inv.rpt.empty"
+    ></app-inventory-empty-state>
+
+    <div class="table-wrap" *ngIf="rows().length">
+      <table>
+        <thead>
+          <tr>
+            <th *ngFor="let col of columns()">{{ columnLabel(col) }}</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let row of rows()">
+            <td *ngFor="let col of columns()">{{ cell(row, col) }}</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </ng-container>
+</app-inventory-page-shell>

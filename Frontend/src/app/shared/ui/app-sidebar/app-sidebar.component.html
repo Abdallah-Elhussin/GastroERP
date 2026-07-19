@@ -32,7 +32,6 @@
 
     <nav class="flex flex-col gap-1 px-4 select-none overflow-y-auto">
       <ng-container *ngFor="let item of navItems">
-        <!-- Simple link -->
         <a 
           *ngIf="!item.children"
           [routerLink]="item.path"
@@ -44,43 +43,63 @@
           <span *ngIf="!isCollapsed()" class="truncate transition-opacity duration-200">{{ t(item.labelKey) }}</span>
         </a>
 
-        <!-- Inventory group -->
         <div *ngIf="item.children" class="flex flex-col gap-1">
           <button
             type="button"
-            (click)="toggleInventory()"
-            [class.bg-[var(--bg-canvas)]="inventoryActive()"
-            [class.text-[var(--accent-color)]="inventoryActive()"
-            [class.font-bold]="inventoryActive()"
+            (click)="toggleGroup(item.labelKey)"
+            [class.bg-[var(--bg-canvas)]="isGroupActive(item)"
+            [class.text-[var(--accent-color)]="isGroupActive(item)"
+            [class.font-bold]="isGroupActive(item)"
             [class.justify-center]="isCollapsed()"
             class="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-xs text-[var(--text-secondary)] hover:bg-[var(--bg-surface-hover)] hover:text-[var(--text-primary)] transition-all cursor-pointer"
           >
             <mat-icon class="text-base flex-shrink-0">{{ item.icon }}</mat-icon>
             <span *ngIf="!isCollapsed()" class="truncate flex-1 text-start">{{ t(item.labelKey) }}</span>
-            <mat-icon *ngIf="!isCollapsed()" class="text-sm">{{ inventoryExpanded() ? 'expand_less' : 'expand_more' }}</mat-icon>
+            <mat-icon *ngIf="!isCollapsed()" class="text-sm">{{ isGroupExpanded(item.labelKey) ? 'expand_less' : 'expand_more' }}</mat-icon>
           </button>
 
-          <div *ngIf="inventoryExpanded() && !isCollapsed()" class="flex flex-col gap-0.5 ms-3 border-s border-[var(--border-color)] ps-2">
-            <a
-              *ngFor="let child of item.children"
-              [routerLink]="child.path"
-              routerLinkActive="bg-[var(--bg-canvas)] text-[var(--accent-color)] font-bold"
-              class="flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-[11px] text-[var(--text-secondary)] hover:bg-[var(--bg-surface-hover)] hover:text-[var(--text-primary)] transition-all cursor-pointer"
-            >
-              <mat-icon class="text-sm flex-shrink-0">{{ child.icon }}</mat-icon>
-              <span class="truncate">{{ t(child.labelKey) }}</span>
-            </a>
+          <div *ngIf="isGroupExpanded(item.labelKey) && !isCollapsed()" class="flex flex-col gap-0.5 ms-3 border-s border-[var(--border-color)] ps-2">
+            <ng-container *ngFor="let child of item.children">
+              <div
+                *ngIf="child.sectionKey"
+                class="px-3 pt-2.5 pb-1 text-[9px] uppercase tracking-wider text-[var(--text-muted)] font-bold"
+              >
+                {{ t(child.sectionKey) }}
+              </div>
+              <a
+                [routerLink]="child.path"
+                routerLinkActive="bg-[var(--bg-canvas)] text-[var(--accent-color)] font-bold"
+                [routerLinkActiveOptions]="{ exact: child.path === '/inventory/items' || child.path === '/inventory/dashboard' || child.path === '/finance' }"
+                class="flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-[11px] text-[var(--text-secondary)] hover:bg-[var(--bg-surface-hover)] hover:text-[var(--text-primary)] transition-all cursor-pointer"
+              >
+                <mat-icon class="text-sm flex-shrink-0">{{ child.icon }}</mat-icon>
+                <span class="truncate">{{ t(child.labelKey) }}</span>
+              </a>
+            </ng-container>
+
+            <div *ngIf="item.labelKey === 'nav.inventory' && favoriteLinks().length" class="mt-2 pt-2 border-t border-[var(--border-color)]">
+              <div class="px-3 py-1 text-[9px] uppercase tracking-wider text-[var(--text-muted)] font-bold">
+                {{ t('inv.favorites.title') }}
+              </div>
+              <a
+                *ngFor="let fav of favoriteLinks()"
+                [routerLink]="fav.path"
+                class="flex items-center gap-2.5 px-3 py-2 rounded-lg text-[11px] text-[var(--text-secondary)] hover:bg-[var(--bg-surface-hover)] hover:text-[var(--text-primary)]"
+              >
+                <mat-icon class="text-sm flex-shrink-0">{{ fav.icon }}</mat-icon>
+                <span class="truncate">{{ t(fav.labelKey) }}</span>
+              </a>
+            </div>
           </div>
 
-          <!-- Collapsed: show first child icon as shortcut -->
           <a
-            *ngIf="isCollapsed()"
-            routerLink="/inventory"
+            *ngIf="isCollapsed() && item.children[0]"
+            [routerLink]="item.children[0].path"
             routerLinkActive="text-[var(--accent-color)]"
             class="flex items-center justify-center py-2 text-[var(--text-muted)] hover:text-[var(--accent-color)]"
-            [title]="t('nav.inventory')"
+            [title]="t(item.labelKey)"
           >
-            <mat-icon class="text-base">inventory_2</mat-icon>
+            <mat-icon class="text-base">{{ item.icon }}</mat-icon>
           </a>
         </div>
       </ng-container>

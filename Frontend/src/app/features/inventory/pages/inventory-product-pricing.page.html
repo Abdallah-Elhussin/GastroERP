@@ -1,0 +1,345 @@
+<app-inventory-page-shell
+  [breadcrumbs]="breadcrumbs"
+  titleKey="inv.nav.prices"
+  subtitleKey="inv.prices.subtitle"
+>
+  <section class="toolbar" shellActions>
+    <div class="toolbar-row">
+      <button type="button" class="btn primary" [disabled]="!canCreate()" (click)="openCreate()">
+        <mat-icon>add</mat-icon>
+        {{ t('inv.items.toolbar.new') }}
+      </button>
+      <button type="button" class="btn ghost" [disabled]="!canEdit() || !selected()" (click)="openEdit()">
+        <mat-icon>edit</mat-icon>
+        {{ t('inv.items.toolbar.edit') }}
+      </button>
+      <button type="button" class="btn ghost" [disabled]="!canDelete() || !selected()" (click)="deleteSelected()">
+        <mat-icon>delete</mat-icon>
+        {{ t('inv.items.toolbar.delete') }}
+      </button>
+      <button type="button" class="btn ghost" (click)="load()">
+        <mat-icon>refresh</mat-icon>
+        {{ t('inv.items.toolbar.refresh') }}
+      </button>
+
+      <div class="search-group">
+        <input
+          type="search"
+          [ngModel]="search()"
+          (ngModelChange)="search.set($event)"
+          (keydown.enter)="onSearch()"
+          [placeholder]="t('inv.prices.searchPlaceholder')"
+        />
+        <button type="button" class="btn primary" (click)="onSearch()">
+          <mat-icon>search</mat-icon>
+          {{ t('inv.items.toolbar.search') }}
+        </button>
+      </div>
+
+      <button type="button" class="btn icon-only" (click)="showHelp.set(true)" [matTooltip]="t('common.help')">
+        <mat-icon>help_outline</mat-icon>
+      </button>
+      <button type="button" class="btn date-btn" [matTooltip]="t('inv.prices.asOfDate')">
+        <mat-icon>calendar_today</mat-icon>
+        {{ t('inv.prices.date') }}
+      </button>
+    </div>
+
+    <div class="filter-row">
+      <label class="item-filter">
+        <span>{{ t('inv.prices.itemFilter') }}</span>
+        <div class="filter-input">
+          <mat-icon>search</mat-icon>
+          <input
+            type="search"
+            [ngModel]="itemFilter()"
+            (ngModelChange)="itemFilter.set($event)"
+            [placeholder]="t('inv.prices.itemFilterPlaceholder')"
+          />
+        </div>
+      </label>
+      <button type="button" class="btn ghost" (click)="clearItemFilter()">
+        <mat-icon>close</mat-icon>
+        {{ t('inv.prices.clearFilter') }}
+      </button>
+    </div>
+  </section>
+
+  @if (loading()) {
+    <app-inventory-skeleton [count]="8" />
+  } @else if (error()) {
+    <app-inventory-error-state [message]="error()!" (retry)="load()" />
+  } @else if (filtered().length === 0) {
+    <app-inventory-empty-state
+      icon="sell"
+      [title]="t('inv.empty.title')"
+      [message]="t('inv.prices.empty')"
+      actionLabelKey="inv.items.toolbar.new"
+      (action)="openCreate()"
+    />
+  } @else {
+    <div class="table-card">
+      <table mat-table [dataSource]="filtered()" matSort (matSortChange)="onSort($event)" class="prices-table">
+        <ng-container matColumnDef="index">
+          <th mat-header-cell *matHeaderCellDef>#</th>
+          <td mat-cell *matCellDef="let row; let i = index">{{ i + 1 }}</td>
+        </ng-container>
+
+        <ng-container matColumnDef="product">
+          <th mat-header-cell *matHeaderCellDef mat-sort-header="product">{{ t('inv.prices.col.product') }}</th>
+          <td mat-cell *matCellDef="let row">
+            <strong>{{ row.productNameAr || '—' }}</strong>
+            @if (row.productSku) {
+              <div class="muted">{{ row.productSku }}</div>
+            }
+          </td>
+        </ng-container>
+
+        <ng-container matColumnDef="unit">
+          <th mat-header-cell *matHeaderCellDef mat-sort-header="unit">{{ t('inv.prices.col.unit') }}</th>
+          <td mat-cell *matCellDef="let row">{{ row.unitNameAr || '—' }}</td>
+        </ng-container>
+
+        <ng-container matColumnDef="costType">
+          <th mat-header-cell *matHeaderCellDef mat-sort-header="costType">{{ t('inv.prices.col.costType') }}</th>
+          <td mat-cell *matCellDef="let row">{{ costTypeLabel(row.costType) }}</td>
+        </ng-container>
+
+        <ng-container matColumnDef="priceList">
+          <th mat-header-cell *matHeaderCellDef mat-sort-header="priceList">{{ t('inv.prices.col.level') }}</th>
+          <td mat-cell *matCellDef="let row">{{ row.priceListNameAr || '—' }}</td>
+        </ng-container>
+
+        <ng-container matColumnDef="cost">
+          <th mat-header-cell *matHeaderCellDef mat-sort-header="cost">{{ t('inv.prices.col.cost') }}</th>
+          <td mat-cell *matCellDef="let row" class="num">{{ row.cost | number: '1.2-4' }}</td>
+        </ng-container>
+
+        <ng-container matColumnDef="profitAmount">
+          <th mat-header-cell *matHeaderCellDef mat-sort-header="profitAmount">{{ t('inv.prices.col.marginValue') }}</th>
+          <td mat-cell *matCellDef="let row" class="num">{{ row.profitAmount | number: '1.2-4' }}</td>
+        </ng-container>
+
+        <ng-container matColumnDef="profitMargin">
+          <th mat-header-cell *matHeaderCellDef mat-sort-header="profitMargin">{{ t('inv.prices.col.marginPct') }}</th>
+          <td mat-cell *matCellDef="let row" class="num">{{ row.profitMargin | number: '1.2-2' }}</td>
+        </ng-container>
+
+        <ng-container matColumnDef="sellingPrice">
+          <th mat-header-cell *matHeaderCellDef mat-sort-header="sellingPrice">{{ t('inv.prices.col.sellingPrice') }}</th>
+          <td mat-cell *matCellDef="let row" class="num strong">{{ row.sellingPrice | number: '1.2-4' }}</td>
+        </ng-container>
+
+        <ng-container matColumnDef="startDate">
+          <th mat-header-cell *matHeaderCellDef mat-sort-header="startDate">{{ t('inv.prices.col.from') }}</th>
+          <td mat-cell *matCellDef="let row">{{ formatDate(row.startDate) }}</td>
+        </ng-container>
+
+        <ng-container matColumnDef="endDate">
+          <th mat-header-cell *matHeaderCellDef mat-sort-header="endDate">{{ t('inv.prices.col.to') }}</th>
+          <td mat-cell *matCellDef="let row">{{ formatDate(row.endDate) }}</td>
+        </ng-container>
+
+        <tr mat-header-row *matHeaderRowDef="displayedColumns; sticky: true"></tr>
+        <tr
+          mat-row
+          *matRowDef="let row; columns: displayedColumns"
+          [class.selected]="selectedId() === row.id"
+          (click)="selectRow(row)"
+          (dblclick)="selectRow(row); openEdit()"
+        ></tr>
+      </table>
+    </div>
+  }
+</app-inventory-page-shell>
+
+@if (showHelp()) {
+  <div class="overlay" (click)="showHelp.set(false)">
+    <div class="dialog help-dialog" (click)="$event.stopPropagation()">
+      <header>
+        <h3>{{ t('inv.prices.helpTitle') }}</h3>
+        <button type="button" class="btn icon-only" (click)="showHelp.set(false)"><mat-icon>close</mat-icon></button>
+      </header>
+      <p>{{ t('inv.prices.helpBody') }}</p>
+    </div>
+  </div>
+}
+
+@if (showModal()) {
+  <div class="overlay" (click)="closeModal()">
+    <div class="dialog price-dialog" (click)="$event.stopPropagation()">
+      <header>
+        <div>
+          <h3>{{ editingId() ? t('inv.prices.editTitle') : t('inv.prices.createTitle') }}</h3>
+          <p class="subtitle">{{ t('inv.prices.createHint') }}</p>
+        </div>
+        <button type="button" class="btn icon-only" (click)="closeModal()"><mat-icon>close</mat-icon></button>
+      </header>
+
+      @if (formError()) {
+        <div class="form-error">{{ formError() }}</div>
+      }
+
+      <section class="card-section">
+        <h4>{{ t('inv.prices.section.item') }}</h4>
+        <label class="field">
+          <span>{{ t('inv.prices.col.product') }} *</span>
+          @if (editingId()) {
+            <input type="text" [value]="productLabel()" disabled />
+          } @else {
+            <div class="lookup">
+              <mat-icon>search</mat-icon>
+              <input
+                type="search"
+                [ngModel]="itemSearch()"
+                (ngModelChange)="itemSearch.set($event)"
+                (keydown.enter)="searchItems()"
+                [placeholder]="productLabel() || t('inv.prices.pickItem')"
+              />
+              <button type="button" class="btn ghost" (click)="searchItems()">{{ t('inv.items.toolbar.search') }}</button>
+            </div>
+            @if (itemResults().length) {
+              <ul class="lookup-results">
+                @for (item of itemResults(); track item.id) {
+                  <li (click)="pickItem(item)">
+                    <strong>{{ item.nameAr }}</strong>
+                    @if (item.sku) { <span class="muted">{{ item.sku }}</span> }
+                  </li>
+                }
+              </ul>
+            }
+          }
+        </label>
+      </section>
+
+      <section class="card-section">
+        <h4>
+          {{ t('inv.prices.section.general') }}
+          <span class="muted">{{ t('inv.prices.section.generalHint') }}</span>
+        </h4>
+        <div class="grid-4">
+          <label class="field">
+            <span>{{ t('inv.prices.col.level') }}</span>
+            <select [ngModel]="priceListId()" (ngModelChange)="priceListId.set($event)">
+              @for (pl of priceLists(); track pl.id) {
+                <option [ngValue]="pl.id">{{ pl.nameAr }}</option>
+              }
+            </select>
+          </label>
+          <label class="field">
+            <span>{{ t('inv.prices.col.costType') }}</span>
+            <select
+              [ngModel]="costType()"
+              (ngModelChange)="costType.set($event); onCostTypeOrMethodChange()"
+            >
+              <option [ngValue]="1">{{ t('inv.prices.costType.average') }}</option>
+              <option [ngValue]="2">{{ t('inv.prices.costType.last') }}</option>
+              <option [ngValue]="3">{{ t('inv.prices.costType.standard') }}</option>
+            </select>
+          </label>
+          <label class="field">
+            <span>{{ t('inv.prices.col.method') }}</span>
+            <select
+              [ngModel]="pricingMethod()"
+              (ngModelChange)="pricingMethod.set($event); recalcAll()"
+            >
+              <option [ngValue]="1">{{ t('inv.prices.method.fixed') }}</option>
+              <option [ngValue]="2">{{ t('inv.prices.method.margin') }}</option>
+              <option [ngValue]="3">{{ t('inv.prices.method.profit') }}</option>
+              <option [ngValue]="4">{{ t('inv.prices.method.manual') }}</option>
+            </select>
+          </label>
+          <label class="field">
+            <span>{{ t('inv.prices.col.from') }}</span>
+            <input type="date" [ngModel]="startDate()" (ngModelChange)="startDate.set($event)" />
+          </label>
+        </div>
+      </section>
+
+      <section class="card-section">
+        <div class="section-head">
+          <h4>{{ t('inv.prices.section.units') }}</h4>
+          <div class="section-actions">
+            <button type="button" class="btn success" [disabled]="!unitLines().length" (click)="applyToAll()">
+              {{ t('inv.prices.applyAll') }}
+            </button>
+            <button type="button" class="btn purple" [disabled]="!productId()" (click)="updateCosts()">
+              {{ t('inv.prices.updateCosts') }}
+            </button>
+          </div>
+        </div>
+
+        @if (!productId()) {
+          <div class="warn-box">{{ t('inv.prices.selectItemHint') }}</div>
+        } @else if (unitsLoading()) {
+          <div class="muted">{{ t('common.loading') }}</div>
+        } @else {
+          <div class="unit-table-wrap">
+            <table class="unit-table">
+              <thead>
+                <tr>
+                  <th>{{ t('inv.prices.col.unit') }}</th>
+                  <th>{{ t('inv.prices.col.factor') }}</th>
+                  <th>{{ t('inv.prices.col.cost') }}</th>
+                  <th>{{ t('inv.prices.col.marginValue') }}</th>
+                  <th>{{ t('inv.prices.col.sellingPrice') }}</th>
+                  <th>{{ t('inv.prices.col.save') }}</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (line of unitLines(); track line.unitId; let i = $index) {
+                  <tr>
+                    <td>{{ line.unitNameAr }}</td>
+                    <td class="num">{{ line.unitFactor | number: '1.0-4' }}</td>
+                    <td>
+                      <input
+                        type="number"
+                        step="0.01"
+                        [ngModel]="line.cost"
+                        (ngModelChange)="onLineChange(i, 'cost', +$event)"
+                      />
+                    </td>
+                    <td>
+                      <input
+                        type="number"
+                        step="0.01"
+                        [ngModel]="line.profitAmount"
+                        (ngModelChange)="onLineChange(i, 'profitAmount', +$event)"
+                      />
+                    </td>
+                    <td>
+                      <input
+                        type="number"
+                        step="0.01"
+                        [ngModel]="line.sellingPrice"
+                        (ngModelChange)="onLineChange(i, 'sellingPrice', +$event)"
+                      />
+                    </td>
+                    <td class="center">
+                      <input
+                        type="checkbox"
+                        [ngModel]="line.save"
+                        (ngModelChange)="onLineChange(i, 'save', $event)"
+                      />
+                    </td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        }
+      </section>
+
+      <footer class="dialog-footer">
+        <button type="button" class="btn primary" [disabled]="saving()" (click)="saveModal()">
+          <mat-icon>save</mat-icon>
+          {{ t('inv.prices.savePrices') }}
+        </button>
+        <button type="button" class="btn ghost" [disabled]="saving()" (click)="closeModal()">
+          <mat-icon>close</mat-icon>
+          {{ t('common.cancel') }}
+        </button>
+      </footer>
+    </div>
+  </div>
+}

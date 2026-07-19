@@ -1,0 +1,362 @@
+<section class="dash" [class.fullscreen]="isFullscreen()">
+  <header class="hero">
+    <div class="hero-text">
+      <h1>{{ t('sal.dash.title') }}</h1>
+      <p>{{ t('sal.dash.subtitle') }}</p>
+      @if (data(); as d) {
+        <span class="updated"
+          >{{ t('sal.dash.lastUpdated') }}:
+          {{ d.generatedAtUtc | date: 'medium' }}</span
+        >
+      }
+    </div>
+    <div class="hero-actions">
+      <label class="field">
+        <span>{{ t('sal.dash.filter.from') }}</span>
+        <input type="date" [ngModel]="fromDate()" (ngModelChange)="fromDate.set($event)" />
+      </label>
+      <label class="field">
+        <span>{{ t('sal.dash.filter.to') }}</span>
+        <input type="date" [ngModel]="toDate()" (ngModelChange)="toDate.set($event)" />
+      </label>
+      <button type="button" class="btn" (click)="applyFilters()">{{ t('sal.dash.apply') }}</button>
+      <button type="button" class="btn" (click)="load()">
+        <mat-icon>sync</mat-icon>
+        {{ t('sal.dash.refresh') }}
+      </button>
+      <div class="auto">
+        <button type="button" class="chip" [class.on]="autoRefreshSec() === 0" (click)="setAutoRefresh(0)">
+          {{ t('sal.dash.auto.off') }}
+        </button>
+        <button type="button" class="chip" [class.on]="autoRefreshSec() === 30" (click)="setAutoRefresh(30)">
+          30s
+        </button>
+        <button type="button" class="chip" [class.on]="autoRefreshSec() === 60" (click)="setAutoRefresh(60)">
+          60s
+        </button>
+      </div>
+      <button type="button" class="btn ghost" (click)="toggleFullscreen()">
+        <mat-icon>{{ isFullscreen() ? 'fullscreen_exit' : 'fullscreen' }}</mat-icon>
+      </button>
+    </div>
+  </header>
+
+  <nav class="quick">
+    @for (a of quickActions; track a.key) {
+      <a [routerLink]="a.path" class="quick-btn">
+        <mat-icon>{{ a.icon }}</mat-icon>
+        {{ t(a.key) }}
+      </a>
+    }
+  </nav>
+
+  @if (error()) {
+    <div class="banner error">
+      {{ error() }}
+      <button type="button" (click)="load()">{{ t('sal.dash.retry') }}</button>
+    </div>
+  }
+
+  @if (loading()) {
+    <div class="skeleton-grid">
+      @for (i of [1, 2, 3, 4, 5, 6]; track i) {
+        <div class="skel"></div>
+      }
+    </div>
+  } @else if (data()) {
+    @if (alerts().length) {
+      <section class="alerts">
+        @for (a of alerts(); track a.code) {
+          <a class="alert" [attr.data-sev]="a.severity" [routerLink]="a.path || '/sales/dashboard'">
+            <mat-icon>{{ a.severity === 'danger' ? 'error' : 'warning' }}</mat-icon>
+            <span>{{ alertMessage(a) }}</span>
+          </a>
+        }
+      </section>
+    }
+
+    <section class="kpi-grid">
+      @for (k of kpiCards(); track k.key) {
+        <a class="kpi" [attr.data-tone]="k.tone" [routerLink]="k.path">
+          <div class="kpi-icon"><mat-icon>{{ k.icon }}</mat-icon></div>
+          <div class="kpi-body">
+            <span class="label">{{ t(k.key) }}</span>
+            <strong>{{ k.value }}</strong>
+            @if (k.change != null) {
+              <span class="chg" [class.up]="k.change >= 0" [class.down]="k.change < 0">
+                {{ k.change >= 0 ? '↑' : '↓' }} {{ k.change | number: '1.0-1' }}%
+              </span>
+            }
+            @if (k.meta) {
+              <span class="meta">{{ k.meta }}</span>
+            }
+          </div>
+        </a>
+      }
+    </section>
+
+    <section class="insight-row">
+      <div class="insight">
+        <span>{{ t('sal.dash.insight.bestBranch') }}</span>
+        <strong>{{ data()!.kpis.bestBranchName || '—' }}</strong>
+      </div>
+      <div class="insight">
+        <span>{{ t('sal.dash.insight.bestCashier') }}</span>
+        <strong>{{ data()!.kpis.bestCashierName || '—' }}</strong>
+      </div>
+      <div class="insight">
+        <span>{{ t('sal.dash.insight.topItem') }}</span>
+        <strong>{{ data()!.kpis.topSellingItemName || '—' }}</strong>
+      </div>
+      <div class="insight">
+        <span>{{ t('sal.dash.insight.topPay') }}</span>
+        <strong>{{ data()!.kpis.topPaymentMethodName || '—' }}</strong>
+      </div>
+    </section>
+
+    <section class="charts">
+      <article class="card">
+        <h3>{{ t('sal.dash.chart.byDay') }}</h3>
+        @for (b of dayBars(); track b.label) {
+          <div class="bar-row">
+            <span class="bar-label">{{ b.label }}</span>
+            <div class="bar-track"><div class="bar-fill" [style.width.%]="b.pct"></div></div>
+            <span class="bar-val">{{ money(b.value) }}</span>
+          </div>
+        } @empty {
+          <p class="empty">{{ t('sal.dash.emptyChart') }}</p>
+        }
+      </article>
+
+      <article class="card">
+        <h3>{{ t('sal.dash.chart.byBranch') }}</h3>
+        @for (b of branchBars(); track b.label) {
+          <div class="bar-row">
+            <span class="bar-label">{{ b.label }}</span>
+            <div class="bar-track"><div class="bar-fill blue" [style.width.%]="b.pct"></div></div>
+            <span class="bar-val">{{ money(b.value) }}</span>
+          </div>
+        } @empty {
+          <p class="empty">{{ t('sal.dash.emptyChart') }}</p>
+        }
+      </article>
+
+      <article class="card">
+        <h3>{{ t('sal.dash.chart.byCashier') }}</h3>
+        @for (b of cashierBars(); track b.label) {
+          <div class="bar-row">
+            <span class="bar-label">{{ b.label }}</span>
+            <div class="bar-track"><div class="bar-fill violet" [style.width.%]="b.pct"></div></div>
+            <span class="bar-val">{{ money(b.value) }}</span>
+          </div>
+        } @empty {
+          <p class="empty">{{ t('sal.dash.emptyChart') }}</p>
+        }
+      </article>
+
+      <article class="card">
+        <h3>{{ t('sal.dash.chart.byPos') }}</h3>
+        @for (b of posBars(); track b.label) {
+          <div class="bar-row">
+            <span class="bar-label">{{ b.label }}</span>
+            <div class="bar-track"><div class="bar-fill" [style.width.%]="b.pct"></div></div>
+            <span class="bar-val">{{ money(b.value) }}</span>
+          </div>
+        } @empty {
+          <p class="empty">{{ t('sal.dash.emptyChart') }}</p>
+        }
+      </article>
+
+      <article class="card">
+        <h3>{{ t('sal.dash.chart.topItems') }}</h3>
+        @for (b of itemBars(); track b.label) {
+          <div class="bar-row">
+            <span class="bar-label">{{ b.label }}</span>
+            <div class="bar-track"><div class="bar-fill orange" [style.width.%]="b.pct"></div></div>
+            <span class="bar-val">{{ money(b.value) }}</span>
+          </div>
+        } @empty {
+          <p class="empty">{{ t('sal.dash.emptyChart') }}</p>
+        }
+      </article>
+
+      <article class="card">
+        <h3>{{ t('sal.dash.chart.payments') }}</h3>
+        @for (b of payBars(); track b.label) {
+          <div class="bar-row">
+            <span class="bar-label">{{ b.label }}</span>
+            <div class="bar-track"><div class="bar-fill blue" [style.width.%]="b.pct"></div></div>
+            <span class="bar-val">{{ money(b.value) }}</span>
+          </div>
+        } @empty {
+          <p class="empty">{{ t('sal.dash.emptyChart') }}</p>
+        }
+      </article>
+
+      <article class="card">
+        <h3>{{ t('sal.dash.chart.categories') }}</h3>
+        @for (b of categoryBars(); track b.label) {
+          <div class="bar-row">
+            <span class="bar-label">{{ b.label }}</span>
+            <div class="bar-track"><div class="bar-fill violet" [style.width.%]="b.pct"></div></div>
+            <span class="bar-val">{{ money(b.value) }}</span>
+          </div>
+        } @empty {
+          <p class="empty">{{ t('sal.dash.emptyChart') }}</p>
+        }
+      </article>
+
+      <article class="card heat-card">
+        <h3>{{ t('sal.dash.chart.byHour') }}</h3>
+        <div class="heat">
+          <div class="heat-corner"></div>
+          @for (h of hours; track h) {
+            <div class="heat-h">{{ h }}</div>
+          }
+          @for (d of days; track d) {
+            <div class="heat-d">{{ dayLabel(d) }}</div>
+            @for (h of hours; track h) {
+              <div
+                class="heat-cell"
+                [style.opacity]="0.15 + heatOpacity(d, h) * 0.85"
+                [title]="money(heatValue(d, h))"
+              ></div>
+            }
+          }
+        </div>
+      </article>
+    </section>
+
+    <section class="tables">
+      <article class="card">
+        <h3>{{ t('sal.dash.table.recentOrders') }}</h3>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>{{ t('sal.dash.col.order') }}</th>
+                <th>{{ t('sal.dash.col.customer') }}</th>
+                <th>{{ t('sal.dash.col.amount') }}</th>
+                <th>{{ t('sal.dash.col.payment') }}</th>
+                <th>{{ t('sal.dash.col.branch') }}</th>
+                <th>{{ t('sal.dash.col.cashier') }}</th>
+                <th>{{ t('sal.dash.col.status') }}</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (o of data()!.recentOrders; track o.id) {
+                <tr>
+                  <td>
+                    <a [routerLink]="['/pos']" [queryParams]="{ orderId: o.id }">{{ o.orderNumber }}</a>
+                  </td>
+                  <td>{{ o.customerName || '—' }}</td>
+                  <td>{{ money(o.grandTotal) }}</td>
+                  <td>{{ o.paymentMethod || '—' }}</td>
+                  <td>{{ o.branchName || '—' }}</td>
+                  <td>{{ o.cashierName || '—' }}</td>
+                  <td><span class="status">{{ o.status }}</span></td>
+                </tr>
+              } @empty {
+                <tr>
+                  <td colspan="7">{{ t('sal.dash.emptyTable') }}</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      </article>
+
+      <article class="card">
+        <h3>{{ t('sal.dash.table.recentReturns') }}</h3>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>{{ t('sal.dash.col.return') }}</th>
+                <th>{{ t('sal.dash.col.invoice') }}</th>
+                <th>{{ t('sal.dash.col.customer') }}</th>
+                <th>{{ t('sal.dash.col.amount') }}</th>
+                <th>{{ t('sal.dash.col.reason') }}</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (r of data()!.recentReturns; track r.id) {
+                <tr>
+                  <td>{{ r.creditNoteNumber }}</td>
+                  <td>{{ r.originalInvoiceNumber || '—' }}</td>
+                  <td>{{ r.customerName || '—' }}</td>
+                  <td>{{ money(r.totalAmount) }}</td>
+                  <td>{{ r.reason }}</td>
+                </tr>
+              } @empty {
+                <tr>
+                  <td colspan="5">{{ t('sal.dash.emptyTable') }}</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      </article>
+
+      <article class="card">
+        <h3>{{ t('sal.dash.table.topCustomers') }}</h3>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>{{ t('sal.dash.col.customer') }}</th>
+                <th>{{ t('sal.dash.col.sales') }}</th>
+                <th>{{ t('sal.dash.col.invoices') }}</th>
+                <th>{{ t('sal.dash.col.lastPurchase') }}</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (c of data()!.topCustomers; track c.customerName) {
+                <tr>
+                  <td>{{ c.customerName }}</td>
+                  <td>{{ money(c.totalSales) }}</td>
+                  <td>{{ c.invoiceCount }}</td>
+                  <td>{{ c.lastPurchaseAt ? (c.lastPurchaseAt | date: 'short') : '—' }}</td>
+                </tr>
+              } @empty {
+                <tr>
+                  <td colspan="4">{{ t('sal.dash.emptyTable') }}</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      </article>
+
+      <article class="card">
+        <h3>{{ t('sal.dash.table.topItems') }}</h3>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>{{ t('sal.dash.col.item') }}</th>
+                <th>{{ t('sal.dash.col.qty') }}</th>
+                <th>{{ t('sal.dash.col.revenue') }}</th>
+                <th>{{ t('sal.dash.col.profit') }}</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (i of data()!.topItems; track i.productId) {
+                <tr>
+                  <td>{{ i.productName }}</td>
+                  <td>{{ i.quantity | number: '1.0-2' }}</td>
+                  <td>{{ money(i.revenue) }}</td>
+                  <td>{{ money(i.profit) }}</td>
+                </tr>
+              } @empty {
+                <tr>
+                  <td colspan="4">{{ t('sal.dash.emptyTable') }}</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      </article>
+    </section>
+  }
+</section>

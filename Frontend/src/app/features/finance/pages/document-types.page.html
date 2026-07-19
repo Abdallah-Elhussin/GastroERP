@@ -1,0 +1,309 @@
+<div class="doc-page">
+  <header class="page-header">
+    <div>
+      <h1>{{ t('fin.doc.title') }}</h1>
+      <p>{{ t('fin.doc.subtitle') }}</p>
+    </div>
+    <div class="header-actions">
+      <button type="button" class="btn primary" [disabled]="!canEdit() || !selected()" (click)="openEdit()">
+        <mat-icon>edit</mat-icon>
+        {{ t('common.edit') }}
+      </button>
+      <button type="button" class="btn ghost" (click)="load()" [matTooltip]="t('common.refresh')">
+        <mat-icon>sync</mat-icon>
+        {{ t('common.refresh') }}
+      </button>
+    </div>
+  </header>
+
+  <section class="toolbar">
+    <div class="search-box">
+      <mat-icon>search</mat-icon>
+      <input
+        type="search"
+        [ngModel]="search()"
+        (ngModelChange)="search.set($event)"
+        (keydown.enter)="load()"
+        [placeholder]="t('fin.doc.searchPlaceholder')"
+      />
+      <button type="button" class="btn primary" (click)="load()">{{ t('common.search') }}</button>
+    </div>
+    <button type="button" class="btn primary" [disabled]="!canCreate()" (click)="openCreate()">
+      <mat-icon>add</mat-icon>
+      {{ t('fin.doc.new') }}
+    </button>
+    <button type="button" class="btn ghost" [disabled]="!canCreate() || !selected()" (click)="copySelected()">
+      <mat-icon>content_copy</mat-icon>
+      {{ t('fin.doc.copy') }}
+    </button>
+    <button
+      type="button"
+      class="btn ghost"
+      [disabled]="!canDelete() || !selected() || selected()?.isSystem"
+      (click)="remove()"
+    >
+      <mat-icon>delete</mat-icon>
+      {{ t('common.delete') }}
+    </button>
+  </section>
+
+  @if (error() && !showModal()) {
+    <div class="form-error">{{ error() }}</div>
+  }
+
+  @if (loading()) {
+    <div class="muted">{{ t('common.loading') }}</div>
+  } @else {
+    <div class="table-card">
+      <table>
+        <thead>
+          <tr>
+            <th>{{ t('fin.doc.col.code') }}</th>
+            <th>{{ t('fin.doc.col.nameAr') }}</th>
+            <th>{{ t('fin.doc.col.nameEn') }}</th>
+            <th>{{ t('fin.doc.col.module') }}</th>
+            <th>{{ t('fin.doc.col.prefix') }}</th>
+            <th>{{ t('fin.doc.col.lastNumber') }}</th>
+            <th>{{ t('fin.doc.col.approval') }}</th>
+            <th>{{ t('fin.doc.col.autoPost') }}</th>
+            <th>{{ t('fin.doc.col.postAfter') }}</th>
+            <th>{{ t('fin.doc.col.workflow') }}</th>
+            <th>{{ t('fin.doc.col.active') }}</th>
+            <th>{{ t('fin.doc.col.system') }}</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (row of rows(); track row.id) {
+            <tr
+              [class.selected]="selectedId() === row.id"
+              (click)="select(row)"
+              (dblclick)="openEdit()"
+            >
+              <td><code>{{ row.code }}</code></td>
+              <td>{{ row.nameAr }}</td>
+              <td>{{ row.nameEn }}</td>
+              <td>{{ row.moduleCode }}</td>
+              <td><code>{{ row.prefix }}</code></td>
+              <td class="num">{{ row.lastNumber }}</td>
+              <td class="num">{{ yesNo(row.requiresApproval) }}</td>
+              <td class="num">{{ yesNo(row.autoPost) }}</td>
+              <td class="num">{{ yesNo(row.postAfterApproval) }}</td>
+              <td class="num">{{ yesNo(row.usesWorkflow) }}</td>
+              <td class="num"><input type="checkbox" [checked]="row.isActive" disabled /></td>
+              <td class="num"><input type="checkbox" [checked]="row.isSystem" disabled /></td>
+            </tr>
+          } @empty {
+            <tr>
+              <td colspan="12" class="empty">{{ t('fin.doc.empty') }}</td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  }
+</div>
+
+@if (showModal()) {
+  <div class="modal-backdrop" (click)="closeModal()">
+    <div class="modal wide" (click)="$event.stopPropagation()" role="dialog">
+      <header class="modal-header">
+        <h2>{{ isEditing() ? t('fin.doc.editTitle') : t('fin.doc.createTitle') }}</h2>
+        <div class="modal-actions">
+          <button type="button" class="btn primary" [disabled]="saving()" (click)="save()">
+            <mat-icon>save</mat-icon>
+            {{ t('common.save') }}
+          </button>
+          <button type="button" class="btn ghost" (click)="closeModal()">
+            <mat-icon>close</mat-icon>
+            {{ t('common.cancel') }}
+          </button>
+        </div>
+      </header>
+
+      @if (error()) {
+        <div class="form-error">{{ error() }}</div>
+      }
+
+      <nav class="tabs">
+        @for (tab of [
+          { id: 'basic', key: 'fin.doc.tab.basic' },
+          { id: 'numbering', key: 'fin.doc.tab.numbering' },
+          { id: 'lifecycle', key: 'fin.doc.tab.lifecycle' },
+          { id: 'approval', key: 'fin.doc.tab.approval' },
+          { id: 'posting', key: 'fin.doc.tab.posting' },
+          { id: 'impact', key: 'fin.doc.tab.impact' },
+          { id: 'permissions', key: 'fin.doc.tab.permissions' },
+          { id: 'extras', key: 'fin.doc.tab.extras' }
+        ]; track tab.id) {
+          <button
+            type="button"
+            class="tab"
+            [class.active]="formTab() === tab.id"
+            (click)="formTab.set($any(tab.id))"
+          >
+            {{ t(tab.key) }}
+          </button>
+        }
+      </nav>
+
+      <form [formGroup]="form" class="modal-body" (ngSubmit)="save()">
+        @if (formTab() === 'basic') {
+          <section class="card">
+            <label>
+              <span>{{ t('fin.doc.code') }} *</span>
+              <input formControlName="code" />
+            </label>
+            <label>
+              <span>{{ t('fin.doc.nameAr') }} *</span>
+              <input formControlName="nameAr" />
+            </label>
+            <label>
+              <span>{{ t('fin.doc.nameEn') }} *</span>
+              <input formControlName="nameEn" />
+            </label>
+            <label>
+              <span>{{ t('fin.doc.module') }} *</span>
+              <select formControlName="module">
+                @for (m of modules; track m.value) {
+                  <option [ngValue]="m.value">{{ t(m.labelKey) }}</option>
+                }
+              </select>
+            </label>
+            <label class="full">
+              <span>{{ t('fin.doc.description') }}</span>
+              <textarea rows="2" formControlName="description"></textarea>
+            </label>
+            <label class="check">
+              <input type="checkbox" formControlName="isActive" />
+              <span>{{ t('fin.doc.active') }}</span>
+            </label>
+          </section>
+        }
+
+        @if (formTab() === 'numbering') {
+          <section class="card">
+            <label>
+              <span>{{ t('fin.doc.prefix') }} *</span>
+              <input formControlName="prefix" />
+            </label>
+            <label>
+              <span>{{ t('fin.doc.suffix') }}</span>
+              <input formControlName="suffix" />
+            </label>
+            <label>
+              <span>{{ t('fin.doc.startingNumber') }}</span>
+              <input type="number" formControlName="startingNumber" />
+            </label>
+            <label>
+              <span>{{ t('fin.doc.lastNumber') }}</span>
+              <input type="number" formControlName="lastNumber" />
+            </label>
+            <label>
+              <span>{{ t('fin.doc.numberLength') }}</span>
+              <input type="number" min="1" max="12" formControlName="numberLength" />
+            </label>
+            <label class="check"><input type="checkbox" formControlName="resetYearly" /><span>{{ t('fin.doc.resetYearly') }}</span></label>
+            <label class="check"><input type="checkbox" formControlName="resetMonthly" /><span>{{ t('fin.doc.resetMonthly') }}</span></label>
+            <label class="check"><input type="checkbox" formControlName="numberPerBranch" /><span>{{ t('fin.doc.numberPerBranch') }}</span></label>
+            <label class="check"><input type="checkbox" formControlName="numberPerCompany" /><span>{{ t('fin.doc.numberPerCompany') }}</span></label>
+          </section>
+        }
+
+        @if (formTab() === 'lifecycle') {
+          <section class="card stages">
+            <div class="stages-toolbar">
+              <button type="button" class="btn ghost" (click)="addStage()">
+                <mat-icon>add</mat-icon>
+                {{ t('fin.doc.addStage') }}
+              </button>
+            </div>
+            <div formArrayName="lifecycleStages" class="stages-list">
+              @for (ctrl of stages.controls; track $index; let i = $index) {
+                <div class="stage-row" [formGroupName]="i">
+                  <input formControlName="code" [placeholder]="t('fin.doc.stageCode')" />
+                  <input formControlName="nameAr" [placeholder]="t('fin.doc.stageNameAr')" />
+                  <input formControlName="nameEn" [placeholder]="t('fin.doc.stageNameEn')" />
+                  <label class="check">
+                    <input type="checkbox" formControlName="isTerminal" />
+                    <span>{{ t('fin.doc.terminal') }}</span>
+                  </label>
+                  <button type="button" class="btn ghost" (click)="removeStage(i)">
+                    <mat-icon>delete</mat-icon>
+                  </button>
+                </div>
+              }
+            </div>
+          </section>
+        }
+
+        @if (formTab() === 'approval') {
+          <section class="card">
+            <label>
+              <span>{{ t('fin.doc.approvalMode') }}</span>
+              <select formControlName="approvalMode">
+                @for (m of approvalModes; track m.value) {
+                  <option [ngValue]="m.value">{{ t(m.labelKey) }}</option>
+                }
+              </select>
+            </label>
+            <label class="check"><input type="checkbox" formControlName="requiresApproval" /><span>{{ t('fin.doc.requiresApproval') }}</span></label>
+            <label class="check"><input type="checkbox" formControlName="usesWorkflow" /><span>{{ t('fin.doc.usesWorkflow') }}</span></label>
+          </section>
+        }
+
+        @if (formTab() === 'posting') {
+          <section class="card">
+            <label>
+              <span>{{ t('fin.doc.postingMode') }}</span>
+              <select formControlName="postingMode">
+                @for (m of postingModes; track m.value) {
+                  <option [ngValue]="m.value">{{ t(m.labelKey) }}</option>
+                }
+              </select>
+            </label>
+            <label class="check"><input type="checkbox" formControlName="autoPost" /><span>{{ t('fin.doc.autoPost') }}</span></label>
+            <label class="check"><input type="checkbox" formControlName="postAfterApproval" /><span>{{ t('fin.doc.postAfterApproval') }}</span></label>
+          </section>
+        }
+
+        @if (formTab() === 'impact') {
+          <section class="card modules-grid">
+            <label class="check"><input type="checkbox" formControlName="affectsInventory" /><span>{{ t('fin.doc.affect.inventory') }}</span></label>
+            <label class="check"><input type="checkbox" formControlName="affectsCost" /><span>{{ t('fin.doc.affect.cost') }}</span></label>
+            <label class="check"><input type="checkbox" formControlName="affectsAccounting" /><span>{{ t('fin.doc.affect.accounting') }}</span></label>
+            <label class="check"><input type="checkbox" formControlName="affectsCash" /><span>{{ t('fin.doc.affect.cash') }}</span></label>
+            <label class="check"><input type="checkbox" formControlName="affectsCustomers" /><span>{{ t('fin.doc.affect.customers') }}</span></label>
+            <label class="check"><input type="checkbox" formControlName="affectsSuppliers" /><span>{{ t('fin.doc.affect.suppliers') }}</span></label>
+            <label class="check"><input type="checkbox" formControlName="affectsAssets" /><span>{{ t('fin.doc.affect.assets') }}</span></label>
+            <label class="check"><input type="checkbox" formControlName="affectsPayroll" /><span>{{ t('fin.doc.affect.payroll') }}</span></label>
+          </section>
+        }
+
+        @if (formTab() === 'permissions') {
+          <section class="card modules-grid">
+            <label class="check"><input type="checkbox" formControlName="allowCreate" /><span>{{ t('fin.doc.perm.create') }}</span></label>
+            <label class="check"><input type="checkbox" formControlName="allowUpdate" /><span>{{ t('fin.doc.perm.update') }}</span></label>
+            <label class="check"><input type="checkbox" formControlName="allowApprove" /><span>{{ t('fin.doc.perm.approve') }}</span></label>
+            <label class="check"><input type="checkbox" formControlName="allowPost" /><span>{{ t('fin.doc.perm.post') }}</span></label>
+            <label class="check"><input type="checkbox" formControlName="allowCancel" /><span>{{ t('fin.doc.perm.cancel') }}</span></label>
+            <label class="check"><input type="checkbox" formControlName="allowDelete" /><span>{{ t('fin.doc.perm.delete') }}</span></label>
+          </section>
+        }
+
+        @if (formTab() === 'extras') {
+          <section class="card modules-grid">
+            <label class="check"><input type="checkbox" formControlName="allowAttachments" /><span>{{ t('fin.doc.extra.attachments') }}</span></label>
+            <label class="check"><input type="checkbox" formControlName="allowPrint" /><span>{{ t('fin.doc.extra.print') }}</span></label>
+            <label class="check"><input type="checkbox" formControlName="allowEditAfterSave" /><span>{{ t('fin.doc.extra.editAfterSave') }}</span></label>
+            <label class="check"><input type="checkbox" formControlName="allowDeleteDocuments" /><span>{{ t('fin.doc.extra.deleteDocs') }}</span></label>
+            <label class="check"><input type="checkbox" formControlName="allowCancelDocuments" /><span>{{ t('fin.doc.extra.cancelDocs') }}</span></label>
+            <label class="check"><input type="checkbox" formControlName="allowCopy" /><span>{{ t('fin.doc.extra.copy') }}</span></label>
+            <label class="check"><input type="checkbox" formControlName="allowReopen" /><span>{{ t('fin.doc.extra.reopen') }}</span></label>
+            <label class="check"><input type="checkbox" formControlName="showInReports" /><span>{{ t('fin.doc.extra.reports') }}</span></label>
+            <label class="check"><input type="checkbox" formControlName="showInDashboard" /><span>{{ t('fin.doc.extra.dashboard') }}</span></label>
+          </section>
+        }
+      </form>
+    </div>
+  </div>
+}

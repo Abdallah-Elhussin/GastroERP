@@ -19,6 +19,14 @@ public sealed class Customer : AuditableBaseEntity
     public string? Notes { get; private set; }
     public CustomerStatus Status { get; private set; }
 
+    // Commercial / AR (Back Office Sales)
+    public string? TaxNumber { get; private set; }
+    public Guid? ArAccountId { get; private set; }
+    public string Currency { get; private set; }
+    public int PaymentDueDays { get; private set; }
+    public string? PaymentTerms { get; private set; }
+    public decimal CreditLimit { get; private set; }
+
     // Statistics
     public int TotalOrders { get; private set; }
     public decimal TotalSpending { get; private set; }
@@ -35,6 +43,7 @@ public sealed class Customer : AuditableBaseEntity
         CustomerNumber = string.Empty;
         FullName = string.Empty;
         Mobile = string.Empty;
+        Currency = "SAR";
     }
 
     public Customer(Guid tenantId, string customerNumber, string fullName, string mobile, string? email = null)
@@ -48,6 +57,7 @@ public sealed class Customer : AuditableBaseEntity
         FullName = fullName;
         Mobile = mobile;
         Email = email;
+        Currency = "SAR";
         Status = CustomerStatus.Active;
 
         RaiseDomainEvent(new CustomerCreatedEvent(Id, TenantId));
@@ -68,6 +78,33 @@ public sealed class Customer : AuditableBaseEntity
 
         RaiseDomainEvent(new CustomerUpdatedEvent(Id, TenantId));
     }
+
+    /// <summary>شروط البيع الآجل والذمم المدينة للعميل التجاري.</summary>
+    public void UpdateCommercialTerms(
+        string? taxNumber,
+        Guid? arAccountId,
+        string? currency,
+        int paymentDueDays,
+        string? paymentTerms,
+        decimal creditLimit)
+    {
+        if (creditLimit < 0)
+            throw new BusinessException(ErrorCodes.InvalidAmount, "Credit limit cannot be negative.");
+        if (paymentDueDays < 0)
+            throw new BusinessException(ErrorCodes.InvalidAmount, "Payment due days cannot be negative.");
+
+        TaxNumber = string.IsNullOrWhiteSpace(taxNumber) ? null : taxNumber.Trim();
+        ArAccountId = arAccountId;
+        Currency = string.IsNullOrWhiteSpace(currency) ? "SAR" : currency.Trim().ToUpperInvariant();
+        PaymentDueDays = paymentDueDays;
+        PaymentTerms = string.IsNullOrWhiteSpace(paymentTerms) ? null : paymentTerms.Trim();
+        CreditLimit = creditLimit;
+
+        RaiseDomainEvent(new CustomerUpdatedEvent(Id, TenantId));
+    }
+
+    public bool IsOverCreditLimit(decimal currentBalance)
+        => CreditLimit > 0 && currentBalance > CreditLimit;
 
     public void ChangeStatus(CustomerStatus status)
     {

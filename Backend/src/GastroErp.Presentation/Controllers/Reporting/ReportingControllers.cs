@@ -263,7 +263,7 @@ public class FinanceReportsController : BaseApiController
     [HttpGet($"{ApiRoutes.Reports.Finance}/general-ledger")]
     [HasPermission(Permissions.FinanceReports.View)]
     public async Task<IActionResult> GetGeneralLedger([FromQuery] GeneralLedgerFilterDto filter)
-        => HandleResult(await Mediator.Send(new GetGeneralLedgerReportQuery(filter)));
+        => HandleResult(await Mediator.Send(new GetGeneralLedgerReportQuery(TenantId, filter)));
 
     [HttpGet($"{ApiRoutes.Reports.Finance}/journal-register")]
     [HasPermission(Permissions.FinanceReports.View)]

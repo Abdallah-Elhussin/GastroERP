@@ -1,163 +1,304 @@
-<div class="item-form-page">
-  <header class="page-header">
-    <div class="header-start">
-      <a routerLink="/inventory" class="back-link">
+<div class="item-workspace" *ngIf="!loading(); else loadingTpl">
+  <header class="toolbar">
+    <div class="title-block">
+      <a routerLink="/inventory/items" class="back">
         <mat-icon>arrow_back</mat-icon>
-        <span>{{ t('inventoryItem.backToList') }}</span>
+        {{ t('inventoryItem.backToList') }}
       </a>
-      <h1>{{ isEditMode() ? t('inventoryItem.editTitle') : t('inventoryItem.newTitle') }}</h1>
-      <p>{{ t('inventoryItem.subtitle') }}</p>
+      <h1>{{ displayTitle() }}</h1>
     </div>
-    <div class="header-actions">
-      <button type="button" class="btn-secondary" routerLink="/inventory">{{ t('common.cancel') }}</button>
-      <button type="button" class="btn-primary" [disabled]="saving() || form.invalid" (click)="save()">
+    <div class="actions">
+      <button type="button" class="btn ghost" routerLink="/inventory/items">{{ t('common.cancel') }}</button>
+      <button type="button" class="btn primary" [disabled]="saving() || form.invalid" (click)="save()">
         <mat-icon>save</mat-icon>
         {{ saving() ? t('common.saving') : t('inventoryItem.save') }}
       </button>
     </div>
   </header>
 
-  <div *ngIf="saveError()" class="error-banner">{{ saveError() }}</div>
+  <div class="error" *ngIf="saveError()">{{ saveError() }}</div>
 
-  <div class="form-layout">
-    <aside class="tabs-nav">
-      <button type="button" [class.active]="activeTab() === 'basic'" (click)="setTab('basic')">
-        <mat-icon>inventory_2</mat-icon>
-        {{ t('inventoryItem.tab.basic') }}
-      </button>
-      <button type="button" [class.active]="activeTab() === 'identifiers'" (click)="setTab('identifiers')">
-        <mat-icon>qr_code_2</mat-icon>
-        {{ t('inventoryItem.tab.identifiers') }}
-      </button>
-      <button type="button" [class.active]="activeTab() === 'costing'" (click)="setTab('costing')">
-        <mat-icon>payments</mat-icon>
-        {{ t('inventoryItem.tab.costing') }}
-      </button>
-    </aside>
+  <form [formGroup]="form" class="workspace-body">
+    <!-- Top product header -->
+    <section class="hero-card">
+      <div class="image-col">
+        <div class="image-box">
+          <img *ngIf="form.value.imageUrl; else noImg" [src]="form.value.imageUrl" [alt]="form.value.nameAr || ''" />
+          <ng-template #noImg>
+            <span>{{ t('inv.item.noImage') }}</span>
+          </ng-template>
+        </div>
+        <label class="upload">
+          <mat-icon>photo_camera</mat-icon>
+          <input type="file" accept="image/*" hidden (change)="onImageSelected($event)" />
+        </label>
+      </div>
 
-    <form [formGroup]="form" class="form-panel">
-      <!-- Basic -->
-      <section *ngIf="activeTab() === 'basic'" class="tab-section">
-        <div class="image-block">
-          <div class="image-preview">
-            <img *ngIf="form.value.imageUrl; else noImage" [src]="form.value.imageUrl" [alt]="form.value.nameAr || ''" />
-            <ng-template #noImage>
-              <mat-icon>image</mat-icon>
-            </ng-template>
+      <div class="fields-col">
+        <label class="field">
+          <span>{{ t('inv.item.category') }}</span>
+          <select formControlName="categoryId">
+            <option value="">{{ t('inventoryItem.selectCategory') }}</option>
+            <option *ngFor="let cat of inventoryService.categories()" [value]="cat.id">
+              {{ categoryLabel(cat) }}
+            </option>
+          </select>
+        </label>
+
+        <label class="field">
+          <span>{{ t('inv.item.evaluationGroup') }}</span>
+          <select formControlName="evaluationGroup">
+            <option value="">{{ t('inv.item.evaluationNone') }}</option>
+            <option value="food">{{ t('inv.item.evaluation.food') }}</option>
+            <option value="beverage">{{ t('inv.item.evaluation.beverage') }}</option>
+            <option value="packaging">{{ t('inv.item.evaluation.packaging') }}</option>
+            <option value="other">{{ t('inv.item.evaluation.other') }}</option>
+          </select>
+        </label>
+
+        <label class="field">
+          <span>{{ t('inv.item.itemType') }}</span>
+          <select formControlName="itemKind">
+            <option value="raw">{{ t('inv.item.type.raw') }}</option>
+            <option value="manufactured">{{ t('inv.item.type.manufactured') }}</option>
+          </select>
+        </label>
+
+        <label class="field">
+          <span>{{ t('inv.item.baseUnit') }}</span>
+          <select formControlName="baseUnitId" (change)="onBaseUnitChange()">
+            <option value="">{{ t('inventoryItem.selectUnit') }}</option>
+            <option *ngFor="let unit of inventoryService.units()" [value]="unit.id">
+              {{ unitLabel(unit) }}
+            </option>
+          </select>
+        </label>
+      </div>
+
+      <div class="flags-col">
+        <label class="toggle">
+          <input type="checkbox" [ngModel]="trackBatch()" (ngModelChange)="trackBatch.set($event)" [ngModelOptions]="{standalone: true}" />
+          <span>{{ t('inv.item.trackBatch') }}</span>
+        </label>
+        <label class="toggle">
+          <input type="checkbox" [ngModel]="trackSerial()" (ngModelChange)="trackSerial.set($event)" [ngModelOptions]="{standalone: true}" />
+          <span>{{ t('inv.item.trackSerial') }}</span>
+        </label>
+        <label class="toggle">
+          <input type="checkbox" [ngModel]="trackExpiry()" (ngModelChange)="trackExpiry.set($event)" [ngModelOptions]="{standalone: true}" />
+          <span>{{ t('inv.item.trackExpiry') }}</span>
+        </label>
+        <label class="check">
+          <input type="checkbox" [ngModel]="showInMenu()" (ngModelChange)="showInMenu.set($event)" [ngModelOptions]="{standalone: true}" />
+          <span>{{ t('inv.item.showInMenu') }}</span>
+        </label>
+        <label class="check">
+          <input type="checkbox" [ngModel]="vatEnabled()" (ngModelChange)="vatEnabled.set($event)" [ngModelOptions]="{standalone: true}" />
+          <span>{{ t('inv.item.vat') }}</span>
+        </label>
+      </div>
+    </section>
+
+    <!-- Bottom tabs -->
+    <section class="tabs-card">
+      <nav class="tabs" role="tablist">
+        <button
+          type="button"
+          *ngFor="let tab of tabs"
+          class="tab"
+          [class.active]="activeTab() === tab.id"
+          (click)="selectTab(tab.id)"
+        >
+          {{ t(tab.labelKey) }}
+        </button>
+      </nav>
+
+      <div class="tab-body">
+        <!-- Units & barcode -->
+        <div *ngIf="activeTab() === 'units'" class="tab-panel">
+          <div class="add-row">
+            <select [ngModel]="draftUnitId()" (ngModelChange)="draftUnitId.set($event)" [ngModelOptions]="{standalone: true}">
+              <option value="">{{ t('inv.item.col.unit') }}</option>
+              <option *ngFor="let unit of inventoryService.units()" [value]="unit.id">{{ unitLabel(unit) }}</option>
+            </select>
+            <input type="text" [ngModel]="draftBarcode()" (ngModelChange)="draftBarcode.set($event)" [ngModelOptions]="{standalone: true}" [placeholder]="t('inv.item.col.barcode')" />
+            <input type="text" [ngModel]="draftBarcodeType()" (ngModelChange)="draftBarcodeType.set($event)" [ngModelOptions]="{standalone: true}" [placeholder]="t('inv.item.col.barcodeType')" />
+            <input type="number" min="0.0001" step="0.01" [ngModel]="draftFactor()" (ngModelChange)="draftFactor.set(+$event)" [ngModelOptions]="{standalone: true}" [placeholder]="t('inv.item.col.factor')" />
+            <button type="button" class="btn primary" (click)="addUnitRow()">
+              <mat-icon>add</mat-icon>
+              {{ t('inv.item.add') }}
+            </button>
           </div>
-          <label class="upload-btn">
-            <mat-icon>upload</mat-icon>
-            {{ t('inventoryItem.uploadImage') }}
-            <input type="file" accept="image/*" hidden (change)="onImageSelected($event)" />
-          </label>
-          <input type="url" formControlName="imageUrl" [placeholder]="t('inventoryItem.imageUrlPlaceholder')" class="field-input mt-2" />
+
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>{{ t('inv.item.col.unit') }}</th>
+                  <th>{{ t('inv.item.col.barcode') }}</th>
+                  <th>{{ t('inv.item.col.barcodeType') }}</th>
+                  <th>{{ t('inv.item.col.factor') }}</th>
+                  <th>{{ t('inv.item.col.base') }}</th>
+                  <th>{{ t('inv.item.col.sale') }}</th>
+                  <th>{{ t('inv.item.col.purchase') }}</th>
+                  <th>{{ t('inv.item.col.inventory') }}</th>
+                  <th>{{ t('inv.item.col.actions') }}</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr *ngFor="let row of unitRows()">
+                  <td>{{ row.unitName }}</td>
+                  <td>{{ row.barcode }}</td>
+                  <td>{{ row.barcodeType }}</td>
+                  <td>{{ row.factor }}</td>
+                  <td><mat-icon class="flag" [class.on]="row.isBase">{{ row.isBase ? 'check_circle' : 'radio_button_unchecked' }}</mat-icon></td>
+                  <td><mat-icon class="flag" [class.on]="row.forSale">{{ row.forSale ? 'check_circle' : 'radio_button_unchecked' }}</mat-icon></td>
+                  <td><mat-icon class="flag" [class.on]="row.forPurchase">{{ row.forPurchase ? 'check_circle' : 'radio_button_unchecked' }}</mat-icon></td>
+                  <td><mat-icon class="flag" [class.on]="row.forInventory">{{ row.forInventory ? 'check_circle' : 'radio_button_unchecked' }}</mat-icon></td>
+                  <td>
+                    <button *ngIf="!row.isBase" type="button" class="icon-btn" (click)="removeUnitRow(row.id)">
+                      <mat-icon>delete</mat-icon>
+                    </button>
+                  </td>
+                </tr>
+                <tr *ngIf="!unitRows().length">
+                  <td colspan="9" class="empty">{{ t('inv.item.empty.units') }}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
         </div>
 
-        <div class="fields-grid">
+        <!-- Extra data -->
+        <div *ngIf="activeTab() === 'extra'" class="tab-panel fields-grid">
           <label class="field">
-            <span>{{ t('inventoryItem.nameAr') }} *</span>
-            <input type="text" formControlName="nameAr" class="field-input" />
+            <span>{{ t('inventoryItem.nameAr') }}</span>
+            <input type="text" formControlName="nameAr" />
           </label>
           <label class="field">
             <span>{{ t('inventoryItem.nameEn') }}</span>
-            <input type="text" formControlName="nameEn" class="field-input" />
+            <input type="text" formControlName="nameEn" />
           </label>
-          <label class="field">
-            <span>{{ t('inventoryItem.category') }} *</span>
-            <select formControlName="categoryId" class="field-input">
-              <option value="">{{ t('inventoryItem.selectCategory') }}</option>
-              <option *ngFor="let cat of inventoryService.categories()" [value]="cat.id">
-                {{ categoryLabel(cat) }}
-              </option>
-            </select>
-          </label>
-          <label class="field">
-            <span>{{ t('inventoryItem.itemKind') }} *</span>
-            <select formControlName="itemKind" class="field-input">
-              <option value="raw">{{ t('inventoryItem.kind.raw') }}</option>
-              <option value="manufactured">{{ t('inventoryItem.kind.manufactured') }}</option>
-            </select>
-          </label>
-          <label class="field full">
-            <span>{{ t('inventoryItem.descriptionAr') }}</span>
-            <textarea formControlName="descriptionAr" rows="3" class="field-input"></textarea>
-          </label>
-          <label class="field full">
-            <span>{{ t('inventoryItem.descriptionEn') }}</span>
-            <textarea formControlName="descriptionEn" rows="3" class="field-input"></textarea>
-          </label>
-        </div>
-      </section>
-
-      <!-- Identifiers -->
-      <section *ngIf="activeTab() === 'identifiers'" class="tab-section">
-        <div class="fields-grid">
           <label class="field">
             <span>{{ t('inventoryItem.sku') }}</span>
-            <input type="text" formControlName="sku" class="field-input" />
+            <input type="text" formControlName="sku" />
           </label>
           <label class="field">
             <span>{{ t('inventoryItem.barcode') }}</span>
-            <input type="text" formControlName="barcode" class="field-input" />
-          </label>
-          <label class="field">
-            <span>{{ t('inventoryItem.baseUnit') }} *</span>
-            <select formControlName="baseUnitId" class="field-input">
-              <option value="">{{ t('inventoryItem.selectUnit') }}</option>
-              <option *ngFor="let unit of inventoryService.units()" [value]="unit.id">
-                {{ unitLabel(unit) }}
-              </option>
-            </select>
+            <input type="text" formControlName="barcode" (change)="onBaseUnitChange()" />
           </label>
           <label class="field">
             <span>{{ t('inventoryItem.purchaseUnit') }}</span>
-            <select formControlName="defaultPurchaseUnitId" class="field-input">
+            <select formControlName="defaultPurchaseUnitId" (change)="onBaseUnitChange()">
               <option value="">{{ t('inventoryItem.sameAsBase') }}</option>
-              <option *ngFor="let unit of inventoryService.units()" [value]="unit.id">
-                {{ unitLabel(unit) }}
-              </option>
+              <option *ngFor="let unit of inventoryService.units()" [value]="unit.id">{{ unitLabel(unit) }}</option>
             </select>
           </label>
           <label class="field">
             <span>{{ t('inventoryItem.recipeUnit') }}</span>
-            <select formControlName="defaultRecipeUnitId" class="field-input">
+            <select formControlName="defaultRecipeUnitId" (change)="onBaseUnitChange()">
               <option value="">{{ t('inventoryItem.sameAsBase') }}</option>
-              <option *ngFor="let unit of inventoryService.units()" [value]="unit.id">
-                {{ unitLabel(unit) }}
-              </option>
+              <option *ngFor="let unit of inventoryService.units()" [value]="unit.id">{{ unitLabel(unit) }}</option>
             </select>
           </label>
-        </div>
-        <p class="hint">{{ t('inventoryItem.identifiersHint') }}</p>
-      </section>
-
-      <!-- Costing -->
-      <section *ngIf="activeTab() === 'costing'" class="tab-section">
-        <div class="cost-cards">
-          <div class="cost-card">
-            <span class="cost-label">{{ t('inventoryItem.avgCost') }}</span>
-            <strong>{{ averageCost() != null ? ('$' + averageCost()!.toFixed(2)) : '—' }}</strong>
-            <small>{{ t('inventoryItem.avgCostHint') }}</small>
-          </div>
-          <div class="cost-card">
-            <span class="cost-label">{{ t('inventoryItem.lastPurchaseCost') }}</span>
-            <strong>{{ lastPurchaseCost() != null ? ('$' + lastPurchaseCost()!.toFixed(2)) : '—' }}</strong>
-            <small>{{ t('inventoryItem.lastPurchaseHint') }}</small>
-          </div>
-        </div>
-
-        <div class="fields-grid">
-          <label class="field">
-            <span>{{ t('inventoryItem.reorderLevel') }}</span>
-            <input type="number" min="0" step="0.01" formControlName="reorderLevel" class="field-input" />
+          <label class="field full">
+            <span>{{ t('inventoryItem.descriptionAr') }}</span>
+            <textarea formControlName="descriptionAr" rows="3"></textarea>
           </label>
-          <label class="field">
-            <span>{{ t('inventoryItem.reorderQty') }}</span>
-            <input type="number" min="0" step="0.01" formControlName="reorderQuantity" class="field-input" />
+          <label class="field full">
+            <span>{{ t('inventoryItem.descriptionEn') }}</span>
+            <textarea formControlName="descriptionEn" rows="3"></textarea>
           </label>
         </div>
-        <p class="hint">{{ t('inventoryItem.costingHint') }}</p>
-      </section>
-    </form>
-  </div>
+
+        <!-- Costs -->
+        <div *ngIf="activeTab() === 'costs'" class="tab-panel">
+          <div class="cost-cards">
+            <div class="cost-card">
+              <span>{{ t('inventoryItem.avgCost') }}</span>
+              <strong>{{ averageCost() != null ? averageCost()!.toFixed(4) : '—' }}</strong>
+              <small>{{ t('inventoryItem.avgCostHint') }}</small>
+            </div>
+            <div class="cost-card">
+              <span>{{ t('inventoryItem.lastPurchaseCost') }}</span>
+              <strong>{{ lastPurchaseCost() != null ? lastPurchaseCost()!.toFixed(4) : '—' }}</strong>
+              <small>{{ t('inventoryItem.lastPurchaseHint') }}</small>
+            </div>
+          </div>
+          <div class="fields-grid">
+            <label class="field">
+              <span>{{ t('inventoryItem.reorderLevel') }}</span>
+              <input type="number" min="0" step="0.01" formControlName="reorderLevel" />
+            </label>
+            <label class="field">
+              <span>{{ t('inventoryItem.reorderQty') }}</span>
+              <input type="number" min="0" step="0.01" formControlName="reorderQuantity" />
+            </label>
+          </div>
+        </div>
+
+        <!-- Prices -->
+        <div *ngIf="activeTab() === 'prices'" class="tab-panel empty-panel">
+          <mat-icon>sell</mat-icon>
+          <h3>{{ t('inv.item.tab.prices') }}</h3>
+          <p>{{ t('inv.item.empty.prices') }}</p>
+          <a routerLink="/inventory/prices" class="btn ghost">{{ t('inv.nav.prices') }}</a>
+        </div>
+
+        <!-- Batches -->
+        <div *ngIf="activeTab() === 'batches'" class="tab-panel empty-panel">
+          <mat-icon>qr_code_2</mat-icon>
+          <h3>{{ t('inv.item.tab.batches') }}</h3>
+          <p>{{ trackBatch() || trackExpiry() ? t('inv.item.empty.batchesOn') : t('inv.item.empty.batchesOff') }}</p>
+        </div>
+
+        <!-- Suppliers -->
+        <div *ngIf="activeTab() === 'suppliers'" class="tab-panel empty-panel">
+          <mat-icon>local_shipping</mat-icon>
+          <h3>{{ t('inv.item.tab.suppliers') }}</h3>
+          <p>{{ t('inv.item.empty.suppliers') }}</p>
+        </div>
+
+        <!-- Stock balances -->
+        <div *ngIf="activeTab() === 'stock'" class="tab-panel">
+          <div *ngIf="stockLoading()" class="empty">{{ t('inventory.loading') }}</div>
+          <div *ngIf="!stockLoading() && !stock().length" class="empty-panel compact">
+            <mat-icon>warehouse</mat-icon>
+            <p>{{ t('inv.item.empty.stock') }}</p>
+          </div>
+          <div class="table-wrap" *ngIf="!stockLoading() && stock().length">
+            <table>
+              <thead>
+                <tr>
+                  <th>{{ t('pd.col.warehouse') }}</th>
+                  <th>{{ t('pd.col.onHand') }}</th>
+                  <th>{{ t('pd.col.reserved') }}</th>
+                  <th>{{ t('pd.col.available') }}</th>
+                  <th>{{ t('pd.col.ordered') }}</th>
+                  <th>{{ t('pd.col.incoming') }}</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr *ngFor="let row of stock()">
+                  <td>
+                    <strong>{{ row.warehouseNameAr }}</strong>
+                    <div class="muted" *ngIf="row.warehouseCode">{{ row.warehouseCode }}</div>
+                  </td>
+                  <td>{{ row.onHand }}</td>
+                  <td>{{ row.reserved }}</td>
+                  <td>{{ row.available }}</td>
+                  <td>{{ row.ordered }}</td>
+                  <td>{{ row.incoming }}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </section>
+  </form>
 </div>
+
+<ng-template #loadingTpl>
+  <div class="loading">{{ t('inventory.loading') }}</div>
+</ng-template>

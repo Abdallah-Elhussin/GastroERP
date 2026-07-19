@@ -1,0 +1,313 @@
+<app-inventory-page-shell [breadcrumbs]="breadcrumbs" [title]="pageTitle()">
+  <section class="toolbar" shellActions>
+    <span class="status-pill" [attr.data-status]="status()">
+      {{ grnNumber() || t('pur.grn.new') }} · {{ statusLabel() }}
+    </span>
+    @if (poCompletionPercent() != null) {
+      <span class="po-progress">{{ t('pur.grn.poCompletion') }}: {{ poCompletionPercent() | number: '1.0-0' }}%</span>
+    }
+    <button type="button" class="btn ghost" (click)="back()">{{ t('pur.grn.cancel') }}</button>
+    <button
+      type="button"
+      class="btn success"
+      [disabled]="!canManage() || !docId() || !isDraft() || saving()"
+      (click)="approve()"
+    >
+      {{ t('pur.grn.approve') }}
+    </button>
+    <button
+      type="button"
+      class="btn info"
+      [disabled]="!canManage() || !docId() || isPosted() || status() === 'Cancelled' || saving()"
+      (click)="post()"
+    >
+      {{ t('pur.grn.post') }}
+    </button>
+    <button
+      type="button"
+      class="btn ghost"
+      [disabled]="!canManage() || !docId() || !isPosted() || saving()"
+      (click)="unpost()"
+    >
+      {{ t('pur.grn.unpost') }}
+    </button>
+    <button
+      type="button"
+      class="btn primary"
+      [disabled]="!docId() || !isPosted()"
+      (click)="createInvoice()"
+    >
+      {{ t('pur.grn.createInvoice') }}
+    </button>
+    <button
+      type="button"
+      class="btn primary"
+      [disabled]="!canManage() || !isDraft() || saving()"
+      (click)="save()"
+    >
+      {{ t('pur.grn.save') }}
+    </button>
+  </section>
+
+  @if (error()) {
+    <div class="form-error">{{ error() }}</div>
+  }
+
+  @if (loading()) {
+    <p class="muted">{{ t('common.loading') }}</p>
+  } @else {
+    <section class="card">
+      <h3>{{ t('pur.grn.headerTitle') }}</h3>
+      <div class="grid-4">
+        <label class="field">
+          <span>{{ t('pur.grn.col.docNumber') }}</span>
+          <input type="text" [ngModel]="grnNumber()" disabled [placeholder]="t('pur.grn.autoNumber')" />
+        </label>
+        <label class="field">
+          <span>{{ t('pur.grn.col.date') }}</span>
+          <input type="date" [ngModel]="receiptDate()" (ngModelChange)="receiptDate.set($event)" [disabled]="!isDraft()" />
+        </label>
+        <label class="field">
+          <span>{{ t('pur.grn.col.supplier') }}</span>
+          @if (supplierLocked()) {
+            <input type="text" [ngModel]="supplierNameAr()" disabled />
+          } @else {
+            <select [ngModel]="supplierId()" (ngModelChange)="supplierId.set($event || null)" [disabled]="!isDraft()">
+              <option [ngValue]="null">{{ t('pur.grn.pickSupplier') }}</option>
+              @for (s of suppliers(); track s.id) {
+                <option [ngValue]="s.id">{{ s.nameAr }}</option>
+              }
+            </select>
+          }
+        </label>
+        <label class="field">
+          <span>{{ t('pur.grn.col.ref') }}</span>
+          <input type="text" [ngModel]="referenceNumber()" (ngModelChange)="referenceNumber.set($event)" [disabled]="!isDraft()" />
+        </label>
+
+        <label class="field span-2">
+          <span>{{ t('pur.grn.col.po') }}</span>
+          <div class="inline">
+            <select
+              [ngModel]="purchaseOrderId()"
+              (ngModelChange)="purchaseOrderId.set($event || null)"
+              [disabled]="!isDraft() || !!docId()"
+            >
+              <option [ngValue]="null">{{ t('pur.grn.pickPo') }}</option>
+              @for (p of purchaseOrders(); track p.id) {
+                <option [ngValue]="p.id">{{ p.poNumber }} — {{ p.supplierNameAr }}</option>
+              }
+            </select>
+            <button type="button" class="btn ghost" [disabled]="!isDraft()" (click)="loadFromPo()">
+              {{ t('pur.grn.loadFromPo') }}
+            </button>
+          </div>
+        </label>
+
+        <div class="field span-2 status-track">
+          <span>{{ t('pur.grn.col.status') }}</span>
+          <div class="steps">
+            <span [class.active]="unifiedStatusCode() === 0 || status() === 'Draft'">0 · {{ t('pur.grn.status.draft') }}</span>
+            <span [class.active]="status() === 'Approved'">1 · {{ t('pur.grn.status.approved') }}</span>
+            <span [class.active]="status() === 'Posted'">2 · {{ t('pur.grn.status.posted') }}</span>
+            <span [class.active]="status() === 'Cancelled'">9 · {{ t('pur.grn.status.cancelled') }}</span>
+          </div>
+        </div>
+
+        <label class="field">
+          <span>{{ t('pur.grn.col.warehouse') }}</span>
+          <select [ngModel]="warehouseId()" (ngModelChange)="warehouseId.set($event || null)" [disabled]="!isDraft()">
+            <option [ngValue]="null">{{ t('pur.grn.pickWarehouse') }}</option>
+            @for (w of warehouses(); track w.id) {
+              <option [ngValue]="w.id">{{ w.nameAr }}</option>
+            }
+          </select>
+        </label>
+        <label class="field">
+          <span>{{ t('pur.grn.col.currency') }}</span>
+          <input type="text" [ngModel]="currency()" (ngModelChange)="currency.set($event)" [disabled]="!isDraft()" />
+        </label>
+        <label class="field">
+          <span>{{ t('pur.grn.exchangeRate') }}</span>
+          <input type="number" step="0.0001" [ngModel]="exchangeRate()" (ngModelChange)="exchangeRate.set(+$event)" [disabled]="!isDraft()" />
+        </label>
+        <label class="field">
+          <span>{{ t('pur.grn.receiptMethod') }}</span>
+          <input type="text" [ngModel]="receiptMethod()" (ngModelChange)="receiptMethod.set($event)" [disabled]="!isDraft()" />
+        </label>
+        <label class="field">
+          <span>{{ t('pur.grn.receivedBy') }}</span>
+          <input type="text" [ngModel]="receivedByName()" (ngModelChange)="receivedByName.set($event)" [disabled]="!isDraft()" />
+        </label>
+        <label class="field">
+          <span>{{ t('pur.grn.supplierRep') }}</span>
+          <input type="text" [ngModel]="supplierRepName()" (ngModelChange)="supplierRepName.set($event)" [disabled]="!isDraft()" />
+        </label>
+        <label class="field">
+          <span>{{ t('pur.grn.vehicle') }}</span>
+          <input type="text" [ngModel]="vehicleNumber()" (ngModelChange)="vehicleNumber.set($event)" [disabled]="!isDraft()" />
+        </label>
+        <label class="field">
+          <span>{{ t('pur.grn.waybill') }}</span>
+          <input type="text" [ngModel]="waybillNumber()" (ngModelChange)="waybillNumber.set($event)" [disabled]="!isDraft()" />
+        </label>
+        <label class="field span-4">
+          <span>{{ t('pur.grn.col.notes') }}</span>
+          <input type="text" [ngModel]="notes()" (ngModelChange)="notes.set($event)" [disabled]="!isDraft()" />
+        </label>
+      </div>
+    </section>
+
+    <section class="card">
+      <h3>{{ t('pur.grn.inspectionTitle') }}</h3>
+      <div class="grid-4">
+        <div class="field span-2">
+          <span>{{ t('pur.grn.inspectionResult') }}</span>
+          <div class="radio-row">
+            <label><input type="radio" name="insp" [checked]="inspectionResult() === 1" (change)="inspectionResult.set(1)" [disabled]="!isDraft()" /> {{ t('pur.grn.insp.accepted') }}</label>
+            <label><input type="radio" name="insp" [checked]="inspectionResult() === 2" (change)="inspectionResult.set(2)" [disabled]="!isDraft()" /> {{ t('pur.grn.insp.partial') }}</label>
+            <label><input type="radio" name="insp" [checked]="inspectionResult() === 3" (change)="inspectionResult.set(3)" [disabled]="!isDraft()" /> {{ t('pur.grn.insp.rejected') }}</label>
+          </div>
+        </div>
+        <label class="field">
+          <span>{{ t('pur.grn.inspectedBy') }}</span>
+          <input type="text" [ngModel]="inspectedBy()" (ngModelChange)="inspectedBy.set($event)" [disabled]="!isDraft()" />
+        </label>
+        <label class="field">
+          <span>{{ t('pur.grn.inspectionDate') }}</span>
+          <input type="date" [ngModel]="inspectionDate()" (ngModelChange)="inspectionDate.set($event)" [disabled]="!isDraft()" />
+        </label>
+        <label class="field span-2">
+          <span>{{ t('pur.grn.qualityNotes') }}</span>
+          <input type="text" [ngModel]="qualityNotes()" (ngModelChange)="qualityNotes.set($event)" [disabled]="!isDraft()" />
+        </label>
+        <label class="field span-2">
+          <span>{{ t('pur.grn.rejectionReason') }}</span>
+          <input type="text" [ngModel]="rejectionReason()" (ngModelChange)="rejectionReason.set($event)" [disabled]="!isDraft() || inspectionResult() !== 3" />
+        </label>
+        <label class="field">
+          <span>{{ t('pur.grn.qualityCert') }}</span>
+          <input type="text" [ngModel]="qualityCertificateRef()" (ngModelChange)="qualityCertificateRef.set($event)" [disabled]="!isDraft()" />
+        </label>
+        <label class="field">
+          <span>{{ t('pur.grn.expiryCert') }}</span>
+          <input type="text" [ngModel]="expiryCertificateRef()" (ngModelChange)="expiryCertificateRef.set($event)" [disabled]="!isDraft()" />
+        </label>
+      </div>
+    </section>
+
+    <section class="card">
+      <div class="card-head">
+        <h3>{{ t('pur.grn.linesTitle') }}</h3>
+        <div class="row-actions">
+          <button type="button" class="btn ghost" [disabled]="!isDraft()" (click)="loadFromPo()">{{ t('pur.grn.loadFromPo') }}</button>
+          <button type="button" class="btn ghost" [disabled]="!isDraft() || selectedLineIndex() == null" (click)="removeSelectedLine()">
+            {{ t('pur.grn.deleteLine') }}
+          </button>
+        </div>
+      </div>
+
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>{{ t('pur.grn.col.item') }}</th>
+              <th>{{ t('pur.grn.col.unit') }}</th>
+              <th>{{ t('pur.grn.col.ordered') }}</th>
+              <th>{{ t('pur.grn.col.prevReceived') }}</th>
+              <th>{{ t('pur.grn.col.remaining') }}</th>
+              <th>{{ t('pur.grn.col.receivedNow') }}</th>
+              <th>{{ t('pur.grn.col.accepted') }}</th>
+              <th>{{ t('pur.grn.col.rejected') }}</th>
+              <th>{{ t('pur.grn.col.unitPrice') }}</th>
+              <th>{{ t('pur.grn.col.tax') }}</th>
+              <th>{{ t('pur.grn.col.subtotal') }}</th>
+              <th>{{ t('pur.grn.col.batch') }}</th>
+              <th>{{ t('pur.grn.col.expiry') }}</th>
+            </tr>
+          </thead>
+          <tbody>
+            @if (lines().length === 0) {
+              <tr>
+                <td colspan="13" class="muted">{{ t('pur.grn.noLines') }}</td>
+              </tr>
+            }
+            @for (line of lines(); track $index; let i = $index) {
+              <tr
+                [class.selected]="selectedLineIndex() === i"
+                [attr.data-tone]="lineTone(line)"
+                (click)="selectLine(i)"
+              >
+                <td>{{ line.itemNameAr || line.inventoryItemId }}</td>
+                <td>{{ line.unitNameAr || '—' }}</td>
+                <td>{{ line.orderedQuantity | number: '1.0-3' }}</td>
+                <td>{{ line.previouslyReceivedQuantity | number: '1.0-3' }}</td>
+                <td>{{ line.remainingQuantity | number: '1.0-3' }}</td>
+                <td>
+                  <input
+                    type="number"
+                    class="cell-input"
+                    [ngModel]="line.receivedQuantity"
+                    (ngModelChange)="updateLine(i, { receivedQuantity: +$event })"
+                    [disabled]="!isDraft()"
+                  />
+                </td>
+                <td>
+                  <input
+                    type="number"
+                    class="cell-input"
+                    [ngModel]="line.acceptedQuantity"
+                    (ngModelChange)="updateLine(i, { acceptedQuantity: +$event })"
+                    [disabled]="!isDraft()"
+                  />
+                </td>
+                <td>
+                  <input
+                    type="number"
+                    class="cell-input"
+                    [ngModel]="line.rejectedQuantity"
+                    (ngModelChange)="updateLine(i, { rejectedQuantity: +$event })"
+                    [disabled]="!isDraft()"
+                  />
+                </td>
+                <td>
+                  <input
+                    type="number"
+                    class="cell-input"
+                    [ngModel]="line.unitCost"
+                    (ngModelChange)="updateLine(i, { unitCost: +$event })"
+                    [disabled]="!isDraft()"
+                  />
+                </td>
+                <td>{{ line.taxAmount | number: '1.2-2' }}</td>
+                <td>{{ line.lineSubTotal | number: '1.2-2' }}</td>
+                <td>
+                  <input
+                    type="text"
+                    class="cell-input"
+                    [ngModel]="line.batchNumber"
+                    (ngModelChange)="updateLine(i, { batchNumber: $event })"
+                    [disabled]="!isDraft()"
+                  />
+                </td>
+                <td>
+                  <input
+                    type="date"
+                    class="cell-input"
+                    [ngModel]="line.expiryDate ? (line.expiryDate | date: 'yyyy-MM-dd') : ''"
+                    (ngModelChange)="updateLine(i, { expiryDate: $event || null })"
+                    [disabled]="!isDraft()"
+                  />
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+      <div class="totals">
+        <strong>{{ t('pur.grn.grandTotal') }}: {{ grandTotal() | number: '1.2-2' }} {{ currency() }}</strong>
+      </div>
+      <p class="tip"><mat-icon>lightbulb</mat-icon> {{ t('pur.grn.tip') }}</p>
+    </section>
+  }
+</app-inventory-page-shell>

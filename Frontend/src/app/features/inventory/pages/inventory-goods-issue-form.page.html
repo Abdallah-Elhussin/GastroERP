@@ -1,0 +1,198 @@
+<app-inventory-page-shell [breadcrumbs]="breadcrumbs" [title]="pageTitle()">
+  <section class="toolbar" shellActions>
+    <span class="status-pill" [attr.data-status]="status()">
+      {{ issueNumber() }} · {{ statusLabel() }}
+    </span>
+    <button type="button" class="btn ghost" (click)="cancel()">{{ t('inv.gi.cancel') }}</button>
+    <button
+      type="button"
+      class="btn info"
+      [disabled]="!canManage() || isPosted() || status() === 'Cancelled' || saving() || !docId()"
+      (click)="post()"
+    >
+      {{ t('inv.gi.post') }}
+    </button>
+    <button
+      type="button"
+      class="btn primary"
+      [disabled]="!canManage() || !isDraft() || saving()"
+      (click)="save()"
+    >
+      {{ t('inv.gi.save') }}
+    </button>
+  </section>
+
+  @if (error()) {
+    <div class="form-error">{{ error() }}</div>
+  }
+
+  @if (loading()) {
+    <p class="muted">{{ t('common.loading') }}</p>
+  } @else {
+    <section class="card">
+      <h3>{{ t('inv.gi.headerTitle') }}</h3>
+      <div class="grid-3">
+        <label class="field">
+          <span>{{ t('inv.gi.col.docNumber') }}</span>
+          <input type="text" [ngModel]="issueNumber()" disabled />
+        </label>
+        <label class="field">
+          <span>{{ t('inv.gi.col.date') }}</span>
+          <input type="date" [ngModel]="issueDate()" (ngModelChange)="issueDate.set($event)" [disabled]="!isDraft()" />
+        </label>
+        <label class="field">
+          <span>{{ t('inv.gi.col.destination') }}</span>
+          <select
+            [ngModel]="issueDestinationId()"
+            (ngModelChange)="issueDestinationId.set($event || null)"
+            [disabled]="!isDraft()"
+          >
+            <option [ngValue]="null">{{ t('inv.gi.pickDestination') }}</option>
+            @for (d of destinations(); track d.id) {
+              <option [ngValue]="d.id">{{ d.nameAr }}</option>
+            }
+          </select>
+        </label>
+        <label class="field">
+          <span>{{ t('inv.gi.col.warehouse') }}</span>
+          <select
+            [ngModel]="defaultWarehouseId()"
+            (ngModelChange)="defaultWarehouseId.set($event || null)"
+            [disabled]="!isDraft()"
+          >
+            <option [ngValue]="null">{{ t('inv.gi.pickWarehouse') }}</option>
+            @for (w of warehouses(); track w.id) {
+              <option [ngValue]="w.id">{{ w.nameAr }}</option>
+            }
+          </select>
+        </label>
+        <label class="field">
+          <span>{{ t('inv.gi.col.currency') }}</span>
+          <select [ngModel]="currency()" (ngModelChange)="currency.set($event)" [disabled]="!isDraft()">
+            <option value="SAR">{{ t('inv.gi.currency.sar') }}</option>
+            <option value="USD">USD</option>
+            <option value="EUR">EUR</option>
+          </select>
+        </label>
+        <label class="field span-2">
+          <span>{{ t('inv.gi.col.notes') }}</span>
+          <input type="text" [ngModel]="notes()" (ngModelChange)="notes.set($event)" [disabled]="!isDraft()" />
+        </label>
+      </div>
+    </section>
+
+    <section class="card">
+      <div class="lines-head">
+        <h3>{{ t('inv.gi.linesTitle') }}</h3>
+        <div class="line-actions">
+          <button type="button" class="btn ghost" [disabled]="!isDraft()" (click)="addLine()">
+            <mat-icon>add</mat-icon>
+            {{ t('inv.gi.addLine') }}
+          </button>
+          <button type="button" class="btn ghost" [disabled]="!isDraft() || selectedLineIndex() == null" (click)="removeLine()">
+            <mat-icon>delete</mat-icon>
+            {{ t('inv.gi.deleteLine') }}
+          </button>
+        </div>
+      </div>
+
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>{{ t('inv.gi.col.item') }}</th>
+              <th>{{ t('inv.gi.col.unit') }}</th>
+              <th>{{ t('inv.gi.col.lineWarehouse') }}</th>
+              <th>{{ t('inv.gi.col.qty') }}</th>
+              <th>{{ t('inv.gi.col.unitCost') }}</th>
+              <th>{{ t('inv.gi.col.totalCost') }}</th>
+              <th>{{ t('inv.gi.col.costCenter') }}</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (line of lines(); track $index; let i = $index) {
+              <tr [class.selected]="selectedLineIndex() === i" (click)="selectLine(i)">
+                <td>{{ i + 1 }}</td>
+                <td>
+                  <select
+                    [ngModel]="line.inventoryItemId"
+                    (ngModelChange)="onItemChange(i, $event)"
+                    [disabled]="!isDraft()"
+                  >
+                    @for (item of items(); track item.id) {
+                      <option [ngValue]="item.id">{{ item.nameAr }}</option>
+                    }
+                  </select>
+                </td>
+                <td>
+                  <select
+                    [ngModel]="line.unitId"
+                    (ngModelChange)="patchLine(i, { unitId: $event })"
+                    [disabled]="!isDraft()"
+                  >
+                    @for (u of units(); track u.id) {
+                      <option [ngValue]="u.id">{{ u.nameAr }}</option>
+                    }
+                  </select>
+                </td>
+                <td>
+                  <select
+                    [ngModel]="line.warehouseId"
+                    (ngModelChange)="patchLine(i, { warehouseId: $event })"
+                    [disabled]="!isDraft()"
+                  >
+                    @for (w of warehouses(); track w.id) {
+                      <option [ngValue]="w.id">{{ w.nameAr }}</option>
+                    }
+                  </select>
+                </td>
+                <td>
+                  <input
+                    type="number"
+                    min="0.0001"
+                    step="0.0001"
+                    [ngModel]="line.quantity"
+                    (ngModelChange)="patchLine(i, { quantity: +$event })"
+                    [disabled]="!isDraft()"
+                  />
+                </td>
+                <td>
+                  <input
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    [ngModel]="line.unitCost"
+                    (ngModelChange)="patchLine(i, { unitCost: +$event })"
+                    [disabled]="!isDraft()"
+                  />
+                </td>
+                <td>{{ line.quantity * line.unitCost | number: '1.2-2' }}</td>
+                <td>
+                  <select
+                    [ngModel]="line.costCenterId"
+                    (ngModelChange)="patchLine(i, { costCenterId: $event || null })"
+                    [disabled]="!isDraft()"
+                  >
+                    <option [ngValue]="null">—</option>
+                    @for (c of costCenters(); track c.id) {
+                      <option [ngValue]="c.id">{{ c.nameAr }}</option>
+                    }
+                  </select>
+                </td>
+              </tr>
+            } @empty {
+              <tr>
+                <td colspan="8" class="empty">{{ t('inv.gi.noLines') }}</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+      <footer class="table-footer">
+        <span>{{ t('inv.gi.totalRecords') }}: {{ lines().length }}</span>
+        <strong>{{ t('inv.gi.col.amount') }}: {{ totalAmount() | number: '1.2-2' }} {{ currency() }}</strong>
+      </footer>
+    </section>
+  }
+</app-inventory-page-shell>

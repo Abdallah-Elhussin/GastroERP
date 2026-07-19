@@ -84,6 +84,7 @@ public class ApplicationDbContextInitializer
         {
             adminUser = new AppUser(
                 tenantEntity.Id,
+                "admin",
                 DefaultAdminEmail,
                 _passwordHasher.HashPassword(DefaultAdminPassword),
                 "System",
@@ -113,6 +114,12 @@ public class ApplicationDbContextInitializer
         if (!string.Equals(adminUser.Email, DefaultAdminEmail, StringComparison.Ordinal))
         {
             adminUser.UpdateEmail(DefaultAdminEmail);
+            changed = true;
+        }
+
+        if (string.IsNullOrWhiteSpace(adminUser.UserName))
+        {
+            adminUser.UpdateUserName("admin");
             changed = true;
         }
 

@@ -56,15 +56,13 @@ public sealed class TaxAndFiscalSeeder : IDataSeeder
         }
 
         var year = DateTime.UtcNow.Year;
-        var startMonth = company?.FiscalYearStartMonth ?? 1;
-        var startDate = new DateOnly(year, startMonth, 1);
-        var endDate = startDate.AddYears(1).AddDays(-1);
+        var startMonth = company?.FiscalYearStartMonth ?? (byte)1;
 
         if (!await context.FiscalPeriods.AnyAsync(p => p.TenantId == tenantId && p.FiscalYear == year, ct))
         {
-            context.FiscalPeriods.Add(FiscalPeriod.Create(
-                tenantId, year, $"السنة المالية {year}",
-                startDate, endDate));
+            var period = FiscalPeriod.Create(tenantId, year, startMonth);
+            period.GenerateMonthlyDetails();
+            context.FiscalPeriods.Add(period);
             await context.SaveChangesAsync(ct);
         }
 

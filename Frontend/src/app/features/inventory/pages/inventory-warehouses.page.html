@@ -1,0 +1,358 @@
+<app-inventory-page-shell
+  [breadcrumbs]="breadcrumbs"
+  titleKey="inv.nav.warehouses"
+  subtitleKey="inv.warehouses.subtitle"
+>
+  <section class="toolbar" shellActions>
+    <div class="toolbar-row">
+      <div class="search-group">
+        <input
+          type="search"
+          [ngModel]="search()"
+          (ngModelChange)="search.set($event)"
+          [placeholder]="t('inv.warehouses.searchPlaceholder')"
+        />
+        <button type="button" class="btn primary" (click)="refresh()">
+          <mat-icon>search</mat-icon>
+          {{ t('inv.items.toolbar.search') }}
+        </button>
+      </div>
+
+      <button type="button" class="btn primary" [disabled]="!canCreate()" (click)="openCreate()">
+        <mat-icon>add</mat-icon>
+        {{ t('inv.items.toolbar.new') }}
+      </button>
+      <button type="button" class="btn ghost" [disabled]="!canEdit() || !selected()" (click)="openEdit()">
+        <mat-icon>edit</mat-icon>
+        {{ t('inv.items.toolbar.edit') }}
+      </button>
+      <button type="button" class="btn ghost" [disabled]="!canDelete() || !selected()" (click)="deleteSelected()">
+        <mat-icon>delete</mat-icon>
+        {{ t('inv.items.toolbar.delete') }}
+      </button>
+      <button type="button" class="btn ghost" (click)="refresh()">
+        <mat-icon>refresh</mat-icon>
+        {{ t('inv.items.toolbar.refresh') }}
+      </button>
+      <button type="button" class="btn ghost" [disabled]="!canExport()" (click)="exportExcel()">
+        <mat-icon>grid_on</mat-icon>
+        {{ t('inv.warehouses.exportExcel') }}
+      </button>
+      <button type="button" class="btn ghost" [disabled]="!canExport()" (click)="exportPdf()">
+        <mat-icon>picture_as_pdf</mat-icon>
+        {{ t('inv.warehouses.exportPdf') }}
+      </button>
+
+      <label class="filter">
+        <span>{{ t('inv.warehouses.col.branch') }}</span>
+        <select [ngModel]="branchFilter()" (ngModelChange)="branchFilter.set($event)">
+          <option [ngValue]="null">{{ t('common.all') }}</option>
+          @for (b of branches(); track b.id) {
+            <option [ngValue]="b.id">{{ b.nameAr }}</option>
+          }
+        </select>
+      </label>
+
+      <label class="filter">
+        <span>{{ t('inv.warehouses.col.type') }}</span>
+        <select [ngModel]="typeFilter()" (ngModelChange)="typeFilter.set($event)">
+          <option [ngValue]="null">{{ t('common.all') }}</option>
+          @for (tp of warehouseTypes(); track tp.id) {
+            <option [ngValue]="tp.id">{{ tp.nameAr }}</option>
+          }
+        </select>
+      </label>
+
+      <label class="check-filter">
+        <input type="checkbox" [ngModel]="activeOnly()" (ngModelChange)="activeOnly.set($event)" />
+        {{ t('inv.warehouses.filter.active') }}
+      </label>
+      <label class="check-filter">
+        <input type="checkbox" [ngModel]="posOnly()" (ngModelChange)="posOnly.set($event)" />
+        {{ t('inv.warehouses.filter.pos') }}
+      </label>
+      <label class="check-filter">
+        <input type="checkbox" [ngModel]="defaultOnly()" (ngModelChange)="defaultOnly.set($event)" />
+        {{ t('inv.warehouses.filter.default') }}
+      </label>
+
+      <button type="button" class="btn icon-only" (click)="showHelp.set(true)" [matTooltip]="t('common.help')">
+        <mat-icon>help_outline</mat-icon>
+      </button>
+    </div>
+  </section>
+
+  @if (inventory.loading()) {
+    <app-inventory-skeleton [count]="8" />
+  } @else if (inventory.error()) {
+    <app-inventory-error-state [message]="inventory.error()!" (retry)="refresh()" />
+  } @else if (filtered().length === 0) {
+    <app-inventory-empty-state
+      icon="warehouse"
+      [title]="t('inv.empty.title')"
+      [message]="t('inv.warehouses.empty')"
+      actionLabelKey="inv.items.toolbar.new"
+      (action)="openCreate()"
+    />
+  } @else {
+    <div class="table-card">
+      <table mat-table [dataSource]="filtered()" matSort (matSortChange)="onSort($event)" class="warehouses-table">
+        <ng-container matColumnDef="code">
+          <th mat-header-cell *matHeaderCellDef mat-sort-header="code">{{ t('inv.warehouses.col.code') }}</th>
+          <td mat-cell *matCellDef="let row"><code>{{ row.code || '—' }}</code></td>
+        </ng-container>
+
+        <ng-container matColumnDef="nameAr">
+          <th mat-header-cell *matHeaderCellDef mat-sort-header="nameAr">{{ t('inv.warehouses.col.name') }}</th>
+          <td mat-cell *matCellDef="let row">
+            <strong>{{ row.nameAr }}</strong>
+            @if (row.nameEn) {
+              <div class="muted">{{ row.nameEn }}</div>
+            }
+          </td>
+        </ng-container>
+
+        <ng-container matColumnDef="branch">
+          <th mat-header-cell *matHeaderCellDef mat-sort-header="branch">{{ t('inv.warehouses.col.branch') }}</th>
+          <td mat-cell *matCellDef="let row">{{ row.branchNameAr || branchName(row.branchId) }}</td>
+        </ng-container>
+
+        <ng-container matColumnDef="type">
+          <th mat-header-cell *matHeaderCellDef mat-sort-header="type">{{ t('inv.warehouses.col.type') }}</th>
+          <td mat-cell *matCellDef="let row">{{ typeLabel(row) }}</td>
+        </ng-container>
+
+        <ng-container matColumnDef="manager">
+          <th mat-header-cell *matHeaderCellDef mat-sort-header="manager">{{ t('inv.warehouses.col.manager') }}</th>
+          <td mat-cell *matCellDef="let row">{{ row.managerUserId ? row.managerUserId.slice(0, 8) : '—' }}</td>
+        </ng-container>
+
+        <ng-container matColumnDef="isActive">
+          <th mat-header-cell *matHeaderCellDef mat-sort-header="isActive">{{ t('inv.warehouses.col.active') }}</th>
+          <td mat-cell *matCellDef="let row">
+            <input type="checkbox" [checked]="row.isActive" disabled />
+          </td>
+        </ng-container>
+
+        <ng-container matColumnDef="isDefault">
+          <th mat-header-cell *matHeaderCellDef mat-sort-header="isDefault">{{ t('inv.warehouses.col.default') }}</th>
+          <td mat-cell *matCellDef="let row">
+            <input type="checkbox" [checked]="row.isDefault" disabled />
+          </td>
+        </ng-container>
+
+        <ng-container matColumnDef="allowNegativeStock">
+          <th mat-header-cell *matHeaderCellDef mat-sort-header="allowNegativeStock">{{ t('inv.warehouses.col.negative') }}</th>
+          <td mat-cell *matCellDef="let row">
+            <input type="checkbox" [checked]="row.allowNegativeStock" disabled />
+          </td>
+        </ng-container>
+
+        <ng-container matColumnDef="useBins">
+          <th mat-header-cell *matHeaderCellDef mat-sort-header="useBins">{{ t('inv.warehouses.col.bins') }}</th>
+          <td mat-cell *matCellDef="let row">
+            <input type="checkbox" [checked]="row.useBins" disabled />
+          </td>
+        </ng-container>
+
+        <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+        <tr
+          mat-row
+          *matRowDef="let row; columns: displayedColumns"
+          [class.selected]="selectedId() === row.id"
+          [class.inactive]="!row.isActive"
+          (click)="selectRow(row)"
+          (dblclick)="openStructure(row)"
+        ></tr>
+      </table>
+    </div>
+  }
+
+  @if (showForm()) {
+    <div class="drawer-backdrop" (click)="closeForm()"></div>
+    <aside class="drawer warehouse-form" role="dialog">
+      <header class="form-top">
+        <div class="form-actions">
+          <button type="button" class="btn primary" [disabled]="saving()" (click)="save()">
+            {{ t('common.save') }}
+          </button>
+          <button type="button" class="btn ghost" (click)="closeForm()">{{ t('common.cancel') }}</button>
+        </div>
+        <h2>{{ editingId() ? t('inv.warehouses.editTitle') : t('inv.warehouses.createTitle') }}</h2>
+      </header>
+
+      <section class="card-block">
+        <h3>{{ t('inv.warehouses.section.info') }}</h3>
+        <div class="two-col">
+          <label>
+            <span>{{ t('inv.warehouses.col.code') }}</span>
+            <input [(ngModel)]="form.code" />
+          </label>
+          <label>
+            <span>{{ t('inv.warehouses.col.branch') }} *</span>
+            <select [(ngModel)]="form.branchId">
+              <option [ngValue]="null">{{ t('inv.warehouses.selectBranch') }}</option>
+              @for (b of branches(); track b.id) {
+                <option [ngValue]="b.id">{{ b.nameAr }}</option>
+              }
+            </select>
+          </label>
+          <label>
+            <span>{{ t('inv.field.nameAr') }} *</span>
+            <input [(ngModel)]="form.nameAr" required />
+          </label>
+          <label>
+            <span>{{ t('inv.field.nameEn') }}</span>
+            <input [(ngModel)]="form.nameEn" />
+          </label>
+          <label>
+            <span>{{ t('inv.warehouses.col.type') }}</span>
+            <select [ngModel]="form.warehouseTypeId" (ngModelChange)="onTypeSelected($event)">
+              <option [ngValue]="null">{{ t('inv.warehouses.selectType') }}</option>
+              @for (tp of warehouseTypes(); track tp.id) {
+                <option [ngValue]="tp.id">{{ tp.nameAr }}</option>
+              }
+            </select>
+          </label>
+          <label>
+            <span>{{ t('inv.warehouses.col.parent') }}</span>
+            <select [(ngModel)]="form.parentWarehouseId">
+              <option [ngValue]="null">{{ t('inv.warehouses.noParent') }}</option>
+              @for (p of parentOptions(); track p.id) {
+                <option [ngValue]="p.id">{{ p.nameAr }}</option>
+              }
+            </select>
+          </label>
+          <label>
+            <span>{{ t('inv.field.address') }}</span>
+            <input [(ngModel)]="form.address" />
+          </label>
+          <label>
+            <span>{{ t('inv.field.phone') }}</span>
+            <input [(ngModel)]="form.phone" />
+          </label>
+          <label>
+            <span>{{ t('inv.field.email') }}</span>
+            <input type="email" [(ngModel)]="form.email" />
+          </label>
+          <label class="full">
+            <span>{{ t('inv.field.notes') }}</span>
+            <textarea rows="2" [(ngModel)]="form.notes"></textarea>
+          </label>
+        </div>
+      </section>
+
+      <section class="card-block">
+        <h3>{{ t('inv.warehouses.section.permissions') }}</h3>
+        <div class="checks">
+          <label><input type="checkbox" [(ngModel)]="form.allowReceiving" /> {{ t('inv.warehouses.col.receiving') }}</label>
+          <label><input type="checkbox" [(ngModel)]="form.allowIssue" /> {{ t('inv.warehouses.col.issue') }}</label>
+          <label><input type="checkbox" [(ngModel)]="form.allowTransfer" /> {{ t('inv.perm.transfer') }}</label>
+          <label><input type="checkbox" [(ngModel)]="form.allowInventoryCount" /> {{ t('inv.perm.count') }}</label>
+          <label><input type="checkbox" [(ngModel)]="form.allowManufacturing" /> {{ t('inv.perm.mfg') }}</label>
+          <label><input type="checkbox" [(ngModel)]="form.allowAdjustment" /> {{ t('inv.warehouses.col.adjustment') }}</label>
+          <label><input type="checkbox" [(ngModel)]="form.allowReservation" /> {{ t('inv.warehouses.col.reservation') }}</label>
+          <label><input type="checkbox" [(ngModel)]="form.allowNegativeStock" /> {{ t('inv.warehouses.col.negative') }}</label>
+        </div>
+      </section>
+
+      <section class="card-block">
+        <h3>{{ t('inv.warehouses.section.flags') }}</h3>
+        <div class="checks">
+          <label><input type="checkbox" [(ngModel)]="form.isDefault" /> {{ t('inv.warehouses.col.default') }}</label>
+          <label><input type="checkbox" [(ngModel)]="form.isPosWarehouse" /> {{ t('inv.warehouses.col.pos') }}</label>
+          <label><input type="checkbox" [(ngModel)]="form.useBins" /> {{ t('inv.warehouses.col.bins') }}</label>
+          <label><input type="checkbox" [(ngModel)]="form.isActive" /> {{ t('inv.warehouses.col.active') }}</label>
+        </div>
+      </section>
+
+      @if (formError()) {
+        <p class="form-error">{{ formError() }}</p>
+      }
+    </aside>
+  }
+
+  @if (showHelp()) {
+    <div class="drawer-backdrop" (click)="showHelp.set(false)"></div>
+    <aside class="drawer help-drawer" role="dialog">
+      <header>
+        <h2>{{ t('inv.warehouses.helpTitle') }}</h2>
+        <button type="button" class="btn icon-only" (click)="showHelp.set(false)"><mat-icon>close</mat-icon></button>
+      </header>
+      <p>{{ t('inv.warehouses.helpBody') }}</p>
+    </aside>
+  }
+
+  @if (structureLoading() || structureWarehouse()) {
+    <div class="drawer-backdrop" (click)="closeStructure()"></div>
+    <aside class="drawer structure-drawer" role="dialog">
+      <header>
+        <h2>{{ t('inv.warehouses.structure') }} — {{ structureWarehouse()?.nameAr }}</h2>
+        <button type="button" class="btn icon-only" (click)="closeStructure()"><mat-icon>close</mat-icon></button>
+      </header>
+
+      @if (structureLoading()) {
+        <app-inventory-skeleton [count]="3" />
+      } @else {
+        @if (structureWarehouse(); as wh) {
+        <div class="structure-toolbar">
+          <button type="button" class="btn ghost" (click)="beginAddZone()">
+            <mat-icon>add</mat-icon> {{ t('inv.warehouses.addZone') }}
+          </button>
+        </div>
+
+        @if (locationParent(); as parent) {
+          <div class="location-form">
+            <strong>{{ locationFormTitle(parent) }}</strong>
+            <input [ngModel]="locationDraft().nameAr" (ngModelChange)="patchLocationNameAr($event)" [placeholder]="t('inv.field.nameAr')" />
+            <input [ngModel]="locationDraft().code" (ngModelChange)="patchLocationCode($event)" [placeholder]="t('inv.field.code')" />
+            <div class="actions">
+              <button type="button" class="btn ghost" (click)="cancelLocationForm()">{{ t('common.cancel') }}</button>
+              <button type="button" class="btn primary" (click)="saveLocation()">{{ t('common.save') }}</button>
+            </div>
+          </div>
+        }
+
+        @if (!wh.zones || wh.zones.length === 0) {
+          <p class="muted">{{ t('inv.warehouses.noZones') }}</p>
+        } @else {
+          <ul class="tree">
+            @for (zone of wh.zones; track zone.id) {
+              <li>
+                <div class="tree-row">
+                  <strong>{{ zone.nameAr }}</strong>
+                  <div class="actions">
+                    <button type="button" class="btn icon-only" (click)="beginAddShelf(zone.id)" [title]="t('inv.warehouses.addShelf')"><mat-icon>add</mat-icon></button>
+                    <button type="button" class="btn icon-only" (click)="removeZone(zone.id)" [title]="t('common.delete')"><mat-icon>delete</mat-icon></button>
+                  </div>
+                </div>
+                <ul>
+                  @for (shelf of zone.shelves; track shelf.id) {
+                    <li>
+                      <div class="tree-row">
+                        <span>{{ shelf.nameAr }}</span>
+                        <div class="actions">
+                          <button type="button" class="btn icon-only" (click)="beginAddBin(zone.id, shelf.id)" [title]="t('inv.warehouses.addBin')"><mat-icon>add</mat-icon></button>
+                          <button type="button" class="btn icon-only" (click)="removeShelf(zone.id, shelf.id)"><mat-icon>delete</mat-icon></button>
+                        </div>
+                      </div>
+                      <ul>
+                        @for (bin of shelf.bins; track bin.id) {
+                          <li class="tree-row">
+                            <span class="muted">{{ bin.nameAr }}</span>
+                            <button type="button" class="btn icon-only" (click)="removeBin(zone.id, shelf.id, bin.id)"><mat-icon>delete</mat-icon></button>
+                          </li>
+                        }
+                      </ul>
+                    </li>
+                  }
+                </ul>
+              </li>
+            }
+          </ul>
+        }
+        }
+      }
+    </aside>
+  }
+</app-inventory-page-shell>

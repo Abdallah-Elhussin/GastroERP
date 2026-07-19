@@ -27,7 +27,35 @@ public class CreateInventoryCategoryCommandHandler : IRequestHandler<CreateInven
 
     public async Task<Result<InventoryCategoryDto>> Handle(CreateInventoryCategoryCommand request, CancellationToken cancellationToken)
     {
-        var cat = new InventoryCategory(request.Dto.TenantId, request.Dto.NameAr, request.Dto.NameEn);
+        if (request.Dto.ParentCategoryId.HasValue)
+        {
+            var parentExists = await _context.InventoryCategories.AnyAsync(
+                c => c.Id == request.Dto.ParentCategoryId.Value && c.TenantId == request.Dto.TenantId,
+                cancellationToken);
+            if (!parentExists)
+                return Result<InventoryCategoryDto>.Failure("CategoryNotFound", "Parent category not found.");
+        }
+
+        var cat = new InventoryCategory(
+            request.Dto.TenantId,
+            request.Dto.NameAr,
+            request.Dto.NameEn,
+            request.Dto.ParentCategoryId,
+            request.Dto.Code);
+        cat.UpdateInfo(request.Dto.NameAr, request.Dto.NameEn, request.Dto.DescriptionAr, request.Dto.DescriptionEn, request.Dto.Code);
+        cat.SetVisuals(request.Dto.Icon, request.Dto.ImageUrl, request.Dto.Color);
+
+        var sortOrder = request.Dto.SortOrder;
+        if (sortOrder <= 0)
+        {
+            var max = await _context.InventoryCategories
+                .Where(c => c.TenantId == request.Dto.TenantId)
+                .Select(c => (int?)c.SortOrder)
+                .MaxAsync(cancellationToken) ?? 0;
+            sortOrder = max + 1;
+        }
+        cat.SetSortOrder(sortOrder);
+
         _context.InventoryCategories.Add(cat);
         await _context.SaveChangesAsync(cancellationToken);
         _logger.LogInformation("InventoryCategory created: {Id}", cat.Id);
@@ -45,7 +73,22 @@ public class UpdateInventoryCategoryCommandHandler : IRequestHandler<UpdateInven
     {
         var cat = await _context.InventoryCategories.FirstOrDefaultAsync(c => c.Id == request.Id, cancellationToken);
         if (cat == null) return Result.Failure("CategoryNotFound", "Inventory category not found.");
-        cat.UpdateInfo(request.Dto.NameAr, request.Dto.NameEn, null, null);
+
+        if (request.Dto.ParentCategoryId.HasValue)
+        {
+            if (request.Dto.ParentCategoryId.Value == request.Id)
+                return Result.Failure("InvalidParent", "Category cannot be its own parent.");
+            var parentExists = await _context.InventoryCategories.AnyAsync(
+                c => c.Id == request.Dto.ParentCategoryId.Value && c.TenantId == cat.TenantId,
+                cancellationToken);
+            if (!parentExists)
+                return Result.Failure("CategoryNotFound", "Parent category not found.");
+        }
+
+        cat.UpdateInfo(request.Dto.NameAr, request.Dto.NameEn, request.Dto.DescriptionAr, request.Dto.DescriptionEn, request.Dto.Code);
+        cat.SetParent(request.Dto.ParentCategoryId);
+        cat.SetVisuals(request.Dto.Icon, request.Dto.ImageUrl, request.Dto.Color);
+        cat.SetSortOrder(request.Dto.SortOrder);
         _context.InventoryCategories.Update(cat);
         await _context.SaveChangesAsync(cancellationToken);
         return Result.Success();
@@ -86,6 +129,33 @@ public class ActivateInventoryCategoryCommandHandler : IRequestHandler<ActivateI
     }
 }
 
+public class DeleteInventoryCategoryCommandHandler : IRequestHandler<DeleteInventoryCategoryCommand, Result>
+{
+    private readonly IApplicationDbContext _context;
+
+    public DeleteInventoryCategoryCommandHandler(IApplicationDbContext context) => _context = context;
+
+    public async Task<Result> Handle(DeleteInventoryCategoryCommand request, CancellationToken cancellationToken)
+    {
+        var cat = await _context.InventoryCategories.FirstOrDefaultAsync(c => c.Id == request.Id, cancellationToken);
+        if (cat == null) return Result.Failure("CategoryNotFound", "Inventory category not found.");
+
+        var hasChildren = await _context.InventoryCategories
+            .AnyAsync(c => c.ParentCategoryId == request.Id, cancellationToken);
+        if (hasChildren)
+            return Result.Failure("CategoryHasChildren", "Cannot delete a category that has sub-categories. Deactivate instead.");
+
+        var inUse = await _context.InventoryItems
+            .AnyAsync(i => i.CategoryId == request.Id, cancellationToken);
+        if (inUse)
+            return Result.Failure("CategoryInUse", "Cannot delete a category used by inventory items. Deactivate instead.");
+
+        cat.SoftDeleteCategory("system");
+        await _context.SaveChangesAsync(cancellationToken);
+        return Result.Success();
+    }
+}
+
 // ─── InventoryUnit Handlers ───────────────────────────────────────────────────
 
 public class CreateInventoryUnitCommandHandler : IRequestHandler<CreateInventoryUnitCommand, Result<InventoryUnitDto>>
@@ -99,11 +169,151 @@ public class CreateInventoryUnitCommandHandler : IRequestHandler<CreateInventory
 
     public async Task<Result<InventoryUnitDto>> Handle(CreateInventoryUnitCommand request, CancellationToken cancellationToken)
     {
-        var unit = new InventoryUnit(request.Dto.TenantId, request.Dto.NameAr, request.Dto.Symbol ?? request.Dto.NameAr, request.Dto.NameEn);
+        if (request.Dto.BaseUnitId.HasValue)
+        {
+            var baseExists = await _context.InventoryUnits.AnyAsync(
+                u => u.Id == request.Dto.BaseUnitId.Value && u.TenantId == request.Dto.TenantId,
+                cancellationToken);
+            if (!baseExists)
+                return Result<InventoryUnitDto>.Failure("UnitNotFound", "Base unit not found.");
+        }
+
+        var unit = new InventoryUnit(
+            request.Dto.TenantId,
+            request.Dto.NameAr,
+            request.Dto.Symbol,
+            request.Dto.NameEn,
+            request.Dto.SymbolAr,
+            request.Dto.Code,
+            request.Dto.DecimalPlaces,
+            request.Dto.BaseUnitId,
+            request.Dto.ConversionFactor <= 0 ? 1m : request.Dto.ConversionFactor,
+            request.Dto.UnitType,
+            request.Dto.Classification,
+            request.Dto.SortOrder);
+
+        if (request.Dto.SortOrder <= 0)
+        {
+            var max = await _context.InventoryUnits
+                .Where(u => u.TenantId == request.Dto.TenantId)
+                .Select(u => (int?)u.SortOrder)
+                .MaxAsync(cancellationToken) ?? 0;
+            unit.SetSortOrder(max + 1);
+        }
+
+        if (!request.Dto.IsActive)
+            unit.Deactivate();
+
         _context.InventoryUnits.Add(unit);
         await _context.SaveChangesAsync(cancellationToken);
         _logger.LogInformation("InventoryUnit created: {Id}", unit.Id);
         return Result<InventoryUnitDto>.Success(_mapper.Map<InventoryUnitDto>(unit));
+    }
+}
+
+public class UpdateInventoryUnitCommandHandler : IRequestHandler<UpdateInventoryUnitCommand, Result>
+{
+    private readonly IApplicationDbContext _context;
+
+    public UpdateInventoryUnitCommandHandler(IApplicationDbContext context) => _context = context;
+
+    public async Task<Result> Handle(UpdateInventoryUnitCommand request, CancellationToken cancellationToken)
+    {
+        var unit = await _context.InventoryUnits.FirstOrDefaultAsync(u => u.Id == request.Id, cancellationToken);
+        if (unit == null) return Result.Failure("UnitNotFound", "Inventory unit not found.");
+
+        if (request.Dto.BaseUnitId.HasValue)
+        {
+            if (request.Dto.BaseUnitId.Value == request.Id)
+                return Result.Failure("InvalidBaseUnit", "Unit cannot reference itself as base unit.");
+            var baseExists = await _context.InventoryUnits.AnyAsync(
+                u => u.Id == request.Dto.BaseUnitId.Value && u.TenantId == unit.TenantId,
+                cancellationToken);
+            if (!baseExists)
+                return Result.Failure("UnitNotFound", "Base unit not found.");
+        }
+
+        unit.UpdateInfo(
+            request.Dto.NameAr,
+            request.Dto.Symbol,
+            request.Dto.NameEn,
+            request.Dto.SymbolAr,
+            request.Dto.Code,
+            request.Dto.DecimalPlaces);
+        unit.SetBaseUnit(request.Dto.BaseUnitId);
+        unit.SetConversionFactor(request.Dto.ConversionFactor <= 0 ? 1m : request.Dto.ConversionFactor);
+        unit.SetMeasurementProfile(request.Dto.UnitType, request.Dto.Classification);
+        if (request.Dto.SortOrder > 0)
+            unit.SetSortOrder(request.Dto.SortOrder);
+        if (request.Dto.IsActive) unit.Activate();
+        else unit.Deactivate();
+
+        _context.InventoryUnits.Update(unit);
+        await _context.SaveChangesAsync(cancellationToken);
+        return Result.Success();
+    }
+}
+
+public class DeactivateInventoryUnitCommandHandler : IRequestHandler<DeactivateInventoryUnitCommand, Result>
+{
+    private readonly IApplicationDbContext _context;
+
+    public DeactivateInventoryUnitCommandHandler(IApplicationDbContext context) => _context = context;
+
+    public async Task<Result> Handle(DeactivateInventoryUnitCommand request, CancellationToken cancellationToken)
+    {
+        var unit = await _context.InventoryUnits.FirstOrDefaultAsync(u => u.Id == request.Id, cancellationToken);
+        if (unit == null) return Result.Failure("UnitNotFound", "Inventory unit not found.");
+        unit.Deactivate();
+        _context.InventoryUnits.Update(unit);
+        await _context.SaveChangesAsync(cancellationToken);
+        return Result.Success();
+    }
+}
+
+public class ActivateInventoryUnitCommandHandler : IRequestHandler<ActivateInventoryUnitCommand, Result>
+{
+    private readonly IApplicationDbContext _context;
+
+    public ActivateInventoryUnitCommandHandler(IApplicationDbContext context) => _context = context;
+
+    public async Task<Result> Handle(ActivateInventoryUnitCommand request, CancellationToken cancellationToken)
+    {
+        var unit = await _context.InventoryUnits.FirstOrDefaultAsync(u => u.Id == request.Id, cancellationToken);
+        if (unit == null) return Result.Failure("UnitNotFound", "Inventory unit not found.");
+        unit.Activate();
+        _context.InventoryUnits.Update(unit);
+        await _context.SaveChangesAsync(cancellationToken);
+        return Result.Success();
+    }
+}
+
+public class DeleteInventoryUnitCommandHandler : IRequestHandler<DeleteInventoryUnitCommand, Result>
+{
+    private readonly IApplicationDbContext _context;
+
+    public DeleteInventoryUnitCommandHandler(IApplicationDbContext context) => _context = context;
+
+    public async Task<Result> Handle(DeleteInventoryUnitCommand request, CancellationToken cancellationToken)
+    {
+        var unit = await _context.InventoryUnits.FirstOrDefaultAsync(u => u.Id == request.Id, cancellationToken);
+        if (unit == null) return Result.Failure("UnitNotFound", "Inventory unit not found.");
+
+        var referencedAsBase = await _context.InventoryUnits
+            .AnyAsync(u => u.BaseUnitId == request.Id, cancellationToken);
+        if (referencedAsBase)
+            return Result.Failure("UnitInUse", "Cannot delete a unit used as a base unit. Deactivate instead.");
+
+        var usedByItems = await _context.InventoryItems
+            .AnyAsync(i => i.BaseUnitId == request.Id
+                || i.DefaultPurchaseUnitId == request.Id
+                || i.DefaultRecipeUnitId == request.Id, cancellationToken);
+        if (usedByItems)
+            return Result.Failure("UnitInUse", "Cannot delete a unit used by inventory items. Deactivate instead.");
+
+        unit.SoftDeleteUnit("system");
+        await _context.SaveChangesAsync(cancellationToken);
+        return Result.Success();
     }
 }
 
@@ -284,41 +494,7 @@ public class ActivateInventoryItemCommandHandler : IRequestHandler<ActivateInven
 
 // ─── Warehouse Handlers ───────────────────────────────────────────────────────
 
-public class CreateWarehouseCommandHandler : IRequestHandler<CreateWarehouseCommand, Result<WarehouseDto>>
-{
-    private readonly IApplicationDbContext _context;
-    private readonly IMapper _mapper;
-    private readonly ILogger<CreateWarehouseCommandHandler> _logger;
-
-    public CreateWarehouseCommandHandler(IApplicationDbContext context, IMapper mapper, ILogger<CreateWarehouseCommandHandler> logger)
-        => (_context, _mapper, _logger) = (context, mapper, logger);
-
-    public async Task<Result<WarehouseDto>> Handle(CreateWarehouseCommand request, CancellationToken cancellationToken)
-    {
-        var wh = new Warehouse(request.Dto.TenantId, request.Dto.NameAr, request.Dto.NameEn, request.Dto.Code, request.Dto.BranchId);
-        _context.Warehouses.Add(wh);
-        await _context.SaveChangesAsync(cancellationToken);
-        _logger.LogInformation("Warehouse created: {Id}", wh.Id);
-        return Result<WarehouseDto>.Success(_mapper.Map<WarehouseDto>(wh));
-    }
-}
-
-public class UpdateWarehouseCommandHandler : IRequestHandler<UpdateWarehouseCommand, Result>
-{
-    private readonly IApplicationDbContext _context;
-
-    public UpdateWarehouseCommandHandler(IApplicationDbContext context) => _context = context;
-
-    public async Task<Result> Handle(UpdateWarehouseCommand request, CancellationToken cancellationToken)
-    {
-        var wh = await _context.Warehouses.FirstOrDefaultAsync(w => w.Id == request.Id, cancellationToken);
-        if (wh == null) return Result.Failure("WarehouseNotFound", "Warehouse not found.");
-        wh.UpdateInfo(request.Dto.NameAr, request.Dto.NameEn, request.Dto.Code, request.Dto.Address);
-        _context.Warehouses.Update(wh);
-        await _context.SaveChangesAsync(cancellationToken);
-        return Result.Success();
-    }
-}
+// Create/Update warehouse handlers moved to WarehouseManagementHandlers.cs
 
 public class AddWarehouseZoneCommandHandler : IRequestHandler<AddWarehouseZoneCommand, Result<WarehouseZoneDto>>
 {

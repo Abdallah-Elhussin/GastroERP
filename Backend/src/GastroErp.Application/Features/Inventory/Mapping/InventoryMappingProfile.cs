@@ -8,6 +8,7 @@ using GastroErp.Domain.Entities.Inventory.Counting;
 using GastroErp.Domain.Entities.Inventory.Waste;
 using GastroErp.Domain.Entities.Inventory.Recipe;
 using GastroErp.Domain.Entities.Inventory.Transactions;
+using GastroErp.Domain.Entities.Inventory.Settings;
 
 namespace GastroErp.Application.Features.Inventory.Mapping;
 
@@ -17,12 +18,10 @@ public class InventoryMappingProfile : Profile
     {
         // InventoryCategory
         CreateMap<InventoryCategory, InventoryCategoryDto>()
-            .ForMember(d => d.Color, opt => opt.Ignore())
             .ForMember(d => d.CreatedAt, opt => opt.MapFrom(src => src.CreatedAt.UtcDateTime));
 
         // InventoryUnit
-        CreateMap<InventoryUnit, InventoryUnitDto>()
-            .ForMember(d => d.Symbol, opt => opt.MapFrom(src => src.Symbol));
+        CreateMap<InventoryUnit, InventoryUnitDto>();
 
         // UnitConversion
         CreateMap<UnitConversion, UnitConversionDto>()
@@ -37,18 +36,52 @@ public class InventoryMappingProfile : Profile
 
         // Warehouse
         CreateMap<Warehouse, WarehouseDto>()
-            .ForMember(d => d.ZoneCount, opt => opt.MapFrom(src => src.Zones.Count));
+            .ForMember(d => d.ZoneCount, opt => opt.MapFrom(src => src.Zones.Count))
+            .ForMember(d => d.CreatedAt, opt => opt.MapFrom(src => src.CreatedAt.UtcDateTime))
+            .ForMember(d => d.WarehouseTypeNameAr, opt => opt.Ignore())
+            .ForMember(d => d.ParentWarehouseNameAr, opt => opt.Ignore())
+            .ForMember(d => d.BranchNameAr, opt => opt.Ignore());
+
+        CreateMap<WarehouseTypeDefinition, WarehouseTypeDefinitionDto>();
+
+        CreateMap<Warehouse, WarehouseDetailDto>()
+            .ForMember(d => d.ZoneCount, opt => opt.MapFrom(src => src.Zones.Count))
+            .ForMember(d => d.CreatedAt, opt => opt.MapFrom(src => src.CreatedAt.UtcDateTime))
+            .ForMember(d => d.Zones, opt => opt.MapFrom(src => src.Zones));
 
         // WarehouseZone
         CreateMap<WarehouseZone, WarehouseZoneDto>()
             .ForMember(d => d.ShelfCount, opt => opt.MapFrom(src => src.Shelves.Count));
 
-        // Supplier
-        CreateMap<Supplier, SupplierDto>()
-            .ForMember(d => d.ContactCount, opt => opt.MapFrom(src => src.Contacts.Count));
+        CreateMap<WarehouseZone, WarehouseZoneDetailDto>()
+            .ForMember(d => d.Shelves, opt => opt.MapFrom(src => src.Shelves));
 
-        // SupplierContact
+        CreateMap<WarehouseShelf, WarehouseShelfDto>()
+            .ForMember(d => d.ZoneId, opt => opt.MapFrom(src => src.WarehouseZoneId))
+            .ForMember(d => d.BinCount, opt => opt.MapFrom(src => src.Bins.Count));
+
+        CreateMap<WarehouseShelf, WarehouseShelfDetailDto>()
+            .ForMember(d => d.ZoneId, opt => opt.MapFrom(src => src.WarehouseZoneId))
+            .ForMember(d => d.Bins, opt => opt.MapFrom(src => src.Bins));
+
+        CreateMap<WarehouseBin, WarehouseBinDto>()
+            .ForMember(d => d.ShelfId, opt => opt.MapFrom(src => src.WarehouseShelfId));
+
+        CreateMap<InventoryBrand, InventoryBrandDto>();
+        CreateMap<InventoryManufacturer, InventoryManufacturerDto>();
+        CreateMap<InventoryAttributeValue, InventoryAttributeValueDto>();
+        CreateMap<InventoryAttribute, InventoryAttributeDto>()
+            .ForMember(d => d.Values, opt => opt.MapFrom(src => src.Values.OrderBy(v => v.SortOrder)));
+        CreateMap<InventoryPriceListLine, InventoryPriceListLineDto>()
+            .ForMember(d => d.InventoryItemNameAr, opt => opt.Ignore());
+        CreateMap<InventoryPriceList, InventoryPriceListDto>()
+            .ForMember(d => d.LineCount, opt => opt.MapFrom(src => src.Lines.Count))
+            .ForMember(d => d.Lines, opt => opt.MapFrom(src => src.Lines));
+
+        // Supplier — mapped manually via SupplierMapper
         CreateMap<SupplierContact, SupplierContactDto>();
+        CreateMap<SupplierPaymentMethod, SupplierPaymentMethodDto>();
+        CreateMap<SupplierAttachment, SupplierAttachmentDto>();
 
         // PurchaseOrder
         CreateMap<PurchaseOrder, PurchaseOrderDto>()
@@ -61,18 +94,46 @@ public class InventoryMappingProfile : Profile
             .ForMember(d => d.ItemNameAr, opt => opt.Ignore())
             .ForMember(d => d.UnitNameAr, opt => opt.Ignore());
 
-        // GoodsReceipt
-        CreateMap<GoodsReceipt, GoodsReceiptDto>()
-            .ForMember(d => d.PoNumber, opt => opt.Ignore())
-            .ForMember(d => d.WarehouseNameAr, opt => opt.Ignore())
-            .ForMember(d => d.GrnNumber, opt => opt.MapFrom(src => src.ReceiptNumber))
-            .ForMember(d => d.LineCount, opt => opt.MapFrom(src => src.Lines.Count));
+// GoodsReceipt — mapped manually via GoodsReceiptMapper
 
-        // StockTransfer
+        // GoodsIssue — mapped manually via GoodsIssueMapper
+        CreateMap<GastroErp.Domain.Entities.Inventory.Issuing.GoodsIssue, GoodsIssueDto>()
+            .ForMember(d => d.WarehouseNameAr, opt => opt.Ignore())
+            .ForMember(d => d.IssueDestinationNameAr, opt => opt.Ignore())
+            .ForMember(d => d.Status, opt => opt.MapFrom(src => src.Status.ToString()))
+            .ForMember(d => d.StatusCode, opt => opt.MapFrom(src => (byte)src.Status))
+            .ForMember(d => d.Lines, opt => opt.Ignore())
+            .ForMember(d => d.TotalAmount, opt => opt.MapFrom(src => src.TotalAmount))
+            .ForMember(d => d.LineCount, opt => opt.MapFrom(src => src.Lines.Count))
+            .ForMember(d => d.CreatedAt, opt => opt.MapFrom(src => src.CreatedAt.UtcDateTime));
+
+        // OpeningBalance — mapped manually via OpeningBalanceMapper
+        CreateMap<GastroErp.Domain.Entities.Inventory.Opening.OpeningBalance, OpeningBalanceDto>()
+            .ForMember(d => d.WarehouseNameAr, opt => opt.Ignore())
+            .ForMember(d => d.ContraAccountName, opt => opt.Ignore())
+            .ForMember(d => d.CostCenterNameAr, opt => opt.Ignore())
+            .ForMember(d => d.Lines, opt => opt.Ignore())
+            .ForMember(d => d.Status, opt => opt.MapFrom(src => src.Status.ToString()))
+            .ForMember(d => d.StatusCode, opt => opt.MapFrom(src => (byte)src.Status))
+            .ForMember(d => d.EntryMethod, opt => opt.MapFrom(src => src.EntryMethod.ToString()))
+            .ForMember(d => d.DisplayMethod, opt => opt.MapFrom(src => src.DisplayMethod.ToString()))
+            .ForMember(d => d.CostingMethod, opt => opt.MapFrom(src => src.CostingMethod.ToString()))
+            .ForMember(d => d.WeightedAverageScope, opt => opt.MapFrom(src => src.WeightedAverageScope.ToString()))
+            .ForMember(d => d.LineCount, opt => opt.MapFrom(src => src.Lines.Count))
+            .ForMember(d => d.CreatedAt, opt => opt.MapFrom(src => src.CreatedAt.UtcDateTime));
+
+        // StockTransfer — mapped manually via StockTransferMapper
         CreateMap<StockTransfer, StockTransferDto>()
             .ForMember(d => d.SourceWarehouseNameAr, opt => opt.Ignore())
             .ForMember(d => d.DestinationWarehouseNameAr, opt => opt.Ignore())
-            .ForMember(d => d.Status, opt => opt.MapFrom(src => src.Status.ToString()));
+            .ForMember(d => d.TransferType, opt => opt.MapFrom(src => src.TransferType.ToString()))
+            .ForMember(d => d.TransferTypeCode, opt => opt.MapFrom(src => (byte)src.TransferType))
+            .ForMember(d => d.Status, opt => opt.MapFrom(src => src.Status.ToString()))
+            .ForMember(d => d.StatusCode, opt => opt.MapFrom(src => (byte)src.Status))
+            .ForMember(d => d.Lines, opt => opt.Ignore())
+            .ForMember(d => d.LineCount, opt => opt.MapFrom(src => src.Lines.Count))
+            .ForMember(d => d.TotalAmount, opt => opt.MapFrom(src => src.TotalAmount))
+            .ForMember(d => d.CreatedAt, opt => opt.MapFrom(src => src.CreatedAt.UtcDateTime));
 
         // StockAdjustment
         CreateMap<StockAdjustment, StockAdjustmentDto>()
@@ -119,17 +180,12 @@ public class InventoryMappingProfile : Profile
             .ForMember(d => d.InventoryItemNameAr, opt => opt.Ignore())
             .ForMember(d => d.UnitNameAr, opt => opt.Ignore());
 
-        // PurchaseReturn
-        CreateMap<PurchaseReturn, PurchaseReturnDto>()
-            .ForMember(d => d.Lines, opt => opt.MapFrom(src => src.Lines));
-
-        // PurchaseReturnLine
-        CreateMap<PurchaseReturnLine, PurchaseReturnLineDto>()
-            .ForMember(d => d.InventoryItemNameAr, opt => opt.Ignore())
-            .ForMember(d => d.UnitNameAr, opt => opt.Ignore());
+        // PurchaseReturn — mapped manually via PurchaseReturnMapper
 
         // InventoryReservation
         CreateMap<global::GastroErp.Domain.Entities.Inventory.Reservation.InventoryReservation, InventoryReservationDto>()
             .ForMember(d => d.InventoryItemNameAr, opt => opt.Ignore());
+
+        // InventorySetting — mapped manually in SettingsHandlers (expanded DTO).
     }
 }

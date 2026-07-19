@@ -46,9 +46,17 @@ export class CrmComponent implements OnInit {
   });
 
   ngOnInit(): void {
-    this.crmRepo.getCustomers().subscribe(data => {
+    this.crmRepo.getCustomers(1, 200).subscribe(data => {
       if (data && data.length > 0) {
-        this.customersData.set(data);
+        this.customersData.set(
+          data.map(c => ({
+            id: c.customerNumber,
+            name: c.fullName,
+            points: c.creditLimit ?? 0,
+            tier: c.paymentTerms || '—',
+            phone: c.mobile
+          }))
+        );
       }
     });
   }

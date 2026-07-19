@@ -1,0 +1,13 @@
+{
+  "name": "gastro-erp",
+  "private": true,
+  "description": "GastroERP monorepo root — frontend lives in ./Frontend",
+  "scripts": {
+    "start": "npm --prefix Frontend start",
+    "build": "npm --prefix Frontend run build",
+    "watch": "npm --prefix Frontend run watch",
+    "test": "npm --prefix Frontend test",
+    "ng": "npm --prefix Frontend run ng --",
+    "install:frontend": "npm --prefix Frontend install"
+  }
+}

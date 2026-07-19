@@ -1,0 +1,150 @@
+<app-inventory-page-shell
+  [breadcrumbs]="breadcrumbs"
+  titleKey="pur.nav.goodsReceipts"
+  subtitleKey="pur.grn.subtitle"
+>
+  <section class="toolbar" shellActions>
+    <div class="search-group">
+      <mat-icon>search</mat-icon>
+      <input
+        type="search"
+        [ngModel]="search()"
+        (ngModelChange)="search.set($event)"
+        (keydown.enter)="load()"
+        [placeholder]="t('pur.grn.searchPlaceholder')"
+      />
+      <button type="button" class="btn ghost" (click)="load()">{{ t('common.search') }}</button>
+    </div>
+    <button type="button" class="btn primary" [disabled]="!canManage()" (click)="createNew()">
+      <mat-icon>add</mat-icon>
+      {{ t('pur.grn.new') }}
+    </button>
+    <button type="button" class="btn ghost" [disabled]="!selected()" (click)="edit()">
+      {{ t('pur.grn.edit') }}
+    </button>
+    <button type="button" class="btn ghost" (click)="load()" [matTooltip]="t('pur.grn.refresh')">
+      <mat-icon>refresh</mat-icon>
+    </button>
+    <button
+      type="button"
+      class="btn success"
+      [disabled]="!canManage() || !selected() || statusName(selected()!) !== 'Draft' || acting()"
+      (click)="approve()"
+    >
+      {{ t('pur.grn.approve') }}
+    </button>
+    <button
+      type="button"
+      class="btn info"
+      [disabled]="!canManage() || !selected() || (statusName(selected()!) !== 'Approved' && statusName(selected()!) !== 'Draft') || acting()"
+      (click)="post()"
+    >
+      {{ t('pur.grn.post') }}
+    </button>
+    <button
+      type="button"
+      class="btn ghost"
+      [disabled]="!canManage() || !selected() || statusName(selected()!) !== 'Posted' || acting()"
+      (click)="unpost()"
+    >
+      {{ t('pur.grn.unpost') }}
+    </button>
+    <button
+      type="button"
+      class="btn primary"
+      [disabled]="!selected() || statusName(selected()!) !== 'Posted'"
+      (click)="createInvoice()"
+    >
+      {{ t('pur.grn.createInvoice') }}
+    </button>
+    <button
+      type="button"
+      class="btn danger"
+      [disabled]="!canManage() || !selected() || statusName(selected()!) === 'Posted' || statusName(selected()!) === 'Reversed' || statusName(selected()!) === 'Cancelled' || acting()"
+      (click)="cancel()"
+    >
+      {{ t('pur.grn.cancel') }}
+    </button>
+    <label class="deleted-toggle">
+      <input type="checkbox" [ngModel]="showDeleted()" (ngModelChange)="showDeleted.set($event)" />
+      {{ t('pur.grn.showDeleted') }}
+    </label>
+  </section>
+
+  <div class="chips">
+    <button type="button" class="chip" [class.active]="statusFilter() === 'all'" (click)="setStatus('all')">{{ t('pur.grn.filter.all') }}</button>
+    <button type="button" class="chip" [class.active]="statusFilter() === 'Draft'" (click)="setStatus('Draft')">{{ t('pur.grn.status.draft') }}</button>
+    <button type="button" class="chip" [class.active]="statusFilter() === 'Approved'" (click)="setStatus('Approved')">{{ t('pur.grn.status.approved') }}</button>
+    <button type="button" class="chip" [class.active]="statusFilter() === 'Posted'" (click)="setStatus('Posted')">{{ t('pur.grn.status.posted') }}</button>
+    <button type="button" class="chip" [class.active]="statusFilter() === 'Cancelled'" (click)="setStatus('Cancelled')">{{ t('pur.grn.status.cancelled') }}</button>
+    <span class="chip-sep"></span>
+    <button type="button" class="chip" [class.active]="dateFilter() === 'today'" (click)="setDate('today')">{{ t('pur.grn.filter.today') }}</button>
+    <button type="button" class="chip" [class.active]="dateFilter() === '7d'" (click)="setDate('7d')">{{ t('pur.grn.filter.7d') }}</button>
+    <button type="button" class="chip" [class.active]="dateFilter() === '30d'" (click)="setDate('30d')">{{ t('pur.grn.filter.30d') }}</button>
+    <button type="button" class="chip" [class.active]="dateFilter() === 'all'" (click)="setDate('all')">{{ t('pur.grn.filter.anyDate') }}</button>
+  </div>
+
+  @if (error()) {
+    <div class="form-error">{{ error() }}</div>
+  }
+
+  @if (loading()) {
+    <app-inventory-skeleton [count]="8" />
+  } @else if (error() && filteredRows().length === 0) {
+    <app-inventory-error-state [message]="error()!" (retry)="load()" />
+  } @else if (filteredRows().length === 0) {
+    <app-inventory-empty-state
+      icon="inventory"
+      [title]="t('pur.grn.emptyTitle')"
+      [message]="t('pur.grn.empty')"
+    />
+  } @else {
+    <div class="table-card">
+      <table>
+        <thead>
+          <tr>
+            <th>{{ t('pur.grn.col.docNumber') }}</th>
+            <th>{{ t('pur.grn.col.date') }}</th>
+            <th>{{ t('pur.grn.col.supplier') }}</th>
+            <th>{{ t('pur.grn.col.po') }}</th>
+            <th>{{ t('pur.grn.col.warehouse') }}</th>
+            <th>{{ t('pur.grn.col.lines') }}</th>
+            <th>{{ t('pur.grn.col.qty') }}</th>
+            <th>{{ t('pur.grn.col.total') }}</th>
+            <th>{{ t('pur.grn.col.status') }}</th>
+            <th>{{ t('pur.grn.col.invoiced') }}</th>
+            <th>{{ t('pur.grn.col.completion') }}</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (row of filteredRows(); track row.id) {
+            <tr [class.selected]="selectedId() === row.id" (click)="select(row)" (dblclick)="edit()">
+              <td><a [routerLink]="['/purchases/goods-receipts', row.id]">{{ row.grnNumber }}</a></td>
+              <td>{{ row.receiptDate | date: 'yyyy-MM-dd' }}</td>
+              <td>{{ row.supplierNameAr || '—' }}</td>
+              <td>{{ row.poNumber || '—' }}</td>
+              <td>{{ row.warehouseNameAr || '—' }}</td>
+              <td>{{ row.lineCount }}</td>
+              <td>{{ row.totalQuantity | number: '1.0-3' }}</td>
+              <td>{{ row.grandTotal | number: '1.2-2' }}</td>
+              <td><span class="status-badge" [attr.data-status]="statusName(row)">{{ statusLabel(row) }}</span></td>
+              <td>{{ invoicedLabel(row) }}</td>
+              <td>{{ row.poCompletionPercent != null ? (row.poCompletionPercent | number: '1.0-0') + '%' : '—' }}</td>
+            </tr>
+          }
+        </tbody>
+      </table>
+      <footer class="table-footer">
+        <span>{{ t('pur.grn.totalRecords') }}: {{ filteredRows().length }}</span>
+        <label>
+          {{ t('pur.grn.pageSize') }}
+          <select [ngModel]="pageSize()" (ngModelChange)="pageSize.set(+$event); load()">
+            <option [ngValue]="20">20</option>
+            <option [ngValue]="50">50</option>
+            <option [ngValue]="100">100</option>
+          </select>
+        </label>
+      </footer>
+    </div>
+  }
+</app-inventory-page-shell>

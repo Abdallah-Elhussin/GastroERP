@@ -1,0 +1,128 @@
+<app-inventory-page-shell
+  [breadcrumbs]="breadcrumbs"
+  titleKey="inv.nav.goodsIssue"
+  subtitleKey="inv.gi.subtitle"
+>
+  <section class="toolbar" shellActions>
+    <div class="search-group">
+      <mat-icon>search</mat-icon>
+      <input
+        type="search"
+        [ngModel]="search()"
+        (ngModelChange)="search.set($event)"
+        (keydown.enter)="load()"
+        [placeholder]="t('inv.gi.searchPlaceholder')"
+      />
+      <button type="button" class="btn ghost" (click)="load()">{{ t('common.search') }}</button>
+    </div>
+    <button type="button" class="btn primary" [disabled]="!canManage()" (click)="createNew()">
+      <mat-icon>add</mat-icon>
+      {{ t('inv.gi.new') }}
+    </button>
+    <button type="button" class="btn ghost" [disabled]="!selected()" (click)="edit()">
+      {{ t('inv.gi.edit') }}
+    </button>
+    <button
+      type="button"
+      class="btn success"
+      [disabled]="!canManage() || !selected() || selected()?.status !== 'Draft' || acting()"
+      (click)="approve()"
+    >
+      {{ t('inv.gi.approve') }}
+    </button>
+    <button
+      type="button"
+      class="btn info"
+      [disabled]="!canManage() || !selected() || selected()?.status !== 'Approved' || acting()"
+      (click)="post()"
+    >
+      {{ t('inv.gi.post') }}
+    </button>
+    <button type="button" class="btn ghost" disabled [matTooltip]="t('inv.gi.moreSoon')">
+      {{ t('inv.gi.more') }}
+    </button>
+    <button
+      type="button"
+      class="btn danger"
+      [disabled]="!canManage() || !selected() || selected()?.status === 'Posted' || selected()?.status === 'Cancelled' || acting()"
+      (click)="cancel()"
+    >
+      {{ t('inv.gi.cancel') }}
+    </button>
+    <label class="deleted-toggle">
+      <input type="checkbox" [ngModel]="showDeleted()" (ngModelChange)="showDeleted.set($event)" />
+      {{ t('inv.gi.showDeleted') }}
+    </label>
+  </section>
+
+  <div class="chips">
+    <button type="button" class="chip" [class.active]="statusFilter() === 'all'" (click)="setStatus('all')">{{ t('inv.gi.filter.all') }}</button>
+    <button type="button" class="chip" [class.active]="statusFilter() === 'Draft'" (click)="setStatus('Draft')">{{ t('inv.gi.status.draft') }}</button>
+    <button type="button" class="chip" [class.active]="statusFilter() === 'Posted'" (click)="setStatus('Posted')">{{ t('inv.gi.status.posted') }}</button>
+    <button type="button" class="chip" [class.active]="statusFilter() === 'Approved'" (click)="setStatus('Approved')">{{ t('inv.gi.status.approved') }}</button>
+    <button type="button" class="chip" [class.active]="statusFilter() === 'Cancelled'" (click)="setStatus('Cancelled')">{{ t('inv.gi.status.cancelled') }}</button>
+    <span class="chip-sep"></span>
+    <button type="button" class="chip" [class.active]="dateFilter() === 'today'" (click)="setDate('today')">{{ t('inv.gi.filter.today') }}</button>
+    <button type="button" class="chip" [class.active]="dateFilter() === '7d'" (click)="setDate('7d')">{{ t('inv.gi.filter.7d') }}</button>
+    <button type="button" class="chip" [class.active]="dateFilter() === '30d'" (click)="setDate('30d')">{{ t('inv.gi.filter.30d') }}</button>
+    <button type="button" class="chip" [class.active]="dateFilter() === 'all'" (click)="setDate('all')">{{ t('inv.gi.filter.anyDate') }}</button>
+  </div>
+
+  @if (error()) {
+    <div class="form-error">{{ error() }}</div>
+  }
+
+  @if (loading()) {
+    <app-inventory-skeleton [count]="8" />
+  } @else if (error() && filteredRows().length === 0) {
+    <app-inventory-error-state [message]="error()!" (retry)="load()" />
+  } @else if (filteredRows().length === 0) {
+    <app-inventory-empty-state
+      icon="outbox"
+      [title]="t('inv.empty.title')"
+      [message]="t('inv.gi.empty')"
+    />
+  } @else {
+    <div class="table-card">
+      <table>
+        <thead>
+          <tr>
+            <th>{{ t('inv.gi.col.docNumber') }}</th>
+            <th>{{ t('inv.gi.col.date') }}</th>
+            <th>{{ t('inv.gi.col.destination') }}</th>
+            <th>{{ t('inv.gi.col.warehouse') }}</th>
+            <th>{{ t('inv.gi.col.amount') }}</th>
+            <th>{{ t('inv.gi.col.currency') }}</th>
+            <th>{{ t('inv.gi.col.status') }}</th>
+            <th>{{ t('inv.gi.col.notes') }}</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (row of filteredRows(); track row.id) {
+            <tr [class.selected]="selectedId() === row.id" (click)="select(row)" (dblclick)="edit()">
+              <td><a [routerLink]="['/inventory/goods-issues', row.id]">{{ row.issueNumber }}</a></td>
+              <td>{{ row.issueDate | date: 'yyyy-MM-dd' }}</td>
+              <td>{{ row.issueDestinationNameAr || '—' }}</td>
+              <td>{{ row.warehouseNameAr || '—' }}</td>
+              <td>{{ row.totalAmount | number: '1.2-2' }}</td>
+              <td>{{ row.currency }}</td>
+              <td><span class="status-badge" [attr.data-status]="row.status">{{ statusLabel(row.status) }}</span></td>
+              <td>{{ row.notes || '—' }}</td>
+            </tr>
+          }
+        </tbody>
+      </table>
+      <footer class="table-footer">
+        <span>{{ t('inv.gi.totalRecords') }}: {{ filteredRows().length }}</span>
+        <label>
+          {{ t('inv.gi.pageSize') }}
+          <select [ngModel]="pageSize()" (ngModelChange)="pageSize.set(+$event); load()">
+            <option [ngValue]="20">20</option>
+            <option [ngValue]="50">50</option>
+            <option [ngValue]="100">100</option>
+          </select>
+        </label>
+      </footer>
+    </div>
+  }
+</app-inventory-page-shell>

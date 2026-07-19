@@ -13,10 +13,15 @@ public class CustomerConfiguration : IEntityTypeConfiguration<Customer>
         builder.Property(x => x.FullName).HasMaxLength(200).IsRequired();
         builder.Property(x => x.Mobile).HasMaxLength(20).IsRequired();
         builder.Property(x => x.Email).HasMaxLength(100);
+        builder.Property(x => x.TaxNumber).HasMaxLength(50);
+        builder.Property(x => x.Currency).HasMaxLength(3).IsRequired().HasDefaultValue("SAR");
+        builder.Property(x => x.PaymentTerms).HasMaxLength(200);
+        builder.Property(x => x.CreditLimit).HasColumnType("decimal(18,4)");
         builder.Property(x => x.TotalSpending).HasColumnType("decimal(18,4)");
         builder.Property(x => x.AverageTicket).HasColumnType("decimal(18,4)");
-        
+
         builder.HasIndex(x => new { x.TenantId, x.Mobile }).IsUnique().HasFilter("[IsDeleted] = 0");
+        builder.HasIndex(x => new { x.TenantId, x.CustomerNumber }).IsUnique().HasFilter("[IsDeleted] = 0");
     }
 }
 

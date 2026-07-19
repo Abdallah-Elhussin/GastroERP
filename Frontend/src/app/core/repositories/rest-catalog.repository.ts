@@ -6,6 +6,7 @@ import { CatalogRepository } from './catalog.repository';
 import {
   CatalogAuditEntry,
   CatalogImportRow,
+  CatalogPriceHistoryEntry,
   CreateCatalogDraftPayload,
   ProductCatalogDefinition,
   ProductCatalogTypeDefinition,
@@ -35,6 +36,10 @@ export class RestCatalogRepository extends CatalogRepository {
 
   getDefinitionById(id: string): Observable<ProductCatalogDefinition> {
     return this.http.get<ProductCatalogDefinition>(`${this.base}/definitions/${id}`);
+  }
+
+  getDefinitionByInventoryItemId(inventoryItemId: string): Observable<ProductCatalogDefinition> {
+    return this.http.get<ProductCatalogDefinition>(`${this.base}/definitions/by-inventory-item/${inventoryItemId}`);
   }
 
   createDraft(payload: CreateCatalogDraftPayload): Observable<ProductCatalogDefinition> {
@@ -85,5 +90,9 @@ export class RestCatalogRepository extends CatalogRepository {
 
   getAuditTimeline(id: string): Observable<CatalogAuditEntry[]> {
     return this.http.get<CatalogAuditEntry[]>(`${this.base}/definitions/${id}/audit`);
+  }
+
+  getPriceHistory(id: string): Observable<CatalogPriceHistoryEntry[]> {
+    return this.http.get<CatalogPriceHistoryEntry[]>(`${this.base}/definitions/${id}/price-history`);
   }
 }

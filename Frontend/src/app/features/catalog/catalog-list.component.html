@@ -4,7 +4,7 @@
       <h1>{{ t('catalog.title') }}</h1>
       <p>{{ t('catalog.subtitle') }}</p>
     </div>
-    <a routerLink="/catalog/wizard" class="btn-primary">
+    <a routerLink="/catalog/master" class="btn-primary">
       <mat-icon>add</mat-icon>
       {{ t('catalog.newProduct') }}
     </a>
@@ -27,7 +27,7 @@
   <div *ngIf="catalogService.error()" class="state error">{{ catalogService.error() }}</div>
 
   <div class="grid" *ngIf="!catalogService.loading()">
-    <a *ngFor="let item of catalogService.definitions()" [routerLink]="['/catalog/wizard', item.id]" class="card">
+    <a *ngFor="let item of catalogService.definitions()" [routerLink]="['/catalog/master', item.id]" class="card">
       <div class="card-top">
         <img *ngIf="item.primaryImageUrl; else noImg" [src]="item.primaryImageUrl" alt="" />
         <ng-template #noImg><div class="placeholder"><mat-icon>inventory_2</mat-icon></div></ng-template>

@@ -63,7 +63,7 @@ public record GetVatSummaryReportQuery(Guid TenantId, ReportFilterDto Filter) : 
 public record GetRevenueAnalysisReportQuery(Guid TenantId, ReportFilterDto Filter) : IRequest<Result<IReadOnlyList<RevenueAnalysisDto>>>;
 public record GetExpenseAnalysisReportQuery(Guid TenantId, ReportFilterDto Filter) : IRequest<Result<IReadOnlyList<ExpenseAnalysisDto>>>;
 public record GetTrialBalanceReportQuery(Guid TenantId, TrialBalanceFilterDto Filter) : IRequest<Result<IReadOnlyList<TrialBalanceLineDto>>>;
-public record GetGeneralLedgerReportQuery(GeneralLedgerFilterDto Filter) : IRequest<Result<IReadOnlyList<GeneralLedgerLineDto>>>;
+public record GetGeneralLedgerReportQuery(Guid TenantId, GeneralLedgerFilterDto Filter) : IRequest<Result<GeneralLedgerResultDto>>;
 public record GetJournalRegisterReportQuery(Guid TenantId, JournalRegisterFilterDto Filter) : IRequest<PagedResult<JournalDto>>;
 
 // Analytics & KPI

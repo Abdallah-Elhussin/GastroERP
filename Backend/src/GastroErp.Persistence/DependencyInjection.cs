@@ -38,7 +38,17 @@ public static class DependencyInjection
 
         services.AddScoped<IDataSeeder, OrganizationMasterDataSeeder>();
         services.AddScoped<IDataSeeder, TaxAndFiscalSeeder>();
+        services.AddScoped<AccountClassificationSeeder>();
+        services.AddScoped<IDataSeeder, AccountClassificationSeeder>(sp => sp.GetRequiredService<AccountClassificationSeeder>());
         services.AddScoped<IDataSeeder, ChartOfAccountsSeeder>();
+        services.AddScoped<IDataSeeder, CurrencySeeder>();
+        services.AddScoped<IDataSeeder, CostCenterSeeder>();
+        services.AddScoped<IDataSeeder, DocumentTypeSeeder>();
+        services.AddScoped<IDataSeeder, BankSeeder>();
+        services.AddScoped<IDataSeeder, CashBoxSeeder>();
+        services.AddScoped<IDataSeeder, TaxRegistrationSeeder>();
+        services.AddScoped<IDataSeeder, NotificationReasonSeeder>();
+        services.AddScoped<IDataSeeder, GeneralLedgerSettingSeeder>();
         services.AddScoped<IDataSeeder, InventoryMasterDataSeeder>();
         services.AddScoped<IDataSeeder, MenuMasterDataSeeder>();
         services.AddScoped<IDataSeeder, KitchenOperationalSeeder>();

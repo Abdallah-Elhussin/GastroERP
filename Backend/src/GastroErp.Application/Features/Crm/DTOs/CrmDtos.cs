@@ -2,9 +2,60 @@ using GastroErp.Domain.Enums;
 
 namespace GastroErp.Application.Features.Crm.DTOs;
 
-public record CustomerDto(Guid Id, string CustomerNumber, string FullName, string Mobile, string? Email, DateTime? DateOfBirth, string? Gender, string? PreferredLanguage, string? Notes, CustomerStatus Status, int TotalOrders, decimal TotalSpending, decimal AverageTicket, DateTimeOffset? LastVisit, Guid? LastOrderId, Guid? FavoriteBranchId, Guid? LoyaltyAccountId);
-public record CreateCustomerDto(string FullName, string Mobile, string? Email, DateTime? DateOfBirth, string? Gender, string? PreferredLanguage, string? Notes);
-public record UpdateCustomerDto(string FullName, string Mobile, string? Email, DateTime? DateOfBirth, string? Gender, string? PreferredLanguage, string? Notes);
+public record CustomerDto(
+    Guid Id,
+    string CustomerNumber,
+    string FullName,
+    string Mobile,
+    string? Email,
+    DateTime? DateOfBirth,
+    string? Gender,
+    string? PreferredLanguage,
+    string? Notes,
+    CustomerStatus Status,
+    string? TaxNumber,
+    Guid? ArAccountId,
+    string Currency,
+    int PaymentDueDays,
+    string? PaymentTerms,
+    decimal CreditLimit,
+    int TotalOrders,
+    decimal TotalSpending,
+    decimal AverageTicket,
+    DateTimeOffset? LastVisit,
+    Guid? LastOrderId,
+    Guid? FavoriteBranchId,
+    Guid? LoyaltyAccountId);
+
+public record CreateCustomerDto(
+    string FullName,
+    string Mobile,
+    string? Email,
+    DateTime? DateOfBirth,
+    string? Gender,
+    string? PreferredLanguage,
+    string? Notes,
+    string? TaxNumber = null,
+    Guid? ArAccountId = null,
+    string? Currency = null,
+    int PaymentDueDays = 0,
+    string? PaymentTerms = null,
+    decimal CreditLimit = 0);
+
+public record UpdateCustomerDto(
+    string FullName,
+    string Mobile,
+    string? Email,
+    DateTime? DateOfBirth,
+    string? Gender,
+    string? PreferredLanguage,
+    string? Notes,
+    string? TaxNumber = null,
+    Guid? ArAccountId = null,
+    string? Currency = null,
+    int PaymentDueDays = 0,
+    string? PaymentTerms = null,
+    decimal CreditLimit = 0);
 
 public record LoyaltyAccountDto(Guid Id, Guid CustomerId, decimal CurrentPoints, decimal EarnedPoints, decimal RedeemedPoints, decimal ExpiredPoints, Guid? MembershipTierId);
 public record LoyaltyTransactionDto(Guid Id, Guid LoyaltyAccountId, LoyaltyTransactionType Type, decimal Points, string Reason, Guid? OrderId, DateTimeOffset CreatedAt);

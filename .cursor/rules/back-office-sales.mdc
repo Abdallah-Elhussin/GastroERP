@@ -1,0 +1,15 @@
+---
+description: Back Office Sales vs POS hard boundary and implementation plan pointer
+globs: Backend/src/GastroErp.*/**/Sales/**/*,Frontend/src/app/features/sales/**/*,Backend/docs/Document/Modules/BackOffice-Sales*
+alwaysApply: false
+---
+
+# Back Office Sales — Hard Rules
+
+- Back Office Sales is **independent** of POS. Never merge POS checkout, shifts, drawers, KDS, tables, or POS payments into this module.
+- Do **not** reuse `Domain.Entities.Sales.SalesOrder` (POS ticket) as an administrative sales order. Create dedicated BO aggregates (see plan doc).
+- Legacy system analysis is for **business rules / workflows only** — never port old Feature Folders, ViewModels, God services, or AppDbContext patterns.
+- Document lifecycle: Draft → Approved → Posted → Unposted/Reversed → Cancelled. No post before approve; no edit after post.
+- Posting creates GL (and inventory/COGS when needed). Unpost reverses both.
+- Prefer API prefix `/api/v1/back-office-sales` over overloading POS `/api/v1/sales`.
+- Source of truth for roadmap: `Backend/docs/Document/Modules/BackOffice-Sales-Module-Plan.md`

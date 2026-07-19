@@ -1,0 +1,148 @@
+<section class="page">
+  <header class="hero">
+    <div>
+      <h1>{{ t('bos.rpt.title') }}</h1>
+      <p>{{ t('bos.rpt.subtitle') }}</p>
+    </div>
+    <div class="filters">
+      <label class="field">
+        <span>{{ t('bos.rpt.from') }}</span>
+        <input type="date" [ngModel]="fromDate()" (ngModelChange)="fromDate.set($event)" />
+      </label>
+      <label class="field">
+        <span>{{ t('bos.rpt.to') }}</span>
+        <input type="date" [ngModel]="toDate()" (ngModelChange)="toDate.set($event)" />
+      </label>
+      <button type="button" class="btn primary" (click)="applyFilters()">{{ t('bos.rpt.apply') }}</button>
+    </div>
+  </header>
+
+  @if (error()) {
+    <div class="err">{{ error() }}</div>
+  }
+
+  @if (report(); as r) {
+    <div class="kpi-grid">
+      <div class="kpi">
+        <div class="label">{{ t('bos.rpt.kpi.grossSales') }}</div>
+        <div class="value">{{ money(r.summary.grossSales) }}</div>
+      </div>
+      <div class="kpi">
+        <div class="label">{{ t('bos.rpt.kpi.netSales') }}</div>
+        <div class="value">{{ money(r.summary.netSales) }}</div>
+      </div>
+      <div class="kpi">
+        <div class="label">{{ t('bos.rpt.kpi.taxAmount') }}</div>
+        <div class="value">{{ money(r.summary.taxAmount) }}</div>
+      </div>
+      <div class="kpi">
+        <div class="label">{{ t('bos.rpt.kpi.totalReturns') }}</div>
+        <div class="value">{{ money(r.summary.totalReturns) }}</div>
+      </div>
+      <div class="kpi">
+        <div class="label">{{ t('bos.rpt.kpi.totalDebitNotes') }}</div>
+        <div class="value">{{ money(r.summary.totalDebitNotes) }}</div>
+      </div>
+      <div class="kpi">
+        <div class="label">{{ t('bos.rpt.kpi.postedInvoices') }}</div>
+        <div class="value">{{ r.summary.postedInvoiceCount }}</div>
+      </div>
+      <div class="kpi">
+        <div class="label">{{ t('bos.rpt.kpi.postedReturns') }}</div>
+        <div class="value">{{ r.summary.postedReturnCount }}</div>
+      </div>
+      <div class="kpi">
+        <div class="label">{{ t('bos.rpt.kpi.postedDebitNotes') }}</div>
+        <div class="value">{{ r.summary.postedDebitNoteCount }}</div>
+      </div>
+    </div>
+
+    <div class="section-grid">
+      <section class="card">
+        <h3>{{ t('bos.rpt.section.byCustomer') }}</h3>
+        @if (customerBars().length === 0) {
+          <p class="muted">{{ t('bos.rpt.empty') }}</p>
+        } @else {
+          <div class="bar-list">
+            @for (b of customerBars(); track b.label) {
+              <div class="bar-row">
+                <span class="name" [title]="b.label">{{ b.label }}</span>
+                <div class="bar-track">
+                  <div class="bar-fill" [style.width.%]="b.pct"></div>
+                </div>
+                <span class="amount">{{ money(b.value) }}</span>
+              </div>
+            }
+          </div>
+        }
+      </section>
+
+      <section class="card">
+        <h3>{{ t('bos.rpt.section.byItem') }}</h3>
+        @if (itemBars().length === 0) {
+          <p class="muted">{{ t('bos.rpt.empty') }}</p>
+        } @else {
+          <div class="bar-list">
+            @for (b of itemBars(); track b.label) {
+              <div class="bar-row">
+                <span class="name" [title]="b.label">{{ b.label }}</span>
+                <div class="bar-track">
+                  <div class="bar-fill" [style.width.%]="b.pct"></div>
+                </div>
+                <span class="amount">{{ money(b.value) }}</span>
+              </div>
+            }
+          </div>
+        }
+      </section>
+
+      <section class="card">
+        <h3>{{ t('bos.rpt.section.byDay') }}</h3>
+        @if (dayBars().length === 0) {
+          <p class="muted">{{ t('bos.rpt.empty') }}</p>
+        } @else {
+          <div class="bar-list">
+            @for (b of dayBars(); track b.label) {
+              <div class="bar-row">
+                <span class="name" [title]="b.label">{{ b.label }}</span>
+                <div class="bar-track">
+                  <div class="bar-fill" [style.width.%]="b.pct"></div>
+                </div>
+                <span class="amount">{{ money(b.value) }}</span>
+              </div>
+            }
+          </div>
+        }
+      </section>
+    </div>
+
+    <section class="card">
+      <h3>{{ t('bos.rpt.section.documentCounts') }}</h3>
+      <div class="doc-counts-grid">
+        @for (group of docCountGroups(); track group.titleKey) {
+          <div>
+            <h4>{{ t(group.titleKey) }}</h4>
+            <table>
+              <thead>
+                <tr>
+                  <th>{{ t('bos.ord.col.status') }}</th>
+                  <th>{{ t('bos.rpt.col.count') }}</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (row of group.rows; track row.status) {
+                  <tr>
+                    <td>{{ row.status }}</td>
+                    <td>{{ row.count }}</td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        }
+      </div>
+    </section>
+  } @else if (loading()) {
+    <p class="muted">{{ t('common.loading') }}</p>
+  }
+</section>

@@ -1,0 +1,205 @@
+<div class="fp-page">
+  <header class="page-header">
+    <div>
+      <h1>{{ t('fin.period.title') }}</h1>
+      <p>{{ t('fin.period.subtitle') }}</p>
+    </div>
+  </header>
+
+  <section class="toolbar">
+    <div class="search-box">
+      <mat-icon>search</mat-icon>
+      <input
+        type="search"
+        [ngModel]="search()"
+        (ngModelChange)="search.set($event)"
+        (keydown.enter)="load()"
+        [placeholder]="t('fin.period.searchPlaceholder')"
+      />
+      <button type="button" class="btn primary" (click)="load()">{{ t('common.search') }}</button>
+    </div>
+
+    <button type="button" class="btn primary" [disabled]="!canCreate()" (click)="openCreate()">
+      <mat-icon>add</mat-icon>
+      {{ t('fin.period.new') }}
+    </button>
+    <button type="button" class="btn ghost" [disabled]="!canEdit() || !selected()" (click)="openEdit()">
+      <mat-icon>edit</mat-icon>
+      {{ t('common.edit') }}
+    </button>
+    <button type="button" class="btn ghost" [disabled]="!canDelete() || !selected()" (click)="remove()">
+      <mat-icon>delete</mat-icon>
+      {{ t('common.delete') }}
+    </button>
+    <button type="button" class="btn ghost" (click)="load()" [matTooltip]="t('common.refresh')">
+      <mat-icon>sync</mat-icon>
+    </button>
+  </section>
+
+  @if (error() && !showModal()) {
+    <div class="form-error">{{ error() }}</div>
+  }
+
+  @if (loading()) {
+    <div class="skeleton-list" aria-busy="true">
+      @for (_ of [1, 2, 3, 4]; track $index) {
+        <div class="skeleton-row"></div>
+      }
+    </div>
+  } @else {
+    <div class="table-card">
+      <table>
+        <thead>
+          <tr>
+            <th>{{ t('fin.period.col.year') }}</th>
+            <th>{{ t('fin.period.col.startMonth') }}</th>
+            <th>{{ t('fin.period.col.startDate') }}</th>
+            <th>{{ t('fin.period.col.endDate') }}</th>
+            <th>{{ t('fin.period.col.status') }}</th>
+            <th>{{ t('fin.period.col.notes') }}</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (row of rows(); track row.id) {
+            <tr
+              [class.selected]="selectedId() === row.id"
+              (click)="select(row)"
+              (dblclick)="openEdit()"
+            >
+              <td class="num">{{ row.fiscalYear }}</td>
+              <td class="num">{{ row.startMonth }}</td>
+              <td>{{ row.startDate }}</td>
+              <td>{{ row.endDate }}</td>
+              <td>
+                <span class="status" [class]="statusClass(+row.status)">{{ statusLabel(+row.status) }}</span>
+              </td>
+              <td>{{ row.notes || '—' }}</td>
+            </tr>
+          } @empty {
+            <tr>
+              <td colspan="6" class="empty">{{ t('fin.period.empty') }}</td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  }
+</div>
+
+@if (showModal()) {
+  <div class="modal-backdrop" (click)="closeModal()">
+    <div class="modal wide" (click)="$event.stopPropagation()" role="dialog" aria-modal="true">
+      <header class="modal-header">
+        <div class="title-row">
+          <mat-icon>date_range</mat-icon>
+          <h2>{{ isEditing() ? t('fin.period.editTitle') : t('fin.period.createTitle') }}</h2>
+        </div>
+      </header>
+
+      @if (error()) {
+        <div class="form-error">{{ error() }}</div>
+      }
+
+      <form [formGroup]="form" class="modal-body" (ngSubmit)="save()">
+        <section class="card master">
+          <div class="grid">
+            <label>
+              <span>{{ t('fin.period.year') }} *</span>
+              <input type="number" formControlName="fiscalYear" min="2000" max="2100" />
+            </label>
+            <label>
+              <span>{{ t('fin.period.startMonth') }} *</span>
+              <select formControlName="startMonth">
+                @for (m of months; track m) {
+                  <option [ngValue]="m">{{ m }}</option>
+                }
+              </select>
+            </label>
+            <label>
+              <span>{{ t('fin.period.startDate') }} *</span>
+              <input [value]="formatDisplayDate(form.controls.startDate.value)" readonly />
+            </label>
+            <label>
+              <span>{{ t('fin.period.endDate') }} *</span>
+              <input [value]="formatDisplayDate(form.controls.endDate.value)" readonly />
+            </label>
+            <label class="full">
+              <span>{{ t('fin.period.notes') }}</span>
+              <textarea rows="3" formControlName="notes"></textarea>
+            </label>
+          </div>
+
+          <div class="meta-side">
+            <div>
+              <span class="muted">{{ t('fin.period.policy') }}:</span>
+              <strong class="policy">{{ t('fin.period.policy.monthly') }}</strong>
+            </div>
+            <div>
+              <span class="muted">{{ t('fin.period.col.status') }}:</span>
+              <strong class="status open">{{ statusLabel(selected()?.status ? +selected()!.status : 1) }}</strong>
+            </div>
+            <button
+              type="button"
+              class="btn primary"
+              [disabled]="generating()"
+              (click)="generateDetails()"
+            >
+              <mat-icon>playlist_add</mat-icon>
+              {{ t('fin.period.generate') }}
+            </button>
+          </div>
+        </section>
+
+        <section class="card details-card">
+          <h3>{{ t('fin.period.detailsTitle') }}</h3>
+          <div class="table-card nested" formArrayName="details">
+            <table>
+              <thead>
+                <tr>
+                  <th>{{ t('fin.period.col.periodNo') }}</th>
+                  <th>{{ t('fin.period.col.nameAr') }}</th>
+                  <th>{{ t('fin.period.col.nameEn') }}</th>
+                  <th>{{ t('fin.period.col.startDate') }}</th>
+                  <th>{{ t('fin.period.col.endDate') }}</th>
+                  <th>{{ t('fin.period.col.status') }}</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (ctrl of detailsFA.controls; track $index; let i = $index) {
+                  <tr [formGroupName]="i">
+                    <td class="num">{{ ctrl.get('periodNumber')?.value }}</td>
+                    <td><input formControlName="nameAr" /></td>
+                    <td><input formControlName="nameEn" /></td>
+                    <td><input type="date" formControlName="startDate" /></td>
+                    <td><input type="date" formControlName="endDate" /></td>
+                    <td>
+                      <select formControlName="status">
+                        @for (s of statusOptions; track s.value) {
+                          <option [ngValue]="s.value">{{ t(s.labelKey) }}</option>
+                        }
+                      </select>
+                    </td>
+                  </tr>
+                } @empty {
+                  <tr>
+                    <td colspan="6" class="empty">{{ t('fin.period.detailsEmpty') }}</td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        </section>
+      </form>
+
+      <footer class="modal-footer">
+        <button type="button" class="btn primary" [disabled]="saving()" (click)="save()">
+          <mat-icon>save</mat-icon>
+          {{ t('common.save') }}
+        </button>
+        <button type="button" class="btn ghost" [disabled]="saving()" (click)="closeModal()">
+          {{ t('common.cancel') }}
+        </button>
+      </footer>
+    </div>
+  </div>
+}

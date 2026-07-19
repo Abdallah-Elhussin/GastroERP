@@ -1,0 +1,280 @@
+<div class="tax-page">
+  <header class="page-header">
+    <div>
+      <h1>{{ t('fin.tax.title') }}</h1>
+      <p>{{ t('fin.tax.subtitle') }}</p>
+    </div>
+  </header>
+
+  <section class="toolbar">
+    <div class="search-box">
+      <mat-icon>search</mat-icon>
+      <input
+        type="search"
+        [ngModel]="search()"
+        (ngModelChange)="search.set($event)"
+        (keydown.enter)="load()"
+        [placeholder]="t('fin.tax.searchPlaceholder')"
+      />
+      <button type="button" class="btn primary" (click)="load()">{{ t('common.search') }}</button>
+    </div>
+
+    <button type="button" class="btn primary" [disabled]="!canCreate()" (click)="openCreate()">
+      <mat-icon>add</mat-icon>
+      {{ t('fin.tax.new') }}
+    </button>
+    <button type="button" class="btn ghost" [disabled]="!canEdit() || !selected()" (click)="openEdit()">
+      <mat-icon>edit</mat-icon>
+      {{ t('fin.tax.edit') }}
+    </button>
+    <button
+      type="button"
+      class="btn ghost"
+      [disabled]="!canDelete() || !selected() || selected()?.isSystem || selected()?.hasBeenUsed"
+      (click)="remove()"
+    >
+      <mat-icon>delete</mat-icon>
+      {{ t('common.delete') }}
+    </button>
+    <button type="button" class="btn ghost" (click)="load()" [matTooltip]="t('common.refresh')">
+      <mat-icon>sync</mat-icon>
+    </button>
+  </section>
+
+  <section class="filters">
+    <label>
+      <span>{{ t('fin.tax.filter.search') }}</span>
+      <input [ngModel]="search()" (ngModelChange)="search.set($event)" />
+    </label>
+    <label>
+      <span>{{ t('fin.tax.filter.company') }}</span>
+      <select [ngModel]="filterCompanyId()" (ngModelChange)="filterCompanyId.set($event); filterBranchId.set('')">
+        <option value="">—</option>
+        @for (c of companies(); track c.id) {
+          <option [value]="c.id">{{ c.nameAr }}</option>
+        }
+      </select>
+    </label>
+    <label>
+      <span>{{ t('fin.tax.filter.branch') }}</span>
+      <select [ngModel]="filterBranchId()" (ngModelChange)="filterBranchId.set($event)">
+        <option value="">—</option>
+        @for (b of filteredBranches(); track b.id) {
+          <option [value]="b.id">{{ b.nameAr }}</option>
+        }
+      </select>
+    </label>
+    <button type="button" class="btn primary" (click)="load()">{{ t('common.search') }}</button>
+    <button type="button" class="btn ghost" (click)="resetFilters()">{{ t('fin.tax.resetFilters') }}</button>
+    <span class="count">{{ t('fin.tax.count') }}: {{ rows().length }}</span>
+  </section>
+
+  @if (error() && !showModal()) {
+    <div class="form-error">{{ error() }}</div>
+  }
+
+  @if (loading()) {
+    <div class="muted">{{ t('common.loading') }}</div>
+  } @else {
+    <div class="table-card">
+      <table>
+        <thead>
+          <tr>
+            <th>{{ t('fin.tax.col.number') }}</th>
+            <th>{{ t('fin.tax.col.company') }}</th>
+            <th>{{ t('fin.tax.col.branch') }}</th>
+            <th>{{ t('fin.tax.col.vat') }}</th>
+            <th>{{ t('fin.tax.col.branchVat') }}</th>
+            <th>{{ t('fin.tax.col.office') }}</th>
+            <th>{{ t('fin.tax.col.type') }}</th>
+            <th>{{ t('fin.tax.col.activity') }}</th>
+            <th>{{ t('fin.tax.col.regDate') }}</th>
+            <th>{{ t('fin.tax.col.expiry') }}</th>
+            <th>{{ t('fin.tax.col.status') }}</th>
+            <th>{{ t('fin.tax.col.created') }}</th>
+            <th>{{ t('fin.tax.col.updated') }}</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (row of rows(); track row.id) {
+            <tr
+              [class.selected]="selectedId() === row.id"
+              (click)="select(row)"
+              (dblclick)="openEdit()"
+            >
+              <td class="num">{{ row.number }}</td>
+              <td>{{ row.companyNameAr || '—' }}</td>
+              <td>{{ row.branchNameAr || '—' }}</td>
+              <td><code>{{ row.vatNumber }}</code></td>
+              <td>{{ row.branchVatNumber || '—' }}</td>
+              <td>{{ row.taxOffice || '—' }}</td>
+              <td>{{ typeLabel(row.taxpayerType) }}</td>
+              <td>{{ row.activityCode || '—' }}</td>
+              <td>{{ row.registrationDate || '—' }}</td>
+              <td>{{ row.expiryDate || '—' }}</td>
+              <td>{{ statusLabel(row.status) }}</td>
+              <td>{{ formatDate(row.createdAt) }}</td>
+              <td>{{ formatDate(row.updatedAt) }}</td>
+            </tr>
+          } @empty {
+            <tr>
+              <td colspan="13" class="empty">{{ t('fin.tax.empty') }}</td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  }
+</div>
+
+@if (showModal()) {
+  <div class="modal-backdrop" (click)="closeModal()">
+    <div class="modal" (click)="$event.stopPropagation()" role="dialog">
+      <header class="modal-header">
+        <h2>{{ isEditing() ? t('fin.tax.editTitle') : t('fin.tax.createTitle') }}</h2>
+        <div class="modal-actions">
+          <button type="button" class="btn primary" [disabled]="saving()" (click)="save()">
+            <mat-icon>save</mat-icon>
+            {{ t('common.save') }}
+          </button>
+          <button type="button" class="btn ghost" (click)="closeModal()">
+            <mat-icon>close</mat-icon>
+            {{ t('common.cancel') }}
+          </button>
+        </div>
+      </header>
+
+      @if (error()) {
+        <div class="form-error">{{ error() }}</div>
+      }
+
+      <form [formGroup]="form" class="modal-body" (ngSubmit)="save()">
+        <section class="card">
+          <label>
+            <span>{{ t('fin.tax.company') }} *</span>
+            <select formControlName="companyId">
+              <option value="">—</option>
+              @for (c of companies(); track c.id) {
+                <option [value]="c.id">{{ c.nameAr }}</option>
+              }
+            </select>
+          </label>
+          <label>
+            <span>{{ t('fin.tax.branch') }}</span>
+            <select formControlName="branchId">
+              <option value="">—</option>
+              @for (b of modalBranches(); track b.id) {
+                <option [value]="b.id">{{ b.nameAr }}</option>
+              }
+            </select>
+          </label>
+          <label>
+            <span>{{ t('fin.tax.vat') }} *</span>
+            <input formControlName="vatNumber" />
+          </label>
+          <label>
+            <span>{{ t('fin.tax.branchVat') }}</span>
+            <input formControlName="branchVatNumber" />
+          </label>
+          <label>
+            <span>{{ t('fin.tax.office') }}</span>
+            <input formControlName="taxOffice" />
+          </label>
+          <label>
+            <span>{{ t('fin.tax.type') }}</span>
+            <select formControlName="taxpayerType">
+              @for (tp of taxpayerTypes; track tp.value) {
+                <option [ngValue]="tp.value">{{ t(tp.labelKey) }}</option>
+              }
+            </select>
+          </label>
+          <label>
+            <span>{{ t('fin.tax.activityCode') }}</span>
+            <select formControlName="activityCode">
+              <option value="">—</option>
+              @for (a of activityCodes; track a.code) {
+                <option [value]="a.code">{{ a.code }} — {{ a.nameAr }}</option>
+              }
+            </select>
+          </label>
+          <label>
+            <span>{{ t('fin.tax.activityName') }}</span>
+            <input formControlName="activityNameAr" readonly />
+          </label>
+          <label>
+            <span>{{ t('fin.tax.defaultRate') }}</span>
+            <input type="number" formControlName="defaultTaxRate" />
+          </label>
+          <label>
+            <span>{{ t('fin.tax.status') }}</span>
+            <select formControlName="status">
+              @for (s of statuses; track s.value) {
+                <option [ngValue]="s.value">{{ t(s.labelKey) }}</option>
+              }
+            </select>
+          </label>
+          <label>
+            <span>{{ t('fin.tax.registrationDate') }}</span>
+            <input type="date" formControlName="registrationDate" />
+          </label>
+          <label>
+            <span>{{ t('fin.tax.expiryDate') }}</span>
+            <input type="date" formControlName="expiryDate" />
+          </label>
+          <label class="full cert-block">
+            <span>{{ t('fin.tax.certificate') }}</span>
+            <div class="cert-actions">
+              <label class="file-btn">
+                <input type="file" accept=".pdf,.jpg,.jpeg,.png" (change)="onFileSelected($event)" hidden />
+                {{ t('fin.tax.attachFile') }}
+              </label>
+              <button type="button" class="btn ghost" (click)="clearFile()" [disabled]="!pendingFile()">
+                {{ t('fin.tax.removeFile') }}
+              </button>
+              <span class="file-status">
+                @if (pendingFile()) {
+                  {{ pendingFile()!.name }}
+                } @else if (selected()?.currentCertificate) {
+                  {{ selected()!.currentCertificate!.fileName }}
+                } @else {
+                  {{ t('fin.tax.noFile') }}
+                }
+              </span>
+            </div>
+          </label>
+          <label>
+            <span>{{ t('fin.tax.certDocNo') }}</span>
+            <input formControlName="certificateDocumentNumber" />
+          </label>
+          <label>
+            <span>{{ t('fin.tax.certIssue') }}</span>
+            <input type="date" formControlName="certificateIssueDate" />
+          </label>
+          <label>
+            <span>{{ t('fin.tax.certExpiry') }}</span>
+            <input type="date" formControlName="certificateExpiryDate" />
+          </label>
+          <label class="full">
+            <span>{{ t('fin.tax.certNotes') }}</span>
+            <textarea rows="2" formControlName="certificateNotes"></textarea>
+          </label>
+          @if (isEditing() && selected()) {
+            <label>
+              <span>{{ t('fin.tax.sys.created') }}</span>
+              <input [value]="formatDate(selected()!.createdAt)" disabled />
+            </label>
+            <label>
+              <span>{{ t('fin.tax.sys.updated') }}</span>
+              <input [value]="formatDate(selected()!.updatedAt)" disabled />
+            </label>
+          }
+        </section>
+
+        <p class="tip">
+          <mat-icon>lightbulb</mat-icon>
+          {{ t('fin.tax.tip') }}
+        </p>
+      </form>
+    </div>
+  </div>
+}

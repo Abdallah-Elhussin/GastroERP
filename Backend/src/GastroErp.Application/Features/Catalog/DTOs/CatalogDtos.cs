@@ -124,6 +124,16 @@ public record CatalogAuditEntryDto(
     string? Actor
 );
 
+public record CatalogPriceHistoryDto(
+    Guid Id,
+    decimal PreviousPrice,
+    decimal CurrentPrice,
+    string Currency,
+    string? PriceLevelName,
+    DateTime EffectiveDate,
+    string? Actor
+);
+
 public record CatalogImportRowDto(
     ProductCatalogType CatalogType,
     string NameAr,

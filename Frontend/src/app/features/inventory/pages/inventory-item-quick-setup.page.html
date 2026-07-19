@@ -1,0 +1,107 @@
+<app-inventory-page-shell
+  [breadcrumbs]="breadcrumbs"
+  titleKey="inv.quick.title"
+  subtitleKey="inv.quick.subtitle"
+>
+  <a shellActions routerLink="/inventory/items" class="btn ghost">
+    <mat-icon>close</mat-icon>
+    {{ t('common.cancel') }}
+  </a>
+
+  <section class="wizard">
+    <nav class="steps" aria-label="steps">
+      <button type="button" class="step" [class.active]="step() === 1" [class.done]="step() > 1">1</button>
+      <span class="line" [class.on]="step() > 1"></span>
+      <button type="button" class="step" [class.active]="step() === 2" [class.done]="step() > 2">2</button>
+      <span class="line" [class.on]="step() > 2"></span>
+      <button type="button" class="step" [class.active]="step() === 3" [class.done]="step() > 3">3</button>
+      <span class="line" [class.on]="step() > 3"></span>
+      <button type="button" class="step" [class.active]="step() === 4" [class.done]="step() > 4">4</button>
+    </nav>
+
+    <article class="card">
+      <header>
+        <h2>{{ stepTitle() }}<span class="req">*</span></h2>
+        <p>{{ stepHint() }}</p>
+      </header>
+
+      <!-- Step 1: Category -->
+      <div class="field" *ngIf="step() === 1">
+        <div class="lookup">
+          <input
+            type="text"
+            [ngModel]="categoryQuery()"
+            (ngModelChange)="categoryQuery.set($event); lookupOpen.set(true)"
+            (focus)="lookupOpen.set(true)"
+            [placeholder]="t('inv.quick.lookupPlaceholder')"
+          />
+          <mat-icon>search</mat-icon>
+          <ul *ngIf="lookupOpen()" class="lookup-list">
+            <li *ngFor="let c of categoryOptions()" (mousedown)="pickCategory(c)">{{ catLabel(c) }}</li>
+            <li *ngIf="!categoryOptions().length" class="muted">{{ t('inv.quick.noResults') }}</li>
+          </ul>
+        </div>
+        <small *ngIf="selectedCategoryLabel()">{{ selectedCategoryLabel() }}</small>
+      </div>
+
+      <!-- Step 2: Name -->
+      <div class="field" *ngIf="step() === 2">
+        <input
+          type="text"
+          [ngModel]="nameAr()"
+          (ngModelChange)="nameAr.set($event)"
+          [placeholder]="t('inv.quick.itemNamePlaceholder')"
+        />
+      </div>
+
+      <!-- Step 3: Unit -->
+      <div class="field" *ngIf="step() === 3">
+        <div class="lookup">
+          <input
+            type="text"
+            [ngModel]="unitQuery()"
+            (ngModelChange)="unitQuery.set($event); lookupOpen.set(true)"
+            (focus)="lookupOpen.set(true)"
+            [placeholder]="t('inv.quick.lookupPlaceholder')"
+          />
+          <mat-icon>search</mat-icon>
+          <ul *ngIf="lookupOpen()" class="lookup-list">
+            <li *ngFor="let u of unitOptions()" (mousedown)="pickUnit(u)">{{ unitLabel(u) }}</li>
+            <li *ngIf="!unitOptions().length" class="muted">{{ t('inv.quick.noResults') }}</li>
+          </ul>
+        </div>
+        <small *ngIf="selectedUnitLabel()">{{ selectedUnitLabel() }}</small>
+      </div>
+
+      <!-- Step 4: Classification -->
+      <div class="field" *ngIf="step() === 4">
+        <div class="lookup">
+          <input
+            type="text"
+            [ngModel]="classificationQuery()"
+            (ngModelChange)="classificationQuery.set($event); lookupOpen.set(true)"
+            (focus)="lookupOpen.set(true)"
+            [placeholder]="t('inv.quick.lookupPlaceholder')"
+          />
+          <mat-icon>search</mat-icon>
+          <ul *ngIf="lookupOpen()" class="lookup-list">
+            <li *ngFor="let c of classificationOptions()" (mousedown)="pickClassification(c)">{{ catLabel(c) }}</li>
+            <li *ngIf="!classificationOptions().length" class="muted">{{ t('inv.quick.noResults') }}</li>
+          </ul>
+        </div>
+        <small *ngIf="selectedClassificationLabel()">{{ selectedClassificationLabel() }}</small>
+      </div>
+
+      <p class="error" *ngIf="error()">{{ error() }}</p>
+
+      <footer class="actions">
+        <button type="button" class="btn ghost" (click)="back()" [disabled]="saving()">
+          {{ step() === 1 ? t('common.cancel') : t('inv.quick.back') }}
+        </button>
+        <button type="button" class="btn primary" (click)="next()" [disabled]="saving() || !canNext()">
+          {{ saving() ? t('common.saving') : (step() === 4 ? t('inv.quick.continue') : t('inv.quick.next')) }}
+        </button>
+      </footer>
+    </article>
+  </section>
+</app-inventory-page-shell>

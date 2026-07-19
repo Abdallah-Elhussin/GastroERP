@@ -1,0 +1,217 @@
+@if (!editorOpen()) {
+  <div class="pv-page">
+    <section class="toolbar">
+      <div class="search-box">
+        <mat-icon>search</mat-icon>
+        <input
+          type="search"
+          [ngModel]="search()"
+          (ngModelChange)="search.set($event)"
+          (keydown.enter)="load()"
+          [placeholder]="t('fin.ops.pv.searchPlaceholder')"
+        />
+        <button type="button" class="btn primary" (click)="load()">{{ t('common.search') }}</button>
+      </div>
+      <button type="button" class="btn primary" [disabled]="!canCreate()" (click)="openCreate()">
+        <mat-icon>add</mat-icon>
+        {{ t('fin.ops.pv.new') }}
+      </button>
+      <button type="button" class="btn ghost" [disabled]="!selected()" (click)="openEdit()">
+        <mat-icon>edit</mat-icon>
+        {{ t('common.edit') }}
+      </button>
+      <button type="button" class="btn ghost" disabled>
+        <mat-icon>delete</mat-icon>
+        {{ t('common.delete') }}
+      </button>
+      <button type="button" class="btn ghost" (click)="load()" [matTooltip]="t('common.refresh')">
+        <mat-icon>sync</mat-icon>
+      </button>
+      <button type="button" class="btn ghost" disabled>
+        <mat-icon>print</mat-icon>
+        {{ t('common.print') }}
+      </button>
+      <label class="check">
+        <input type="checkbox" [ngModel]="showDeleted()" (ngModelChange)="showDeleted.set($event)" />
+        {{ t('fin.ops.pv.showDeleted') }}
+      </label>
+    </section>
+
+    @if (error() && !editorOpen()) {
+      <div class="form-error">{{ error() }}</div>
+    }
+
+    <div class="table-card">
+      <table>
+        <thead>
+          <tr>
+            <th>{{ t('fin.ops.pv.col.documentNumber') }}</th>
+            <th>{{ t('fin.ops.pv.col.date') }}</th>
+            <th>{{ t('fin.ops.pv.col.branch') }}</th>
+            <th>{{ t('fin.ops.pv.col.type') }}</th>
+            <th>{{ t('fin.ops.pv.col.beneficiary') }}</th>
+            <th>{{ t('fin.ops.pv.col.source') }}</th>
+            <th>{{ t('fin.ops.pv.col.localAmount') }}</th>
+            <th>{{ t('fin.ops.pv.col.foreignAmount') }}</th>
+            <th>{{ t('fin.ops.pv.col.status') }}</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (row of rows(); track row.id) {
+            <tr
+              [class.selected]="selectedId() === row.id"
+              (click)="select(row)"
+              (dblclick)="openEdit()"
+            >
+              <td><code>{{ row.documentNumber }}</code></td>
+              <td>{{ row.voucherDate }}</td>
+              <td>{{ row.branchName }}</td>
+              <td>{{ row.paymentType }}</td>
+              <td>{{ row.beneficiary }}</td>
+              <td>{{ row.source }}</td>
+              <td class="num">{{ row.localAmount | number: '1.2-2' }}</td>
+              <td class="num">{{ row.foreignAmount | number: '1.2-2' }}</td>
+              <td>{{ row.status }}</td>
+            </tr>
+          } @empty {
+            <tr>
+              <td colspan="9" class="empty">{{ t('fin.ops.pv.empty') }}</td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+    <footer class="status-bar">
+      {{ t('fin.ops.pv.totalPrefix') }} {{ rows().length }} {{ t('fin.ops.pv.totalSuffix') }}
+    </footer>
+  </div>
+} @else {
+  <div class="pv-editor">
+    <header class="editor-toolbar">
+      <button type="button" class="btn primary" [disabled]="saving()" (click)="save()">
+        <mat-icon>save</mat-icon>
+        {{ t('common.save') }}
+      </button>
+      <button type="button" class="btn ghost" disabled>
+        <mat-icon>print</mat-icon>
+        {{ t('common.print') }}
+      </button>
+      <button type="button" class="btn ghost" [disabled]="saving()" (click)="closeEditor()">
+        {{ t('common.cancel') }}
+      </button>
+      <h1>
+        {{ editingId() ? t('fin.ops.pv.editTitle') : t('fin.ops.pv.createTitle') }}
+      </h1>
+    </header>
+
+    @if (error()) {
+      <div class="form-error">{{ error() }}</div>
+    }
+
+    <form [formGroup]="headerForm" class="editor-body" (ngSubmit)="save()">
+      <section class="card">
+        <h2>{{ t('fin.ops.pv.headerTitle') }}</h2>
+        <div class="grid-4">
+          <label>
+            <span>{{ t('fin.ops.pv.branch') }} *</span>
+            <select formControlName="branchId">
+              <option value="">—</option>
+              @for (b of branches(); track b.id) {
+                <option [value]="b.id">{{ b.nameAr }}</option>
+              }
+            </select>
+          </label>
+          <label>
+            <span>{{ t('fin.ops.pv.paymentType') }} *</span>
+            <select formControlName="paymentType">
+              @for (p of paymentTypes; track p.value) {
+                <option [value]="p.value">{{ t(p.labelKey) }}</option>
+              }
+            </select>
+          </label>
+          @if (isCashType()) {
+            <label>
+              <span>{{ t('fin.ops.pv.cashBox') }} *</span>
+              <select formControlName="cashBoxId">
+                <option value="">—</option>
+                @for (c of cashBoxes(); track c.id) {
+                  <option [value]="c.id">{{ c.nameAr }}</option>
+                }
+              </select>
+            </label>
+          } @else {
+            <label>
+              <span>{{ t('fin.ops.pv.bank') }} *</span>
+              <select formControlName="bankId">
+                <option value="">—</option>
+                @for (b of banks(); track b.id) {
+                  <option [value]="b.id">{{ b.nameAr }}</option>
+                }
+              </select>
+            </label>
+          }
+          <label>
+            <span>{{ t('fin.ops.pv.currency') }} *</span>
+            <select formControlName="currency">
+              @for (c of currencies(); track c.code) {
+                <option [value]="c.code">{{ c.code }} — {{ c.nameAr }}</option>
+              }
+            </select>
+          </label>
+          <label>
+            <span>{{ t('fin.ops.pv.documentType') }} *</span>
+            <select formControlName="documentTypeId">
+              <option value="">—</option>
+              @for (d of documentTypes(); track d.id) {
+                <option [value]="d.id">{{ d.nameAr }}</option>
+              }
+            </select>
+          </label>
+          <label>
+            <span>{{ t('fin.ops.pv.documentNumber') }}</span>
+            <input formControlName="documentNumber" />
+          </label>
+          <label>
+            <span>{{ t('fin.ops.pv.date') }} *</span>
+            <input type="date" formControlName="voucherDate" />
+          </label>
+          <label class="full">
+            <span>{{ t('fin.ops.pv.description') }}</span>
+            <textarea formControlName="description" rows="2"></textarea>
+          </label>
+        </div>
+      </section>
+
+      <section class="card">
+        <app-voucher-details-grid
+          [lines]="linesArray"
+          [accounts]="accounts()"
+          [costCenters]="costCenters()"
+          [currencies]="currencies()"
+          [companyCurrencyCode]="companyCurrency()"
+          [showAnalyticalAccounts]="showAnalytical()"
+          [selectedIndex]="selectedLineIndex()"
+          (lineSelected)="onLineSelected($event)"
+          (totalsChange)="onTotals($event)"
+        />
+      </section>
+
+      <footer class="editor-footer">
+        <div class="footer-totals">
+          <label>
+            <span>{{ t('fin.ops.voucher.summary.totalLocal') }}</span>
+            <input [value]="(summary()?.totalLocal || 0) | number: '1.2-2'" readonly />
+          </label>
+          <label>
+            <span>{{ t('fin.ops.voucher.summary.total') }}</span>
+            <input [value]="(summary()?.totalAmount || 0) | number: '1.2-2'" readonly />
+          </label>
+        </div>
+        <div class="footer-actions">
+          <button type="submit" class="btn primary" [disabled]="saving()">{{ t('common.save') }}</button>
+          <button type="button" class="btn ghost" (click)="closeEditor()">{{ t('common.cancel') }}</button>
+        </div>
+      </footer>
+    </form>
+  </div>
+}

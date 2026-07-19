@@ -1,0 +1,53 @@
+<div class="pur-dash">
+  <header class="page-header">
+    <div>
+      <h1>{{ t('pur.dash.title') }}</h1>
+      <p>{{ t('pur.dash.subtitle') }}</p>
+    </div>
+    <div class="actions">
+      <a routerLink="/purchases/suppliers" class="btn primary">{{ t('pur.nav.suppliers') }}</a>
+      <a routerLink="/purchases/purchase-invoices" class="btn primary">{{ t('pur.nav.purchaseInvoices') }}</a>
+      <a routerLink="/purchases/goods-receipts" class="btn primary">{{ t('pur.nav.goodsReceipts') }}</a>
+      <a routerLink="/purchases/purchase-orders" class="btn primary">{{ t('pur.nav.purchaseOrders') }}</a>
+      <button type="button" class="btn ghost" (click)="refresh()">
+        <mat-icon>sync</mat-icon>
+        {{ t('common.refresh') }}
+      </button>
+    </div>
+  </header>
+
+  <section class="kpi-grid">
+    @for (c of cards(); track c.key) {
+      <a class="kpi-card" [routerLink]="c.link">
+        <div class="kpi-top">
+          <mat-icon>{{ c.icon }}</mat-icon>
+          <span>{{ t(c.key) }}</span>
+        </div>
+        <strong>{{ c.value }}</strong>
+        <div class="kpi-meta">
+          <span>{{ t(c.metaA) }}: 0</span>
+          <span>{{ t(c.metaB) }}: 0</span>
+        </div>
+      </a>
+    }
+  </section>
+
+  <section class="split">
+    <div class="panel">
+      <h2>{{ t('pur.dash.alerts') }}</h2>
+      <p class="empty">{{ t('pur.dash.alertsEmpty') }}</p>
+    </div>
+    <div class="panel wide">
+      <h2>{{ t('pur.dash.recent') }}</h2>
+      <p class="empty">{{ t('pur.dash.recentEmpty') }}</p>
+    </div>
+  </section>
+
+  <section class="cycle-note">
+    <h3>{{ t('pur.dash.cycleTitle') }}</h3>
+    <ol>
+      <li>{{ t('pur.dash.path1') }}</li>
+      <li>{{ t('pur.dash.path2') }}</li>
+    </ol>
+  </section>
+</div>

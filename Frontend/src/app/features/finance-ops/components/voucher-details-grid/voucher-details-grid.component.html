@@ -1,0 +1,176 @@
+<div class="voucher-details">
+  <div class="details-toolbar">
+    <strong>{{ t('fin.ops.voucher.detailsTitle') }}</strong>
+    @if (!readonly()) {
+      <div class="actions">
+        <button type="button" class="btn add" (click)="addLine()">
+          <mat-icon>add</mat-icon>
+          {{ t('fin.ops.voucher.addLine') }}
+        </button>
+        <button
+          type="button"
+          class="btn danger"
+          [disabled]="lines().length <= minLines()"
+          (click)="removeSelectedOrLast()"
+        >
+          <mat-icon>remove</mat-icon>
+          {{ t('fin.ops.voucher.deleteLine') }}
+        </button>
+        <button
+          type="button"
+          class="btn ghost"
+          [disabled]="selectedIndex() < 0"
+          (click)="copyLine(selectedIndex())"
+        >
+          <mat-icon>content_copy</mat-icon>
+          {{ t('fin.ops.voucher.copyLine') }}
+        </button>
+      </div>
+    }
+  </div>
+
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th class="num-col">#</th>
+          <th>{{ t('fin.ops.voucher.line.account') }} *</th>
+          <th>{{ t('fin.ops.voucher.line.accountName') }}</th>
+          <th>{{ t('fin.ops.voucher.line.costCenter') }}</th>
+          @if (showAnalyticalAccounts()) {
+            <th>{{ t('fin.ops.voucher.line.analytical') }}</th>
+          }
+          <th>{{ t('fin.ops.voucher.line.currency') }}</th>
+          <th>{{ t('fin.ops.voucher.line.exchangeRate') }}</th>
+          <th>{{ t('fin.ops.voucher.line.amount') }} *</th>
+          <th>{{ t('fin.ops.voucher.line.description') }}</th>
+          @if (!readonly()) {
+            <th></th>
+          }
+        </tr>
+      </thead>
+      <tbody>
+        @for (ctrl of controls; track $index; let i = $index) {
+          <tr
+            [formGroup]="ctrl"
+            [class.selected]="selectedIndex() === i"
+            (click)="selectRow(i)"
+          >
+            <td class="num-col">{{ i + 1 }}</td>
+            <td>
+              <select formControlName="chartOfAccountId" [attr.disabled]="readonly() ? true : null">
+                <option value="">—</option>
+                @for (a of accounts(); track a.id) {
+                  <option [value]="a.id">{{ a.accountNumber }}</option>
+                }
+              </select>
+            </td>
+            <td class="readonly-cell">{{ accountName(i) }}</td>
+            <td>
+              <select formControlName="costCenterId" [attr.disabled]="readonly() ? true : null">
+                <option value="">—</option>
+                @for (c of costCenters(); track c.id) {
+                  <option [value]="c.id">{{ c.nameAr }}</option>
+                }
+              </select>
+            </td>
+            @if (showAnalyticalAccounts()) {
+              <td>
+                <select formControlName="analyticalAccountId" [attr.disabled]="readonly() ? true : null">
+                  <option value="">—</option>
+                  @for (a of analyticalOptions(); track a.id) {
+                    <option [value]="a.id">{{ a.accountNumber }} — {{ a.nameAr }}</option>
+                  }
+                </select>
+              </td>
+            }
+            <td>
+              <select
+                formControlName="currency"
+                [attr.disabled]="readonly() ? true : null"
+                (change)="onCurrencyChange(i)"
+              >
+                @for (c of currencies(); track c.code) {
+                  <option [value]="c.code">{{ c.code }}</option>
+                }
+              </select>
+            </td>
+            <td>
+              <input
+                type="number"
+                formControlName="exchangeRate"
+                min="0.000001"
+                step="0.0001"
+                [readOnly]="readonly()"
+              />
+            </td>
+            <td>
+              <input
+                type="number"
+                formControlName="amount"
+                min="0.01"
+                step="0.01"
+                [readOnly]="readonly()"
+              />
+            </td>
+            <td>
+              <input formControlName="description" [readOnly]="readonly()" />
+            </td>
+            @if (!readonly()) {
+              <td class="row-actions">
+                <button
+                  type="button"
+                  class="icon-btn"
+                  (click)="copyLine(i); $event.stopPropagation()"
+                  [attr.title]="t('fin.ops.voucher.copyLine')"
+                >
+                  <mat-icon>content_copy</mat-icon>
+                </button>
+                <button
+                  type="button"
+                  class="icon-btn danger"
+                  [disabled]="lines().length <= minLines()"
+                  (click)="removeLine(i); $event.stopPropagation()"
+                  [attr.title]="t('fin.ops.voucher.deleteLine')"
+                >
+                  <mat-icon>delete</mat-icon>
+                </button>
+              </td>
+            }
+          </tr>
+        } @empty {
+          <tr>
+            <td [attr.colspan]="showAnalyticalAccounts() ? 10 : 9" class="empty">
+              {{ t('fin.ops.voucher.noLines') }}
+            </td>
+          </tr>
+        }
+      </tbody>
+    </table>
+  </div>
+
+  <div class="summary">
+    <div class="summary-item">
+      <span>{{ t('fin.ops.voucher.summary.lineCount') }}</span>
+      <strong>{{ totals().lineCount }}</strong>
+    </div>
+    <div class="summary-item">
+      <span>{{ t('fin.ops.voucher.summary.total') }}</span>
+      <strong>{{ totals().totalAmount | number: '1.2-2' }}</strong>
+    </div>
+    <div class="summary-item">
+      <span>{{ t('fin.ops.voucher.summary.companyCurrency') }}</span>
+      <strong>{{ companyCurrencyCode() }}</strong>
+    </div>
+    <div class="summary-item local">
+      <span>{{ t('fin.ops.voucher.summary.totalLocal') }}</span>
+      <strong>{{ totals().totalLocal | number: '1.2-2' }}</strong>
+    </div>
+    @if (totals().hasForeign) {
+      <div class="summary-item foreign">
+        <span>{{ t('fin.ops.voucher.summary.totalForeign') }}</span>
+        <strong>{{ totals().totalForeign | number: '1.2-2' }}</strong>
+      </div>
+    }
+  </div>
+</div>

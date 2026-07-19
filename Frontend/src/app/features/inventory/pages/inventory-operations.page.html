@@ -1,0 +1,498 @@
+<app-inventory-page-shell
+  [breadcrumbs]="breadcrumbs"
+  titleKey="inv.nav.transactions"
+  subtitleKey="inv.ops.subtitle"
+>
+  <div shellActions>
+    <button *ngIf="tab() !== 'ledger'" type="button" class="btn-primary" (click)="openCreate()">
+      <mat-icon>add</mat-icon>
+      {{ t('inv.ops.new') }}
+    </button>
+    <button type="button" class="btn-secondary" (click)="reload()">
+      <mat-icon>refresh</mat-icon>
+      {{ t('common.retry') }}
+    </button>
+  </div>
+
+  <div class="ops-tabs" role="tablist">
+    <button
+      *ngFor="let tabDef of tabs"
+      type="button"
+      class="ops-tab"
+      [class.active]="tab() === tabDef.id"
+      (click)="selectTab(tabDef.id)"
+    >
+      <mat-icon>{{ tabDef.icon }}</mat-icon>
+      <span>{{ t(tabDef.labelKey) }}</span>
+    </button>
+  </div>
+
+  <app-inventory-skeleton *ngIf="loading()"></app-inventory-skeleton>
+  <app-inventory-error-state
+    *ngIf="!loading() && error()"
+    [message]="error()!"
+    (retry)="reload()"
+  ></app-inventory-error-state>
+
+  <ng-container *ngIf="!loading() && !error()">
+    <!-- Ledger -->
+    <div *ngIf="tab() === 'ledger'" class="table-wrap">
+      <app-inventory-empty-state
+        *ngIf="!ledger().length"
+        messageKey="inv.ops.empty.ledger"
+      ></app-inventory-empty-state>
+      <table *ngIf="ledger().length">
+        <thead>
+          <tr>
+            <th>{{ t('inv.ops.col.date') }}</th>
+            <th>{{ t('inv.ops.col.type') }}</th>
+            <th>{{ t('inv.ops.col.ref') }}</th>
+            <th>{{ t('inv.ops.col.movements') }}</th>
+            <th>{{ t('inv.field.notes') }}</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let row of ledger()">
+            <td>{{ row.transactionDate | date: 'medium' }}</td>
+            <td><code>{{ row.transactionType }}</code></td>
+            <td>{{ row.referenceDocumentNumber || '—' }}</td>
+            <td>{{ row.movementCount }}</td>
+            <td class="muted">{{ row.notes || '—' }}</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Transfers -->
+    <div *ngIf="tab() === 'transfer'" class="table-wrap">
+      <app-inventory-empty-state
+        *ngIf="!transfers().length && !showForm()"
+        messageKey="inv.ops.empty.transfer"
+      ></app-inventory-empty-state>
+      <table *ngIf="transfers().length">
+        <thead>
+          <tr>
+            <th>{{ t('inv.field.code') }}</th>
+            <th>{{ t('inv.ops.col.from') }}</th>
+            <th>{{ t('inv.ops.col.to') }}</th>
+            <th>{{ t('inv.field.status') }}</th>
+            <th>{{ t('inv.ops.col.date') }}</th>
+            <th>{{ t('common.actions') }}</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let row of transfers()">
+            <td><code>{{ row.transferNumber }}</code></td>
+            <td>{{ row.sourceWarehouseNameAr }}</td>
+            <td>{{ row.destinationWarehouseNameAr }}</td>
+            <td><span class="badge" [class.on]="row.status === 'Completed'">{{ row.status }}</span></td>
+            <td>{{ row.transferDate | date: 'mediumDate' }}</td>
+            <td>
+              <button
+                *ngIf="row.status !== 'Completed' && row.status !== 'Cancelled'"
+                type="button"
+                class="btn-secondary sm"
+                (click)="confirmTransfer(row.id)"
+              >{{ t('inv.ops.complete') }}</button>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Adjustments -->
+    <div *ngIf="tab() === 'adjust'" class="table-wrap">
+      <app-inventory-empty-state
+        *ngIf="!adjustments().length && !showForm()"
+        messageKey="inv.ops.empty.adjust"
+      ></app-inventory-empty-state>
+      <table *ngIf="adjustments().length">
+        <thead>
+          <tr>
+            <th>{{ t('inv.field.code') }}</th>
+            <th>{{ t('inv.ops.col.warehouse') }}</th>
+            <th>{{ t('inv.ops.col.item') }}</th>
+            <th>{{ t('inv.ops.col.qty') }}</th>
+            <th>{{ t('inv.ops.col.date') }}</th>
+            <th>{{ t('common.actions') }}</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let row of adjustments()">
+            <td><code>{{ row.adjustmentNumber }}</code></td>
+            <td>{{ row.warehouseNameAr }}</td>
+            <td>{{ row.itemNameAr || '—' }}</td>
+            <td [class.neg]="row.quantityAdjusted < 0">{{ row.quantityAdjusted }}</td>
+            <td>{{ row.adjustmentDate | date: 'mediumDate' }}</td>
+            <td>
+              <button type="button" class="btn-secondary sm" (click)="confirmAdjustment(row.id)">
+                {{ t('inv.ops.confirm') }}
+              </button>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Waste -->
+    <div *ngIf="tab() === 'waste'" class="table-wrap">
+      <app-inventory-empty-state
+        *ngIf="!waste().length && !showForm()"
+        messageKey="inv.ops.empty.waste"
+      ></app-inventory-empty-state>
+      <table *ngIf="waste().length">
+        <thead>
+          <tr>
+            <th>{{ t('inv.field.code') }}</th>
+            <th>{{ t('inv.ops.col.warehouse') }}</th>
+            <th>{{ t('inv.ops.col.item') }}</th>
+            <th>{{ t('inv.ops.col.qty') }}</th>
+            <th>{{ t('inv.ops.col.date') }}</th>
+            <th>{{ t('common.actions') }}</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let row of waste()">
+            <td><code>{{ row.wasteNumber }}</code></td>
+            <td>{{ row.warehouseNameAr }}</td>
+            <td>{{ row.itemNameAr || '—' }}</td>
+            <td>{{ row.quantity }}</td>
+            <td>{{ row.wasteDate | date: 'mediumDate' }}</td>
+            <td>
+              <button type="button" class="btn-secondary sm" (click)="confirmWaste(row.id)">
+                {{ t('inv.ops.confirm') }}
+              </button>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- GRN -->
+    <div *ngIf="tab() === 'grn'" class="table-wrap">
+      <app-inventory-empty-state
+        *ngIf="!receipts().length && !showForm()"
+        messageKey="inv.ops.empty.grn"
+      ></app-inventory-empty-state>
+      <table *ngIf="receipts().length">
+        <thead>
+          <tr>
+            <th>{{ t('inv.field.code') }}</th>
+            <th>{{ t('inv.ops.col.po') }}</th>
+            <th>{{ t('inv.ops.col.warehouse') }}</th>
+            <th>{{ t('inv.ops.col.lines') }}</th>
+            <th>{{ t('inv.ops.col.date') }}</th>
+            <th>{{ t('common.actions') }}</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let row of receipts()">
+            <td><code>{{ row.grnNumber }}</code></td>
+            <td>{{ row.poNumber || '—' }}</td>
+            <td>{{ row.warehouseNameAr }}</td>
+            <td>{{ row.lineCount }}</td>
+            <td>{{ row.receiptDate | date: 'mediumDate' }}</td>
+            <td>
+              <button type="button" class="btn-secondary sm" (click)="confirmGrn(row.id)">
+                {{ t('inv.ops.confirm') }}
+              </button>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Count -->
+    <div *ngIf="tab() === 'count'" class="table-wrap">
+      <app-inventory-empty-state
+        *ngIf="!counts().length && !showForm()"
+        messageKey="inv.ops.empty.count"
+      ></app-inventory-empty-state>
+      <table *ngIf="counts().length">
+        <thead>
+          <tr>
+            <th>{{ t('inv.field.code') }}</th>
+            <th>{{ t('inv.ops.col.warehouse') }}</th>
+            <th>{{ t('inv.field.status') }}</th>
+            <th>{{ t('inv.ops.col.date') }}</th>
+            <th>{{ t('common.actions') }}</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let row of counts()">
+            <td><code>{{ row.countNumber }}</code></td>
+            <td>{{ row.warehouseId | slice:0:8 }}…</td>
+            <td>{{ row.status }}</td>
+            <td>{{ row.countDate | date: 'mediumDate' }}</td>
+            <td>
+              <button type="button" class="btn-secondary sm" (click)="approveCount(row.id)">
+                {{ t('common.approve') }}
+              </button>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Returns -->
+    <div *ngIf="tab() === 'return'" class="table-wrap">
+      <app-inventory-empty-state
+        *ngIf="!returns().length && !showForm()"
+        messageKey="inv.ops.empty.return"
+      ></app-inventory-empty-state>
+      <table *ngIf="returns().length">
+        <thead>
+          <tr>
+            <th>{{ t('inv.field.code') }}</th>
+            <th>{{ t('inv.ops.col.warehouse') }}</th>
+            <th>{{ t('inv.field.status') }}</th>
+            <th>{{ t('inv.ops.col.date') }}</th>
+            <th>{{ t('common.actions') }}</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let row of returns()">
+            <td><code>{{ row.returnNumber }}</code></td>
+            <td>{{ row.warehouseId | slice:0:8 }}…</td>
+            <td>
+              <span class="badge" [class.on]="row.isCompleted">
+                {{ row.isCompleted ? t('inv.ops.completed') : t('inv.ops.draft') }}
+              </span>
+            </td>
+            <td>{{ row.returnDate | date: 'mediumDate' }}</td>
+            <td>
+              <button *ngIf="!row.isCompleted" type="button" class="btn-secondary sm" (click)="approveReturn(row.id)">
+                {{ t('common.approve') }}
+              </button>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Reservations -->
+    <div *ngIf="tab() === 'reserve'" class="table-wrap">
+      <app-inventory-empty-state
+        *ngIf="!reservations().length && !showForm()"
+        messageKey="inv.ops.empty.reserve"
+      ></app-inventory-empty-state>
+      <table *ngIf="reservations().length">
+        <thead>
+          <tr>
+            <th>{{ t('inv.ops.col.item') }}</th>
+            <th>{{ t('inv.ops.col.warehouse') }}</th>
+            <th>{{ t('inv.ops.col.qty') }}</th>
+            <th>{{ t('inv.ops.col.ref') }}</th>
+            <th>{{ t('inv.field.status') }}</th>
+            <th>{{ t('common.actions') }}</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let row of reservations()">
+            <td>{{ row.inventoryItemNameAr || (row.inventoryItemId | slice:0:8) }}</td>
+            <td>{{ row.warehouseId | slice:0:8 }}…</td>
+            <td>{{ row.reservedQuantity }}</td>
+            <td><code>{{ row.sourceDocument }}</code></td>
+            <td><span class="badge" [class.on]="row.status === 'Active' || row.status === 1">{{ row.status }}</span></td>
+            <td class="actions">
+              <button type="button" class="btn-secondary sm" (click)="releaseReservation(row.id)">{{ t('inv.ops.release') }}</button>
+              <button type="button" class="btn-secondary sm" (click)="expireReservation(row.id)">{{ t('inv.ops.expire') }}</button>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </ng-container>
+
+  <!-- Create panel -->
+  <div class="form-panel" *ngIf="showForm()">
+    <header>
+      <h2>{{ t('inv.ops.new') }}</h2>
+      <button type="button" class="icon-btn" (click)="closeForm()"><mat-icon>close</mat-icon></button>
+    </header>
+    <p class="form-error" *ngIf="formError()">{{ formError() }}</p>
+
+    <div class="form-grid" *ngIf="tab() === 'transfer'">
+      <label>{{ t('inv.field.code') }}
+        <input [(ngModel)]="transferForm.transferNumber" />
+      </label>
+      <label>{{ t('inv.ops.col.from') }}
+        <select [(ngModel)]="transferForm.sourceWarehouseId">
+          <option *ngFor="let w of inventory.warehouses()" [value]="w.id">{{ w.nameAr }}</option>
+        </select>
+      </label>
+      <label>{{ t('inv.ops.col.to') }}
+        <select [(ngModel)]="transferForm.destinationWarehouseId">
+          <option *ngFor="let w of inventory.warehouses()" [value]="w.id">{{ w.nameAr }}</option>
+        </select>
+      </label>
+      <label>{{ t('inv.ops.col.item') }}
+        <select [ngModel]="transferForm.inventoryItemId" (ngModelChange)="onItemPicked($event, 'transfer')">
+          <option *ngFor="let i of inventory.items()" [value]="i.id">{{ i.nameAr }}</option>
+        </select>
+      </label>
+      <label>{{ t('inv.ops.col.qty') }}
+        <input type="number" [(ngModel)]="transferForm.quantity" min="0.001" step="any" />
+      </label>
+      <label>{{ t('inv.field.notes') }}
+        <input [(ngModel)]="transferForm.notes" />
+      </label>
+    </div>
+
+    <div class="form-grid" *ngIf="tab() === 'adjust'">
+      <label>{{ t('inv.field.code') }}
+        <input [(ngModel)]="adjustForm.adjustmentNumber" />
+      </label>
+      <label>{{ t('inv.ops.col.warehouse') }}
+        <select [(ngModel)]="adjustForm.warehouseId">
+          <option *ngFor="let w of inventory.warehouses()" [value]="w.id">{{ w.nameAr }}</option>
+        </select>
+      </label>
+      <label>{{ t('inv.ops.col.item') }}
+        <select [ngModel]="adjustForm.inventoryItemId" (ngModelChange)="onItemPicked($event, 'adjust')">
+          <option *ngFor="let i of inventory.items()" [value]="i.id">{{ i.nameAr }}</option>
+        </select>
+      </label>
+      <label>{{ t('inv.ops.col.qty') }}
+        <input type="number" [(ngModel)]="adjustForm.quantityAdjusted" step="any" />
+      </label>
+      <label>{{ t('inv.ops.col.cost') }}
+        <input type="number" [(ngModel)]="adjustForm.unitCost" min="0" step="any" />
+      </label>
+      <label>{{ t('inv.field.notes') }}
+        <input [(ngModel)]="adjustForm.notes" />
+      </label>
+    </div>
+
+    <div class="form-grid" *ngIf="tab() === 'waste'">
+      <label>{{ t('inv.field.code') }}
+        <input [(ngModel)]="wasteForm.wasteNumber" />
+      </label>
+      <label>{{ t('inv.ops.col.warehouse') }}
+        <select [(ngModel)]="wasteForm.warehouseId">
+          <option *ngFor="let w of inventory.warehouses()" [value]="w.id">{{ w.nameAr }}</option>
+        </select>
+      </label>
+      <label>{{ t('inv.ops.col.item') }}
+        <select [ngModel]="wasteForm.inventoryItemId" (ngModelChange)="onItemPicked($event, 'waste')">
+          <option *ngFor="let i of inventory.items()" [value]="i.id">{{ i.nameAr }}</option>
+        </select>
+      </label>
+      <label>{{ t('inv.ops.col.qty') }}
+        <input type="number" [(ngModel)]="wasteForm.quantity" min="0.001" step="any" />
+      </label>
+      <label>{{ t('inv.ops.col.cost') }}
+        <input type="number" [(ngModel)]="wasteForm.unitCost" min="0" step="any" />
+      </label>
+      <label>{{ t('inv.field.notes') }}
+        <input [(ngModel)]="wasteForm.notes" />
+      </label>
+    </div>
+
+    <div class="form-grid" *ngIf="tab() === 'grn'">
+      <label>{{ t('inv.field.code') }}
+        <input [(ngModel)]="grnForm.grnNumber" />
+      </label>
+      <label>{{ t('inv.ops.col.po') }}
+        <select [ngModel]="grnForm.purchaseOrderId" (ngModelChange)="onPoPicked($event)">
+          <option value="">—</option>
+          <option *ngFor="let p of purchaseOrders()" [value]="p.id">{{ p.poNumber }} — {{ p.supplierNameAr }}</option>
+        </select>
+      </label>
+      <label>{{ t('inv.ops.col.warehouse') }}
+        <select [(ngModel)]="grnForm.warehouseId">
+          <option *ngFor="let w of inventory.warehouses()" [value]="w.id">{{ w.nameAr }}</option>
+        </select>
+      </label>
+      <label>{{ t('inv.ops.col.item') }}
+        <select [ngModel]="grnForm.inventoryItemId" (ngModelChange)="onItemPicked($event, 'grn')">
+          <option *ngFor="let i of inventory.items()" [value]="i.id">{{ i.nameAr }}</option>
+        </select>
+      </label>
+      <label>{{ t('inv.ops.col.qty') }}
+        <input type="number" [(ngModel)]="grnForm.receivedQuantity" min="0.001" step="any" />
+      </label>
+      <label>{{ t('inv.ops.col.cost') }}
+        <input type="number" [(ngModel)]="grnForm.unitCost" min="0" step="any" />
+      </label>
+    </div>
+
+    <div class="form-grid" *ngIf="tab() === 'count'">
+      <label>{{ t('inv.field.code') }}
+        <input [(ngModel)]="countForm.countNumber" />
+      </label>
+      <label>{{ t('inv.ops.col.warehouse') }}
+        <select [(ngModel)]="countForm.warehouseId">
+          <option *ngFor="let w of inventory.warehouses()" [value]="w.id">{{ w.nameAr }}</option>
+        </select>
+      </label>
+      <label>{{ t('inv.ops.col.item') }}
+        <select [ngModel]="countForm.inventoryItemId" (ngModelChange)="onItemPicked($event, 'count')">
+          <option *ngFor="let i of inventory.items()" [value]="i.id">{{ i.nameAr }}</option>
+        </select>
+      </label>
+      <label>{{ t('inv.ops.col.expected') }}
+        <input type="number" [(ngModel)]="countForm.expectedQuantity" min="0" step="any" />
+      </label>
+      <label>{{ t('inv.ops.col.actual') }}
+        <input type="number" [(ngModel)]="countForm.actualQuantity" min="0" step="any" />
+      </label>
+    </div>
+
+    <div class="form-grid" *ngIf="tab() === 'return'">
+      <label>{{ t('inv.field.code') }}
+        <input [(ngModel)]="returnForm.returnNumber" />
+      </label>
+      <label>{{ t('inv.ops.col.supplier') }}
+        <select [(ngModel)]="returnForm.supplierId">
+          <option *ngFor="let s of suppliers()" [value]="s.id">{{ s.nameAr }}</option>
+        </select>
+      </label>
+      <label>{{ t('inv.ops.col.warehouse') }}
+        <select [(ngModel)]="returnForm.warehouseId">
+          <option *ngFor="let w of inventory.warehouses()" [value]="w.id">{{ w.nameAr }}</option>
+        </select>
+      </label>
+      <label>{{ t('inv.ops.col.item') }}
+        <select [ngModel]="returnForm.inventoryItemId" (ngModelChange)="onItemPicked($event, 'return')">
+          <option *ngFor="let i of inventory.items()" [value]="i.id">{{ i.nameAr }}</option>
+        </select>
+      </label>
+      <label>{{ t('inv.ops.col.qty') }}
+        <input type="number" [(ngModel)]="returnForm.returnQuantity" min="0.001" step="any" />
+      </label>
+      <label>{{ t('inv.ops.col.cost') }}
+        <input type="number" [(ngModel)]="returnForm.unitCost" min="0" step="any" />
+      </label>
+      <label>{{ t('inv.field.notes') }}
+        <input [(ngModel)]="returnForm.reason" />
+      </label>
+    </div>
+
+    <div class="form-grid" *ngIf="tab() === 'reserve'">
+      <label>{{ t('inv.ops.col.warehouse') }}
+        <select [(ngModel)]="reserveForm.warehouseId">
+          <option *ngFor="let w of inventory.warehouses()" [value]="w.id">{{ w.nameAr }}</option>
+        </select>
+      </label>
+      <label>{{ t('inv.ops.col.item') }}
+        <select [ngModel]="reserveForm.inventoryItemId" (ngModelChange)="onItemPicked($event, 'reserve')">
+          <option *ngFor="let i of inventory.items()" [value]="i.id">{{ i.nameAr }}</option>
+        </select>
+      </label>
+      <label>{{ t('inv.ops.col.qty') }}
+        <input type="number" [(ngModel)]="reserveForm.reservedQuantity" min="0.001" step="any" />
+      </label>
+      <label>{{ t('inv.ops.col.ref') }}
+        <input [(ngModel)]="reserveForm.sourceDocument" />
+      </label>
+    </div>
+
+    <footer class="form-actions">
+      <button type="button" class="btn-secondary" (click)="closeForm()">{{ t('common.cancel') }}</button>
+      <button type="button" class="btn-primary" [disabled]="saving()" (click)="save()">
+        {{ saving() ? '…' : t('common.save') }}
+      </button>
+    </footer>
+  </div>
+</app-inventory-page-shell>

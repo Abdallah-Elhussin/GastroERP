@@ -1,0 +1,363 @@
+<app-inventory-page-shell
+  [breadcrumbs]="breadcrumbs()"
+  titleKey="pm.title"
+  subtitleKey="pm.subtitle"
+>
+  <div shellActions class="header-actions">
+    <a routerLink="/catalog" class="btn-secondary">
+      <mat-icon>arrow_back</mat-icon>
+      {{ t('catalog.back') }}
+    </a>
+    @if (definition()?.inventoryItemId; as itemId) {
+      <a [routerLink]="['/inventory/items', itemId, 'details']" class="btn-secondary">
+        <mat-icon>visibility</mat-icon>
+        {{ t('pd.openDetails') }}
+      </a>
+    }
+    @if (catalogId() && definition()?.status !== 2) {
+      <button type="button" class="btn-primary" [disabled]="activating()" (click)="activate()">
+        <mat-icon>check_circle</mat-icon>
+        {{ t('pm.activate') }}
+      </button>
+    }
+  </div>
+
+  @if (loading()) {
+    <app-inventory-skeleton [count]="8" />
+  } @else if (error() && !pickingType() && !definition()) {
+    <app-inventory-error-state [message]="error()!" (retry)="ngOnInit()" />
+  } @else if (pickingType()) {
+    <section class="panel">
+      <h2>{{ t('pm.pickType') }}</h2>
+      <p class="hint">{{ t('catalog.typeHint') }}</p>
+      <div class="type-grid">
+        @for (type of catalogService.types(); track type.type) {
+          <button type="button" (click)="startWithType(type)" [disabled]="saving()">
+            <span class="prefix">{{ type.prefix }}</span>
+            <strong>{{ typeLabel(type) }}</strong>
+          </button>
+        }
+      </div>
+      @if (error()) {
+        <p class="banner error">{{ error() }}</p>
+      }
+    </section>
+  } @else {
+    <div class="master-layout">
+      <aside class="tab-rail" role="tablist">
+        @for (tab of visibleTabs(); track tab) {
+          <button
+            type="button"
+            role="tab"
+            [class.active]="activeTab() === tab"
+            (click)="selectTab(tab)"
+          >
+            {{ tabLabel(tab) }}
+          </button>
+        }
+      </aside>
+
+      <section class="panel tab-panel">
+        <header class="panel-head">
+          <div>
+            <h2>{{ tabLabel(activeTab()) }}</h2>
+            @if (definition(); as def) {
+              <div class="meta">
+                <code>{{ def.code }}</code>
+                @if (selectedType(); as type) {
+                  <span>{{ typeLabel(type) }}</span>
+                }
+              </div>
+              <div class="links">
+                @if (def.inventoryItemId) {
+                  <span class="chip on"><mat-icon>inventory_2</mat-icon> InventoryItem</span>
+                }
+                @if (def.recipeId) {
+                  <span class="chip on"><mat-icon>menu_book</mat-icon> Recipe</span>
+                }
+                @if (def.productId) {
+                  <span class="chip on"><mat-icon>storefront</mat-icon> Product</span>
+                }
+              </div>
+            }
+          </div>
+          <button type="button" class="btn-primary" [disabled]="saving()" (click)="saveActiveTab()">
+            {{ saving() ? t('loading.text') : t('common.save') }}
+          </button>
+        </header>
+
+        @if (error()) {
+          <p class="banner error">{{ error() }}</p>
+        }
+        @if (success()) {
+          <p class="banner ok">{{ success() }}</p>
+        }
+
+        <!-- 1 Basic -->
+        @if (activeTab() === 'basic') {
+          <form class="form-grid" [formGroup]="basicForm">
+            <label><span>{{ t('catalog.nameAr') }} *</span><input formControlName="nameAr" /></label>
+            <label><span>{{ t('catalog.nameEn') }}</span><input formControlName="nameEn" /></label>
+            <label><span>{{ t('catalog.sku') }}</span><input formControlName="sku" /></label>
+            <label><span>{{ t('catalog.barcode') }}</span><input formControlName="barcode" /></label>
+            <label><span>{{ t('catalog.brand') }}</span><input formControlName="brand" /></label>
+            <label><span>{{ t('catalog.keywords') }}</span><input formControlName="keywords" /></label>
+            <label class="full"><span>{{ t('catalog.shortDescAr') }}</span><textarea rows="2" formControlName="shortDescriptionAr"></textarea></label>
+            <label class="full"><span>{{ t('catalog.longDescAr') }}</span><textarea rows="3" formControlName="longDescriptionAr"></textarea></label>
+            <label class="full"><span>{{ t('catalog.imageUrl') }}</span><input formControlName="primaryImageUrl" /></label>
+          </form>
+        }
+
+        <!-- 2 Categories -->
+        @if (activeTab() === 'categories') {
+          <form class="form-grid" [formGroup]="categoriesForm">
+            <label>
+              <span>{{ t('inv.nav.categories') }}</span>
+              <select formControlName="inventoryCategoryId">
+                <option value="">{{ t('inv.field.none') }}</option>
+                @for (cat of inventoryService.categories(); track cat.id) {
+                  <option [value]="cat.id">{{ cat.nameAr }}</option>
+                }
+              </select>
+            </label>
+            <label>
+              <span>{{ t('catalog.menuCategory') }}</span>
+              <select formControlName="menuCategoryId">
+                <option value="">{{ t('inv.field.none') }}</option>
+                @for (cat of menuService.categories(); track cat.id) {
+                  <option [value]="cat.id">{{ cat.nameAr }}</option>
+                }
+              </select>
+            </label>
+          </form>
+        }
+
+        <!-- 3 Units -->
+        @if (activeTab() === 'units') {
+          <form class="form-grid" [formGroup]="unitsForm">
+            <label>
+              <span>{{ t('inv.field.baseUnit') }} *</span>
+              <select formControlName="baseUnitId">
+                <option value="">{{ t('inv.field.none') }}</option>
+                @for (u of inventoryService.units(); track u.id) {
+                  <option [value]="u.id">{{ unitLabel(u) }} ({{ u.symbol }})</option>
+                }
+              </select>
+            </label>
+            <label>
+              <span>{{ t('pm.purchaseUnit') }}</span>
+              <select formControlName="defaultPurchaseUnitId">
+                <option value="">{{ t('inv.field.none') }}</option>
+                @for (u of inventoryService.units(); track u.id) {
+                  <option [value]="u.id">{{ unitLabel(u) }}</option>
+                }
+              </select>
+            </label>
+            <label>
+              <span>{{ t('pm.recipeUnit') }}</span>
+              <select formControlName="defaultRecipeUnitId">
+                <option value="">{{ t('inv.field.none') }}</option>
+                @for (u of inventoryService.units(); track u.id) {
+                  <option [value]="u.id">{{ unitLabel(u) }}</option>
+                }
+              </select>
+            </label>
+          </form>
+          <p class="hint">{{ t('pm.unitsHint') }}</p>
+        }
+
+        <!-- 4 Prices -->
+        @if (activeTab() === 'prices') {
+          <form class="form-grid" [formGroup]="pricingForm">
+            <label><span>{{ t('catalog.basePrice') }}</span><input type="number" formControlName="basePrice" min="0" step="0.01" /></label>
+            <label><span>{{ t('catalog.currency') }}</span><input formControlName="currency" /></label>
+          </form>
+          <div class="price-levels">
+            <h3>{{ t('catalog.priceLevels') }}</h3>
+            @for (level of menuService.priceLevels(); track level.id) {
+              <div class="price-level-row">
+                <span>{{ level.nameAr }}</span>
+                <input
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  [value]="priceLevelPrices()[level.id] || ''"
+                  (input)="setPriceLevelPrice(level.id, +$any($event.target).value)"
+                />
+              </div>
+            }
+          </div>
+        }
+
+        <!-- 5 Taxes -->
+        @if (activeTab() === 'taxes') {
+          <form class="form-grid" [formGroup]="taxesForm">
+            <label><span>{{ t('pm.taxGroup') }}</span><input formControlName="taxGroupCode" [placeholder]="t('pm.taxGroupHint')" /></label>
+            <label class="check"><input type="checkbox" formControlName="taxInclusive" /> {{ t('pm.taxInclusive') }}</label>
+            <label class="full"><span>{{ t('inv.field.notes') }}</span><textarea rows="2" formControlName="notes"></textarea></label>
+          </form>
+          <p class="hint">{{ t('pm.extrasHint') }}</p>
+        }
+
+        <!-- 6 Images -->
+        @if (activeTab() === 'images') {
+          <form class="form-grid" [formGroup]="imagesForm">
+            <label class="full"><span>{{ t('catalog.imageUrl') }}</span><input formControlName="primaryImageUrl" /></label>
+            <label class="full"><span>{{ t('pm.mediaUrls') }}</span><textarea rows="5" formControlName="mediaUrls" [placeholder]="t('pm.mediaUrlsHint')"></textarea></label>
+          </form>
+          @if (imagesForm.value.primaryImageUrl) {
+            <div class="preview">
+              <img [src]="imagesForm.value.primaryImageUrl" alt="" />
+            </div>
+          }
+        }
+
+        <!-- 7 Inventory -->
+        @if (activeTab() === 'inventory') {
+          @if (definition()?.inventoryItemId) {
+            <div class="linked-badge"><mat-icon>link</mat-icon> {{ t('catalog.linkedInventoryItem') }}</div>
+          }
+          <form class="form-grid" [formGroup]="inventoryForm">
+            <label><span>{{ t('catalog.minStock') }}</span><input type="number" formControlName="minStock" /></label>
+            <label><span>{{ t('catalog.maxStock') }}</span><input type="number" formControlName="maxStock" /></label>
+            <label><span>{{ t('catalog.safetyStock') }}</span><input type="number" formControlName="safetyStock" /></label>
+            <label><span>{{ t('pm.reorderLevel') }}</span><input type="number" formControlName="reorderLevel" /></label>
+            <label><span>{{ t('pm.reorderQty') }}</span><input type="number" formControlName="reorderQuantity" /></label>
+            <label>
+              <span>{{ t('catalog.costingMethod') }}</span>
+              <select formControlName="costingMethod">
+                @for (m of costingMethods; track m) {
+                  <option [ngValue]="m">{{ costingMethodLabel(m) }}</option>
+                }
+              </select>
+            </label>
+          </form>
+          <div class="checkbox-row" [formGroup]="inventoryForm">
+            <label><input type="checkbox" formControlName="trackBatch" /> {{ t('catalog.trackBatch') }}</label>
+            <label><input type="checkbox" formControlName="trackSerial" /> {{ t('catalog.trackSerial') }}</label>
+            <label><input type="checkbox" formControlName="trackExpiry" /> {{ t('catalog.trackExpiry') }}</label>
+            <label><input type="checkbox" formControlName="allowNegativeStock" /> {{ t('catalog.allowNegativeStock') }}</label>
+          </div>
+          <p class="hint">{{ t('catalog.inventoryHint') }}</p>
+        }
+
+        <!-- 8 Purchase -->
+        @if (activeTab() === 'purchase') {
+          <form class="form-grid" [formGroup]="purchaseForm">
+            <label class="full"><span>{{ t('pm.suppliers') }}</span><input formControlName="supplierIds" [placeholder]="t('pm.suppliersHint')" /></label>
+          </form>
+          <p class="hint">{{ t('pm.purchaseHint') }}</p>
+        }
+
+        <!-- 9 Sales -->
+        @if (activeTab() === 'sales') {
+          @if (definition()?.productId) {
+            <div class="linked-badge"><mat-icon>link</mat-icon> {{ t('catalog.linkedProduct') }}</div>
+          }
+          <form class="form-grid" [formGroup]="salesForm">
+            <label>
+              <span>{{ t('catalog.menuCategory') }}</span>
+              <select formControlName="menuCategoryId">
+                <option value="">{{ t('catalog.selectMenuCategory') }}</option>
+                @for (cat of menuService.categories(); track cat.id) {
+                  <option [value]="cat.id">{{ cat.nameAr }}</option>
+                }
+              </select>
+            </label>
+            <label class="check"><input type="checkbox" formControlName="isAvailableOnPos" /> {{ t('catalog.availableOnPos') }}</label>
+            <label class="check"><input type="checkbox" formControlName="isFeaturedOnPos" /> {{ t('catalog.featuredOnPos') }}</label>
+          </form>
+        }
+
+        <!-- 10 Manufacturing -->
+        @if (activeTab() === 'manufacturing') {
+          @if (definition()?.recipeId) {
+            <div class="linked-badge"><mat-icon>link</mat-icon> {{ t('catalog.linkedRecipe') }}</div>
+          }
+          <form class="form-grid" [formGroup]="recipeForm">
+            <label><span>{{ t('catalog.recipeYield') }}</span><input type="number" formControlName="yield" min="0.01" step="0.01" /></label>
+            <label><span>{{ t('catalog.recipeWaste') }}</span><input type="number" formControlName="wastePercentage" min="0" max="99" /></label>
+            <label><span>{{ t('catalog.recipePrepTime') }}</span><input type="number" formControlName="preparationTime" min="0" /></label>
+            <label class="full"><span>{{ t('catalog.recipeInstructions') }}</span><textarea rows="3" formControlName="instructions"></textarea></label>
+          </form>
+          <div class="ingredients-block">
+            <div class="ingredients-header">
+              <h3>{{ t('catalog.ingredients') }}</h3>
+              <button type="button" class="btn-secondary" (click)="addIngredient()">
+                <mat-icon>add</mat-icon>{{ t('common.add') }}
+              </button>
+            </div>
+            <div class="ingredient-list" [formGroup]="recipeForm">
+              <div formArrayName="ingredients">
+                @for (ctrl of ingredients.controls; track $index; let i = $index) {
+                  <div class="ingredient-row" [formGroupName]="i">
+                    <select formControlName="inventoryItemId">
+                      <option value="">{{ t('inv.nav.items') }}</option>
+                      @for (item of inventoryService.items(); track item.id) {
+                        <option [value]="item.id">{{ itemLabel(item) }}</option>
+                      }
+                    </select>
+                    <select formControlName="unitId">
+                      <option value="">{{ t('inv.nav.units') }}</option>
+                      @for (u of inventoryService.units(); track u.id) {
+                        <option [value]="u.id">{{ unitLabel(u) }}</option>
+                      }
+                    </select>
+                    <input type="number" formControlName="quantity" min="0.01" step="0.01" />
+                    <input type="number" formControlName="wastePercentage" min="0" max="99" />
+                    <button type="button" class="icon-btn" (click)="removeIngredient(i)"><mat-icon>close</mat-icon></button>
+                  </div>
+                }
+              </div>
+            </div>
+          </div>
+          <p class="hint">{{ t('catalog.recipeHint') }}</p>
+        }
+
+        <!-- 11 Restaurant -->
+        @if (activeTab() === 'restaurant') {
+          <form class="form-grid" [formGroup]="restaurantForm">
+            <label><span>{{ t('catalog.prepTime') }}</span><input type="number" formControlName="prepTimeMinutes" min="0" /></label>
+            <label><span>{{ t('catalog.kitchenStation') }}</span><input formControlName="kitchenStationId" [placeholder]="t('pm.kitchenHint')" /></label>
+          </form>
+        }
+
+        <!-- 12 Logistics -->
+        @if (activeTab() === 'logistics') {
+          <form class="form-grid" [formGroup]="logisticsForm">
+            <label><span>{{ t('pm.weightKg') }}</span><input type="number" formControlName="weightKg" min="0" step="0.001" /></label>
+            <label><span>{{ t('pm.lengthCm') }}</span><input type="number" formControlName="lengthCm" min="0" /></label>
+            <label><span>{{ t('pm.widthCm') }}</span><input type="number" formControlName="widthCm" min="0" /></label>
+            <label><span>{{ t('pm.heightCm') }}</span><input type="number" formControlName="heightCm" min="0" /></label>
+            <label><span>{{ t('pm.hsCode') }}</span><input formControlName="hsCode" /></label>
+            <label><span>{{ t('pm.packingUnit') }}</span><input formControlName="packingUnit" /></label>
+          </form>
+          <p class="hint">{{ t('pm.extrasHint') }}</p>
+        }
+
+        <!-- 13 Accounting -->
+        @if (activeTab() === 'accounting') {
+          <form class="form-grid" [formGroup]="accountingForm">
+            <label><span>{{ t('pm.account.inventory') }}</span><input formControlName="inventoryAccountCode" /></label>
+            <label><span>{{ t('pm.account.cogs') }}</span><input formControlName="cogsAccountCode" /></label>
+            <label><span>{{ t('pm.account.sales') }}</span><input formControlName="salesAccountCode" /></label>
+            <label><span>{{ t('pm.account.purchase') }}</span><input formControlName="purchaseAccountCode" /></label>
+          </form>
+          <p class="hint">{{ t('pm.extrasHint') }}</p>
+        }
+
+        <!-- 14 Additional -->
+        @if (activeTab() === 'additional') {
+          <form class="form-grid" [formGroup]="additionalForm">
+            <label class="check"><input type="checkbox" formControlName="isSellable" /> {{ t('pm.isSellable') }}</label>
+            <label class="check"><input type="checkbox" formControlName="isPurchasable" /> {{ t('pm.isPurchasable') }}</label>
+            <label class="check"><input type="checkbox" formControlName="isProducible" /> {{ t('pm.isProducible') }}</label>
+            <label class="full"><span>{{ t('inv.field.notes') }}</span><textarea rows="2" formControlName="notes"></textarea></label>
+            <label class="full"><span>{{ t('pm.customJson') }}</span><textarea rows="4" formControlName="customFieldsJson"></textarea></label>
+            <label class="full"><span>{{ t('pm.variantJson') }}</span><textarea rows="4" formControlName="variantAttributesJson"></textarea></label>
+          </form>
+        }
+      </section>
+    </div>
+  }
+</app-inventory-page-shell>

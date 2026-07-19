@@ -18,7 +18,9 @@ public interface IFiscalPeriodService
 
 public interface IFinancialValidationService
 {
-    Task<Result> ValidateJournalLinesAsync(Guid tenantId, IReadOnlyList<JournalLineDto> lines, CancellationToken ct = default);
+    Task<Result> ValidateJournalLinesAsync(
+        Guid tenantId, IReadOnlyList<JournalLineDto> lines, CancellationToken ct = default,
+        bool requireBalance = true);
     Task<Result> ValidateAccountCanPostAsync(Guid accountId, CancellationToken ct = default);
 }
 
@@ -42,7 +44,7 @@ public interface IAutoPostingService
 public interface IAccountBalanceService
 {
     Task<decimal> GetAccountBalanceAsync(Guid accountId, DateOnly? asOfDate = null, CancellationToken ct = default);
-    Task<IReadOnlyList<GeneralLedgerLineDto>> GetGeneralLedgerAsync(GeneralLedgerFilterDto filter, CancellationToken ct = default);
+    Task<GeneralLedgerResultDto> GetGeneralLedgerAsync(Guid tenantId, GeneralLedgerFilterDto filter, CancellationToken ct = default);
 }
 
 public interface ITrialBalanceService

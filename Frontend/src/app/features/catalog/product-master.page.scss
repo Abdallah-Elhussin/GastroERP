@@ -1,0 +1,151 @@
+.header-actions { display: flex; gap: 0.5rem; flex-wrap: wrap; }
+
+.btn-primary, .btn-secondary {
+  display: inline-flex; align-items: center; gap: 0.35rem;
+  padding: 0.55rem 0.9rem; border-radius: 0.65rem; font-size: 0.75rem; font-weight: 700;
+  text-decoration: none; border: none; cursor: pointer;
+}
+.btn-primary { background: var(--primary-color); color: var(--primary-contrast); }
+.btn-primary:disabled { opacity: 0.55; cursor: not-allowed; }
+.btn-secondary {
+  background: var(--bg-canvas); color: var(--text-primary);
+  border: 1px solid var(--border-color);
+}
+.btn-primary mat-icon, .btn-secondary mat-icon { font-size: 1rem; width: 1rem; height: 1rem; }
+
+.panel {
+  background: var(--bg-surface); border: 1px solid var(--border-color);
+  border-radius: 1rem; padding: 1.1rem;
+}
+.panel h2 { margin: 0 0 0.35rem; font-size: 1rem; font-weight: 800; }
+.hint { margin: 0.75rem 0 0; font-size: 0.7rem; color: var(--text-muted); }
+
+.type-grid {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 0.75rem;
+}
+.type-grid button {
+  text-align: start; border: 1px solid var(--border-color); border-radius: 0.85rem;
+  padding: 0.85rem; background: var(--bg-canvas); cursor: pointer;
+  display: flex; flex-direction: column; gap: 0.25rem; color: var(--text-primary);
+}
+.type-grid button:hover { border-color: var(--accent-color); }
+.prefix { font-size: 0.65rem; font-weight: 800; color: var(--accent-color); }
+
+.master-layout {
+  display: grid;
+  grid-template-columns: 220px minmax(0, 1fr);
+  gap: 1rem;
+  align-items: start;
+}
+
+.tab-rail {
+  display: flex; flex-direction: column; gap: 0.25rem;
+  background: var(--bg-surface); border: 1px solid var(--border-color);
+  border-radius: 1rem; padding: 0.6rem; position: sticky; top: 0.75rem;
+  max-height: calc(100vh - 8rem); overflow: auto;
+}
+.tab-rail button {
+  border: none; background: transparent; text-align: start;
+  padding: 0.55rem 0.7rem; border-radius: 0.55rem; cursor: pointer;
+  font-size: 0.72rem; font-weight: 600; color: var(--text-muted);
+}
+.tab-rail button.active {
+  background: color-mix(in srgb, var(--accent-color) 14%, transparent);
+  color: var(--text-primary);
+}
+
+.panel-head {
+  display: flex; justify-content: space-between; align-items: flex-start;
+  gap: 1rem; flex-wrap: wrap; margin-bottom: 1rem;
+}
+.meta { display: flex; gap: 0.5rem; align-items: center; font-size: 0.7rem; color: var(--text-muted); margin-top: 0.25rem; }
+.meta code {
+  background: var(--bg-canvas); padding: 0.1rem 0.4rem; border-radius: 0.35rem; font-size: 0.68rem;
+}
+.links { display: flex; flex-wrap: wrap; gap: 0.35rem; margin-top: 0.45rem; }
+.chip {
+  display: inline-flex; align-items: center; gap: 0.2rem;
+  font-size: 0.62rem; font-weight: 700; padding: 0.15rem 0.4rem;
+  border-radius: 0.4rem; border: 1px solid var(--border-color); color: var(--text-muted);
+}
+.chip.on { color: #166534; border-color: #86efac; background: #f0fdf4; }
+.chip mat-icon { font-size: 0.85rem; width: 0.85rem; height: 0.85rem; }
+
+.form-grid {
+  display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.85rem;
+}
+.form-grid label { display: flex; flex-direction: column; gap: 0.3rem; }
+.form-grid label.full { grid-column: 1 / -1; }
+.form-grid label.check {
+  flex-direction: row; align-items: center; gap: 0.45rem;
+  font-size: 0.78rem; font-weight: 600; color: var(--text-primary);
+}
+.form-grid span {
+  font-size: 0.65rem; font-weight: 700; text-transform: uppercase; color: var(--text-muted);
+}
+.form-grid input, .form-grid select, .form-grid textarea {
+  padding: 0.55rem 0.7rem; border-radius: 0.55rem;
+  border: 1px solid var(--border-color); background: var(--bg-canvas); color: var(--text-primary);
+  font-size: 0.8rem;
+}
+
+.checkbox-row {
+  display: flex; flex-wrap: wrap; gap: 1rem; margin-top: 1rem; font-size: 0.75rem;
+}
+.checkbox-row label { display: inline-flex; align-items: center; gap: 0.35rem; cursor: pointer; }
+
+.linked-badge {
+  display: inline-flex; align-items: center; gap: 0.35rem; font-size: 0.7rem;
+  padding: 0.4rem 0.65rem; border-radius: 0.5rem; margin-bottom: 0.75rem;
+  background: color-mix(in srgb, var(--success-color-text, #166534) 12%, transparent);
+  color: var(--success-color-text, #166534);
+}
+.linked-badge mat-icon { font-size: 1rem; width: 1rem; height: 1rem; }
+
+.price-levels { margin-top: 1rem; }
+.price-levels h3, .ingredients-header h3 { margin: 0 0 0.65rem; font-size: 0.85rem; }
+.price-level-row {
+  display: flex; justify-content: space-between; align-items: center;
+  gap: 1rem; margin-bottom: 0.5rem; font-size: 0.8rem;
+}
+.price-level-row input {
+  width: 120px; padding: 0.5rem; border-radius: 0.5rem;
+  border: 1px solid var(--border-color); background: var(--bg-canvas);
+}
+
+.ingredients-block { margin-top: 1rem; }
+.ingredients-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem; }
+.ingredient-list { display: flex; flex-direction: column; gap: 0.5rem; }
+.ingredient-row {
+  display: grid; grid-template-columns: 1fr 1fr 80px 80px 36px; gap: 0.5rem; align-items: center;
+}
+.ingredient-row select, .ingredient-row input {
+  padding: 0.5rem; border-radius: 0.5rem; border: 1px solid var(--border-color);
+  background: var(--bg-canvas); font-size: 0.75rem; color: var(--text-primary);
+}
+.icon-btn {
+  border: none; background: transparent; cursor: pointer; color: var(--text-muted);
+  display: inline-flex; align-items: center;
+}
+
+.preview {
+  margin-top: 1rem; border-radius: 0.85rem; overflow: hidden;
+  border: 1px solid var(--border-color); max-width: 280px;
+}
+.preview img { display: block; width: 100%; height: auto; }
+
+.banner {
+  padding: 0.65rem 0.85rem; border-radius: 0.65rem; font-size: 0.75rem; margin: 0 0 0.85rem;
+}
+.banner.error { background: var(--danger-color-bg, #fef2f2); color: var(--danger-color-text, #b91c1c); }
+.banner.ok { background: #f0fdf4; color: #166534; }
+
+@media (max-width: 900px) {
+  .master-layout { grid-template-columns: 1fr; }
+  .tab-rail {
+    position: static; flex-direction: row; flex-wrap: wrap;
+    max-height: none; overflow: visible;
+  }
+  .form-grid { grid-template-columns: 1fr; }
+  .ingredient-row { grid-template-columns: 1fr 1fr; }
+}

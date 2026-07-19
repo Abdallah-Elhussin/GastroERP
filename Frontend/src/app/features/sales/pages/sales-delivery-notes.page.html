@@ -1,0 +1,113 @@
+<section class="page">
+  <header class="hero">
+    <div>
+      <h1>{{ t('bos.dn.title') }}</h1>
+      <p>{{ t('bos.dn.subtitle') }}</p>
+    </div>
+    <div class="actions">
+      <div class="search">
+        <mat-icon>search</mat-icon>
+        <input
+          type="search"
+          [ngModel]="search()"
+          (ngModelChange)="search.set($event)"
+          (keydown.enter)="load()"
+          [placeholder]="t('bos.dn.search')"
+        />
+      </div>
+      <button type="button" class="btn primary" (click)="createNew()">
+        <mat-icon>add</mat-icon>
+        {{ t('bos.dn.new') }}
+      </button>
+      <button type="button" class="btn" [disabled]="!selected()" (click)="edit()">{{ t('bos.dn.open') }}</button>
+      <button
+        type="button"
+        class="btn success"
+        [disabled]="!selected() || statusName(selected()!) !== 'Draft' || acting()"
+        (click)="approve()"
+      >
+        {{ t('bos.dn.approve') }}
+      </button>
+      <button
+        type="button"
+        class="btn info"
+        [disabled]="!selected() || statusName(selected()!) !== 'Approved' || acting()"
+        (click)="post()"
+      >
+        {{ t('bos.dn.post') }}
+      </button>
+      <button
+        type="button"
+        class="btn"
+        [disabled]="!selected() || statusName(selected()!) !== 'Posted' || acting()"
+        (click)="unpost()"
+      >
+        {{ t('bos.dn.unpost') }}
+      </button>
+      <button
+        type="button"
+        class="btn danger"
+        [disabled]="!selected() || statusName(selected()!) === 'Posted' || statusName(selected()!) === 'Cancelled' || acting()"
+        (click)="cancel()"
+      >
+        {{ t('bos.dn.cancel') }}
+      </button>
+    </div>
+  </header>
+
+  <div class="chips">
+    <button type="button" class="chip" [class.on]="statusFilter() === 'all'" (click)="setStatus('all')">
+      {{ t('bos.dn.filter.all') }}
+    </button>
+    <button type="button" class="chip" [class.on]="statusFilter() === 'Draft'" (click)="setStatus('Draft')">
+      {{ t('bos.dn.status.draft') }}
+    </button>
+    <button type="button" class="chip" [class.on]="statusFilter() === 'Approved'" (click)="setStatus('Approved')">
+      {{ t('bos.dn.status.approved') }}
+    </button>
+    <button type="button" class="chip" [class.on]="statusFilter() === 'Posted'" (click)="setStatus('Posted')">
+      {{ t('bos.dn.status.posted') }}
+    </button>
+  </div>
+
+  @if (error()) {
+    <div class="err">{{ error() }}</div>
+  }
+
+  @if (loading()) {
+    <p class="muted">{{ t('common.loading') }}</p>
+  } @else if (rows().length === 0) {
+    <p class="muted">{{ t('bos.dn.empty') }}</p>
+  } @else {
+    <div class="table-card">
+      <table>
+        <thead>
+          <tr>
+            <th>{{ t('bos.dn.col.number') }}</th>
+            <th>{{ t('bos.dn.col.date') }}</th>
+            <th>{{ t('bos.dn.col.order') }}</th>
+            <th>{{ t('bos.dn.col.totalCost') }}</th>
+            <th>{{ t('bos.dn.col.status') }}</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (row of rows(); track row.id) {
+            <tr [class.selected]="selectedId() === row.id" (click)="select(row)">
+              <td>{{ row.deliveryNumber }}</td>
+              <td>{{ row.deliveryDate }}</td>
+              <td>{{ orderNumber(row.orderId) }}</td>
+              <td>{{ money(row.totalCost) }}</td>
+              <td>
+                <span class="badge" [attr.data-status]="statusName(row)">{{ statusLabel(row) }}</span>
+              </td>
+              <td>
+                <a [routerLink]="['/sales/delivery-notes', row.id]">{{ t('bos.dn.open') }}</a>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  }
+</section>

@@ -46,6 +46,16 @@ export interface CatalogAuditEntry {
   actor?: string;
 }
 
+export interface CatalogPriceHistoryEntry {
+  id: string;
+  previousPrice: number;
+  currentPrice: number;
+  currency: string;
+  priceLevelName?: string;
+  effectiveDate: string;
+  actor?: string;
+}
+
 export interface ProductCatalogDefinition {
   id: string;
   tenantId: string;

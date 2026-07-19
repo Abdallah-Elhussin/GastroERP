@@ -164,7 +164,7 @@ public sealed class WorkflowModuleOutcomeService : IWorkflowModuleOutcomeService
 
             case WorkflowIntegrationReferenceTypes.StockTransfer:
                 var transfer = await _context.StockTransfers.FirstAsync(t => t.TenantId == tenantId && t.Id == referenceId, ct);
-                transfer.MarkAsInTransit();
+                transfer.Approve();
                 break;
 
             case WorkflowIntegrationReferenceTypes.Refund:

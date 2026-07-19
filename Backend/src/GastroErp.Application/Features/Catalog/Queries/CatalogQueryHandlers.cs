@@ -109,19 +109,38 @@ public class GetCatalogAuditTimelineQueryHandler(IApplicationDbContext context)
 }
 
 public class GetCatalogPriceHistoryQueryHandler(IApplicationDbContext context)
-    : IRequestHandler<GetCatalogPriceHistoryQuery, Result<List<CatalogAuditEntryDto>>>
+    : IRequestHandler<GetCatalogPriceHistoryQuery, Result<List<CatalogPriceHistoryDto>>>
 {
-    public async Task<Result<List<CatalogAuditEntryDto>>> Handle(GetCatalogPriceHistoryQuery request, CancellationToken cancellationToken)
+    public async Task<Result<List<CatalogPriceHistoryDto>>> Handle(GetCatalogPriceHistoryQuery request, CancellationToken cancellationToken)
     {
         var history = await context.ProductPriceHistories.AsNoTracking()
             .Where(h => h.CatalogDefinitionId == request.Id)
             .OrderByDescending(h => h.CreatedAt)
-            .Select(h => new CatalogAuditEntryDto(
-                "PriceChanged",
-                $"Price changed from {h.OldPrice} to {h.NewPrice} {h.Currency}",
+            .Select(h => new CatalogPriceHistoryDto(
+                h.Id,
+                h.OldPrice,
+                h.NewPrice,
+                h.Currency,
+                h.PriceLevelName,
                 h.CreatedAt.UtcDateTime,
                 h.CreatedBy))
             .ToListAsync(cancellationToken);
-        return Result<List<CatalogAuditEntryDto>>.Success(history);
+        return Result<List<CatalogPriceHistoryDto>>.Success(history);
+    }
+}
+
+public class GetCatalogDefinitionByInventoryItemIdQueryHandler(IApplicationDbContext context)
+    : IRequestHandler<GetCatalogDefinitionByInventoryItemIdQuery, Result<ProductCatalogDefinitionDto>>
+{
+    public async Task<Result<ProductCatalogDefinitionDto>> Handle(
+        GetCatalogDefinitionByInventoryItemIdQuery request,
+        CancellationToken cancellationToken)
+    {
+        var entity = await context.ProductCatalogDefinitions.AsNoTracking()
+            .FirstOrDefaultAsync(c => c.InventoryItemId == request.InventoryItemId, cancellationToken);
+        if (entity == null)
+            return Result<ProductCatalogDefinitionDto>.Failure("CatalogNotFound", "No catalog definition linked to this inventory item.");
+
+        return Result<ProductCatalogDefinitionDto>.Success(await CatalogDefinitionMapper.MapAsync(context, entity, cancellationToken));
     }
 }

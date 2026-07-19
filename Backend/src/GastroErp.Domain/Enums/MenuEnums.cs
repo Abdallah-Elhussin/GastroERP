@@ -15,12 +15,12 @@ public enum MenuType
     Breakfast = 5
 }
 
-/// <summary>قناة البيع المرتبطة بالمنيو أو مستوى السعر</summary>
+/// <summary>قناة البيع المرتبطة بالمنيو أو مستوى السعر أو تسعير المنتج</summary>
 public enum SalesChannel
 {
     /// <summary>جميع القنوات</summary>
     All = 0,
-    /// <summary>الطلب داخل المطعم</summary>
+    /// <summary>الطلب داخل المطعم / Restaurant</summary>
     DineIn = 1,
     /// <summary>الطلب للسفر</summary>
     TakeAway = 2,
@@ -28,6 +28,14 @@ public enum SalesChannel
     Delivery = 3,
     /// <summary>الكيوسك الذاتي</summary>
     Kiosk = 4,
-    /// <summary>التطبيق الإلكتروني</summary>
-    Online = 5
+    /// <summary>التطبيق الإلكتروني (عام)</summary>
+    Online = 5,
+    /// <summary>نقطة البيع</summary>
+    Pos = 6,
+    /// <summary>الموقع الإلكتروني</summary>
+    Website = 7,
+    /// <summary>تطبيق الجوال</summary>
+    MobileApp = 8,
+    /// <summary>التموين / Catering</summary>
+    Catering = 9
 }

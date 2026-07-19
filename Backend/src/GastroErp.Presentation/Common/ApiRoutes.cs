@@ -64,6 +64,24 @@ public static class ApiRoutes
         public const string StockCounts = $"{Root}/inventory/stock-counts";
         public const string PurchaseReturns = $"{Root}/inventory/purchase-returns";
         public const string Reservations = $"{Root}/inventory/reservations";
+        public const string GoodsReceipts = $"{Root}/inventory/goods-receipts";
+        public const string PurchaseInvoices = $"{Root}/inventory/purchase-invoices";
+        public const string GoodsIssues = $"{Root}/inventory/goods-issues";
+        public const string IssueDestinations = $"{Root}/inventory/issue-destinations";
+        public const string OpeningBalances = $"{Root}/inventory/opening-balances";
+        public const string Transfers = $"{Root}/inventory/stock/transfers";
+        public const string StockTransfers = $"{Root}/inventory/stock-transfers";
+        public const string Adjustments = $"{Root}/inventory/stock/adjustments";
+        public const string Waste = $"{Root}/inventory/stock/waste";
+        public const string Dashboard = $"{Root}/inventory/dashboard";
+        public const string Settings = $"{Root}/inventory/settings";
+        public const string Brands = $"{Root}/inventory/brands";
+        public const string Manufacturers = $"{Root}/inventory/manufacturers";
+        public const string Attributes = $"{Root}/inventory/attributes";
+        public const string PriceLists = $"{Root}/inventory/price-lists";
+        public const string ItemTypes = $"{Root}/inventory/item-types";
+        public const string ValuationGroups = $"{Root}/inventory/valuation-groups";
+        public const string ProductInquiry = $"{Root}/inventory/product-inquiry";
     }
 
     public static class Sales
@@ -87,14 +105,52 @@ public static class ApiRoutes
         public const string DeliveryZones = $"{Root}/sales/delivery/zones";
         public const string DeliveryDrivers = $"{Root}/sales/delivery/drivers";
         public const string DeliveryOrders = $"{Root}/sales/delivery/orders";
+        public const string ProductPrices = $"{Root}/sales/product-prices";
+        public const string PriceLists = $"{Root}/sales/price-lists";
+        public const string Dashboard = $"{Root}/sales/dashboard";
+    }
+
+    /// <summary>المبيعات الإدارية — منفصلة عن /sales (POS).</summary>
+    public static class BackOfficeSales
+    {
+        public const string Base = $"{Root}/back-office-sales";
+        public const string Invoices = $"{Base}/invoices";
+        public const string Dashboard = $"{Base}/dashboard";
+        public const string Orders = $"{Base}/orders";
+        public const string Quotations = $"{Base}/quotations";
+        public const string DeliveryNotes = $"{Base}/delivery-notes";
+        public const string Returns = $"{Base}/returns";
+        public const string DebitNotes = $"{Base}/debit-notes";
+        public const string Reports = $"{Base}/reports";
+    }
+
+    public static class Crm
+    {
+        public const string Base = $"{Root}/crm";
+        public const string Customers = $"{Base}/customers";
     }
 
     public static class Finance
     {
         public const string Accounts = $"{Root}/finance/accounts";
+        public const string AccountClassifications = $"{Root}/finance/account-classifications";
+        public const string AccountMainClassifications = $"{Root}/finance/account-main-classifications";
+        public const string AccountingSettings = $"{Root}/finance/accounting-settings";
         public const string Journals = $"{Root}/finance/journals";
         public const string FiscalPeriods = $"{Root}/finance/fiscal-periods";
         public const string CostCenters = $"{Root}/finance/cost-centers";
+        public const string Currencies = $"{Root}/finance/currencies";
+        public const string ExchangeRates = $"{Root}/finance/exchange-rates";
+        public const string DocumentTypes = $"{Root}/finance/document-types";
+        public const string Banks = $"{Root}/finance/banks";
+        public const string CashBoxes = $"{Root}/finance/cash-boxes";
+        public const string TaxRegistrations = $"{Root}/finance/tax-registrations";
+        public const string TaxCodes = $"{Root}/finance/tax-codes";
+        public const string NotificationReasons = $"{Root}/finance/notification-reasons";
+        public const string OpeningBalances = $"{Root}/finance/opening-balances";
+        public const string ReceiptVouchers = $"{Root}/finance/receipt-vouchers";
+        public const string FinancialNotes = $"{Root}/finance/financial-notes";
+        public const string GeneralLedgerSettings = $"{Root}/finance/general-ledger-settings";
         public const string Reports = $"{Root}/finance/reports";
     }
 

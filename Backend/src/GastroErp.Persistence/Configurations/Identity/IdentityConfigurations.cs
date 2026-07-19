@@ -12,10 +12,14 @@ public sealed class AppUserConfiguration : IEntityTypeConfiguration<AppUser>
         builder.HasKey(x => x.Id);
         
         builder.Property(x => x.Email).IsRequired().HasMaxLength(256);
+        builder.Property(x => x.UserName).IsRequired().HasMaxLength(100);
+        builder.Property(x => x.Code).HasMaxLength(50);
         builder.Property(x => x.FirstName).IsRequired().HasMaxLength(100);
         builder.Property(x => x.LastName).IsRequired().HasMaxLength(100);
         builder.Property(x => x.PasswordHash).IsRequired();
         builder.Property(x => x.PhoneNumber).HasMaxLength(20);
+        builder.Property(x => x.MobileNumber).HasMaxLength(20);
+        builder.Property(x => x.IsPosUser).HasDefaultValue(false);
         
         builder.Property(x => x.IsActive).HasDefaultValue(true);
         builder.Property(x => x.IsDeleted).HasDefaultValue(false);
@@ -25,6 +29,7 @@ public sealed class AppUserConfiguration : IEntityTypeConfiguration<AppUser>
         builder.HasQueryFilter(x => !x.IsDeleted);
         
         builder.HasIndex(x => new { x.TenantId, x.Email }).IsUnique().HasFilter("[IsDeleted] = 0");
+        builder.HasIndex(x => new { x.TenantId, x.UserName }).IsUnique().HasFilter("[IsDeleted] = 0");
         builder.HasIndex(x => x.TenantId).HasFilter("[IsDeleted] = 0");
     }
 }

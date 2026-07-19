@@ -1,0 +1,316 @@
+<app-inventory-page-shell
+  [breadcrumbs]="breadcrumbs()"
+  [title]="displayName()"
+  subtitleKey="pd.subtitle"
+>
+  <div shellActions class="header-actions">
+    <a routerLink="/inventory/items" class="btn-secondary">
+      <mat-icon>arrow_back</mat-icon>{{ t('inv.nav.items') }}
+    </a>
+    @if (itemId(); as id) {
+      <a [routerLink]="['/inventory/items', id]" class="btn-secondary">
+        <mat-icon>edit</mat-icon>{{ t('common.edit') }}
+      </a>
+    }
+    @if (catalogDef()?.id; as catalogId) {
+      <a [routerLink]="['/catalog/master', catalogId]" class="btn-primary">
+        <mat-icon>view_quilt</mat-icon>{{ t('inv.nav.productMaster') }}
+      </a>
+    }
+  </div>
+
+  @if (loading()) {
+    <app-inventory-skeleton [count]="8" />
+  } @else if (error()) {
+    <app-inventory-error-state [message]="error()!" (retry)="ngOnInit()" />
+  } @else {
+    <div class="details-layout">
+      <aside class="tab-rail" role="tablist">
+        @for (tab of tabs; track tab.id) {
+          <button type="button" [class.active]="activeTab() === tab.id" (click)="selectTab(tab.id)">
+            <mat-icon>{{ tab.icon }}</mat-icon>
+            {{ t(tab.labelKey) }}
+          </button>
+        }
+      </aside>
+
+      <section class="panel">
+        @if (activeTab() === 'overview') {
+          <div class="overview-grid">
+            <div class="product-card">
+              <div class="media">
+                @if (primaryImage()) {
+                  <img [src]="primaryImage()" [alt]="displayName()" />
+                } @else {
+                  <div class="media-fallback"><mat-icon>inventory_2</mat-icon></div>
+                }
+              </div>
+              <div class="card-body">
+                <h2>{{ displayName() }}</h2>
+                <div class="meta-row">
+                  @if (sku()) { <span><strong>SKU</strong> {{ sku() }}</span> }
+                  @if (item(); as it) {
+                    <span><strong>{{ t('pd.category') }}</strong> {{ it.categoryNameAr }}</span>
+                    <span><strong>{{ t('pd.unit') }}</strong> {{ it.baseUnitNameAr }}</span>
+                  }
+                </div>
+                <div class="chips">
+                  @if (catalogDef()?.inventoryItemId) {
+                    <span class="chip on">InventoryItem</span>
+                  }
+                  @if (catalogDef()?.recipeId) {
+                    <span class="chip on">Recipe</span>
+                  }
+                  @if (catalogDef()?.productId) {
+                    <span class="chip on">Product</span>
+                  }
+                </div>
+                @if (item(); as it) {
+                  <div class="cost-row">
+                    <div>
+                      <span class="label">{{ t('pd.avgCost') }}</span>
+                      <strong>{{ it.averageUnitCost ?? '—' }}</strong>
+                    </div>
+                    <div>
+                      <span class="label">{{ t('pd.lastCost') }}</span>
+                      <strong>{{ it.lastPurchaseUnitCost ?? '—' }}</strong>
+                    </div>
+                    <div>
+                      <span class="label">{{ t('pd.reorder') }}</span>
+                      <strong>{{ it.reorderLevel }} / {{ it.reorderQuantity }}</strong>
+                    </div>
+                  </div>
+                }
+              </div>
+            </div>
+
+            <div class="codes-panel">
+              <h3>{{ t('pd.barcodeQr') }}</h3>
+              @if (barcode()) {
+                <div class="barcode-box">
+                  <div class="barcode-bars" aria-hidden="true"></div>
+                  <code>{{ barcode() }}</code>
+                </div>
+              } @else {
+                <p class="muted">{{ t('pd.noBarcode') }}</p>
+              }
+              @if (qrUrl()) {
+                <div class="qr-box">
+                  <img [src]="qrUrl()" alt="QR" />
+                </div>
+              }
+            </div>
+          </div>
+        }
+
+        @if (activeTab() === 'inventory') {
+          <h2>{{ t('pd.tab.inventory') }}</h2>
+          @if (sectionLoading()) {
+            <app-inventory-skeleton [count]="4" />
+          } @else if (stock().length === 0) {
+            <app-inventory-empty-state icon="warehouse" [title]="t('pd.empty.stock')" [message]="t('pd.empty.stockHint')" />
+          } @else {
+            <div class="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>{{ t('pd.col.warehouse') }}</th>
+                    <th>{{ t('pd.col.onHand') }}</th>
+                    <th>{{ t('pd.col.reserved') }}</th>
+                    <th>{{ t('pd.col.available') }}</th>
+                    <th>{{ t('pd.col.ordered') }}</th>
+                    <th>{{ t('pd.col.incoming') }}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (row of stock(); track row.warehouseId) {
+                    <tr>
+                      <td>
+                        <strong>{{ row.warehouseNameAr }}</strong>
+                        @if (row.warehouseCode) {
+                          <div class="muted">{{ row.warehouseCode }}</div>
+                        }
+                      </td>
+                      <td>{{ row.onHand }}</td>
+                      <td>{{ row.reserved }}</td>
+                      <td [class.neg]="row.available < 0">{{ row.available }}</td>
+                      <td>{{ row.ordered }}</td>
+                      <td>{{ row.incoming }}</td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+          }
+        }
+
+        @if (activeTab() === 'movements') {
+          <h2>{{ t('pd.tab.movements') }}</h2>
+          @if (sectionLoading()) {
+            <app-inventory-skeleton [count]="5" />
+          } @else if (movements().length === 0) {
+            <app-inventory-empty-state icon="swap_horiz" [title]="t('pd.empty.movements')" />
+          } @else {
+            <div class="timeline">
+              @for (m of movements(); track m.movementId) {
+                <article class="timeline-item" [class.out]="m.quantityChange < 0">
+                  <div class="dot"></div>
+                  <div class="body">
+                    <header>
+                      <strong>{{ m.transactionType }}</strong>
+                      <span>{{ formatDate(m.occurredAt) }}</span>
+                    </header>
+                    <p>
+                      {{ m.warehouseNameAr }} ·
+                      {{ m.quantityChange > 0 ? '+' : '' }}{{ m.quantityChange }}
+                      @if (m.referenceDocumentNumber) {
+                        · #{{ m.referenceDocumentNumber }}
+                      }
+                    </p>
+                    <small>{{ t('pd.unitCost') }}: {{ m.unitCost }} · {{ t('pd.totalCost') }}: {{ m.totalCost }}</small>
+                  </div>
+                </article>
+              }
+            </div>
+          }
+        }
+
+        @if (activeTab() === 'purchases') {
+          <h2>{{ t('pd.tab.purchases') }}</h2>
+          @if (sectionLoading()) {
+            <app-inventory-skeleton [count]="4" />
+          } @else if (purchases().length === 0) {
+            <app-inventory-empty-state icon="local_shipping" [title]="t('pd.empty.purchases')" />
+          } @else {
+            <div class="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>{{ t('pd.col.supplier') }}</th>
+                    <th>{{ t('pd.col.qty') }}</th>
+                    <th>{{ t('pd.col.cost') }}</th>
+                    <th>{{ t('pd.col.date') }}</th>
+                    <th>{{ t('inv.field.status') }}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (p of purchases(); track p.purchaseOrderId + p.poNumber + p.orderDate) {
+                    <tr>
+                      <td>
+                        <strong>{{ p.supplierNameAr }}</strong>
+                        <div class="muted">{{ p.poNumber }}</div>
+                      </td>
+                      <td>{{ p.quantity }}</td>
+                      <td>{{ p.unitPrice }}</td>
+                      <td>{{ formatDate(p.orderDate) }}</td>
+                      <td>{{ p.status }}</td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+          }
+        }
+
+        @if (activeTab() === 'sales') {
+          <h2>{{ t('pd.tab.sales') }}</h2>
+          @if (sectionLoading()) {
+            <app-inventory-skeleton [count]="4" />
+          } @else if (sales().length === 0) {
+            <app-inventory-empty-state icon="point_of_sale" [title]="t('pd.empty.sales')" [message]="t('pd.empty.salesHint')" />
+          } @else {
+            <div class="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>{{ t('pd.col.customer') }}</th>
+                    <th>{{ t('pd.col.qty') }}</th>
+                    <th>{{ t('pd.col.price') }}</th>
+                    <th>{{ t('pd.col.date') }}</th>
+                    <th>{{ t('inv.field.status') }}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (s of sales(); track s.salesOrderId + s.orderNumber) {
+                    <tr>
+                      <td>
+                        <strong>{{ s.customerName || '—' }}</strong>
+                        <div class="muted">{{ s.orderNumber }}</div>
+                      </td>
+                      <td>{{ s.quantity }}</td>
+                      <td>{{ s.unitPrice }}</td>
+                      <td>{{ formatDate(s.orderDate) }}</td>
+                      <td>{{ s.status }}</td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+          }
+        }
+
+        @if (activeTab() === 'prices') {
+          <h2>{{ t('pd.tab.prices') }}</h2>
+          @if (!catalogDef()) {
+            <app-inventory-empty-state icon="payments" [title]="t('pd.empty.prices')" [message]="t('pd.empty.pricesHint')" />
+          } @else if (sectionLoading()) {
+            <app-inventory-skeleton [count]="4" />
+          } @else if (prices().length === 0) {
+            <div class="current-price">
+              <span>{{ t('pd.currentPrice') }}</span>
+              <strong>{{ catalogDef()!.basePrice }} {{ catalogDef()!.currency }}</strong>
+            </div>
+            <app-inventory-empty-state icon="history" [title]="t('pd.empty.priceHistory')" />
+          } @else {
+            <div class="current-price">
+              <span>{{ t('pd.currentPrice') }}</span>
+              <strong>{{ catalogDef()!.basePrice }} {{ catalogDef()!.currency }}</strong>
+            </div>
+            <div class="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>{{ t('pd.col.prevPrice') }}</th>
+                    <th>{{ t('pd.col.currPrice') }}</th>
+                    <th>{{ t('pd.col.effective') }}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (p of prices(); track p.id) {
+                    <tr>
+                      <td>{{ p.previousPrice }} {{ p.currency }}</td>
+                      <td>{{ p.currentPrice }} {{ p.currency }}</td>
+                      <td>{{ formatDate(p.effectiveDate) }}</td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+          }
+        }
+
+        @if (activeTab() === 'attachments') {
+          <h2>{{ t('pd.tab.attachments') }}</h2>
+          @if (mediaUrls().length === 0) {
+            <app-inventory-empty-state icon="attach_file" [title]="t('pd.empty.attachments')" />
+          } @else {
+            <div class="gallery">
+              @for (url of mediaUrls(); track url) {
+                <a class="gallery-item" [href]="url" target="_blank" rel="noopener">
+                  @if (isImageUrl(url)) {
+                    <img [src]="url" alt="" />
+                  } @else {
+                    <div class="doc">
+                      <mat-icon>description</mat-icon>
+                      <span>{{ fileName(url) }}</span>
+                    </div>
+                  }
+                </a>
+              }
+            </div>
+          }
+        }
+      </section>
+    </div>
+  }
+</app-inventory-page-shell>

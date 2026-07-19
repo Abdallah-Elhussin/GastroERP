@@ -1,36 +1,34 @@
-import { Component, ChangeDetectionStrategy, inject, signal, computed, OnInit } from '@angular/core';
+import {
+  Component,
+  ChangeDetectionStrategy,
+  inject,
+  signal,
+  computed,
+  OnInit,
+  HostListener
+} from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { RouterLink } from '@angular/router';
-import { MatButtonModule } from '@angular/material/button';
+import { FormsModule } from '@angular/forms';
+import { Router, RouterLink } from '@angular/router';
 import { MatIconModule } from '@angular/material/icon';
 import { LanguageService } from '../../core/services/language.service';
 import { InventoryService } from '../../core/services/inventory.service';
-import { AppTableComponent } from '../../shared/ui/app-table/app-table.component';
 import { InventoryItemDefinition } from '../../core/models/inventory.models';
 
 interface InventoryListRow {
   id: string;
+  code: string;
   name: string;
+  barcode: string;
   category: string;
-  sku: string;
-  kind: string;
   unit: string;
-  unitPrice: number;
-  totalValue: number;
-  status: 'in_stock' | 'low_stock' | 'out_of_stock';
-  imageUrl?: string;
+  isActive: boolean;
 }
 
 @Component({
   selector: 'app-inventory',
   standalone: true,
-  imports: [
-    CommonModule,
-    RouterLink,
-    MatButtonModule,
-    MatIconModule,
-    AppTableComponent
-  ],
+  imports: [CommonModule, FormsModule, RouterLink, MatIconModule],
   templateUrl: './inventory.component.html',
   styleUrl: './inventory.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush
@@ -38,22 +36,13 @@ interface InventoryListRow {
 export class InventoryComponent implements OnInit {
   langService = inject(LanguageService);
   inventoryService = inject(InventoryService);
+  private router = inject(Router);
 
-  searchQuery = signal<string>('');
-
-  columns = computed(() => {
-    this.langService.language();
-    return [
-      { key: 'name', label: this.t('inventory.col.item'), sortable: true },
-      { key: 'category', label: this.t('inventory.col.category'), sortable: true },
-      { key: 'sku', label: this.t('inventory.col.sku'), sortable: true },
-      { key: 'kind', label: this.t('inventory.col.kind'), sortable: true },
-      { key: 'unit', label: this.t('inventory.col.stock'), sortable: false },
-      { key: 'unitPrice', label: this.t('inventory.col.price'), sortable: true },
-      { key: 'status', label: this.t('inventory.col.status'), sortable: true },
-      { key: 'actions', label: this.t('inventory.col.actions'), sortable: false }
-    ];
-  });
+  searchQuery = signal('');
+  categoryFilter = signal('');
+  showDeleted = signal(false);
+  pageSize = signal(50);
+  selectedId = signal<string | null>(null);
 
   tableRows = computed(() => {
     this.langService.language();
@@ -61,57 +50,85 @@ export class InventoryComponent implements OnInit {
   });
 
   filteredItems = computed(() => {
-    const query = this.searchQuery().toLowerCase();
-    return this.tableRows().filter(item =>
-      item.name.toLowerCase().includes(query) ||
-      item.category.toLowerCase().includes(query) ||
-      item.sku.toLowerCase().includes(query)
-    );
+    const q = this.searchQuery().toLowerCase().trim();
+    const cat = this.categoryFilter();
+    return this.tableRows().filter(row => {
+      if (cat && row.category !== cat) return false;
+      if (!this.showDeleted() && !row.isActive) return false;
+      if (!q) return true;
+      return (
+        row.name.toLowerCase().includes(q) ||
+        row.code.toLowerCase().includes(q) ||
+        row.barcode.toLowerCase().includes(q) ||
+        row.category.toLowerCase().includes(q)
+      );
+    });
   });
 
-  totalValue = computed(() =>
-    this.tableRows().reduce((sum, row) => sum + row.totalValue, 0)
-  );
+  pagedItems = computed(() => this.filteredItems().slice(0, this.pageSize()));
 
-  lowStockCount = computed(() =>
-    this.tableRows().filter(row => row.status === 'low_stock').length
-  );
+  categoryFilterNames = computed(() => {
+    const names = new Set(this.tableRows().map(r => r.category).filter(Boolean));
+    return Array.from(names).sort((a, b) => a.localeCompare(b, 'ar'));
+  });
 
   ngOnInit(): void {
+    this.inventoryService.loadMasterData();
     this.inventoryService.loadItems();
   }
 
-  onSearch(value: string): void {
-    this.searchQuery.set(value);
-    this.inventoryService.loadItems(value);
+  @HostListener('document:keydown', ['$event'])
+  onKeydown(event: KeyboardEvent): void {
+    const tag = (event.target as HTMLElement)?.tagName?.toLowerCase();
+    const typing = tag === 'input' || tag === 'textarea' || tag === 'select';
+    if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'n' && !typing) {
+      event.preventDefault();
+      this.openNew();
+    }
   }
 
-  exportCSV(): void {
-    alert(this.t('inventory.exporting'));
+  openNew(): void {
+    void this.router.navigate(['/inventory/items/new']);
+  }
+
+  selectRow(id: string): void {
+    this.selectedId.set(id === this.selectedId() ? null : id);
+  }
+
+  editSelected(): void {
+    const id = this.selectedId();
+    if (!id) return;
+    void this.router.navigate(['/inventory/items', id]);
+  }
+
+  refresh(): void {
+    this.inventoryService.loadItems(this.searchQuery() || undefined);
+  }
+
+  onSearch(): void {
+    this.inventoryService.loadItems(this.searchQuery() || undefined);
+  }
+
+  goCategories(): void {
+    void this.router.navigate(['/inventory/categories']);
+  }
+
+  goPricing(): void {
+    void this.router.navigate(['/inventory/prices']);
   }
 
   private toRow(item: InventoryItemDefinition): InventoryListRow {
     const name = this.langService.language() === 'ar'
       ? item.nameAr
       : (item.nameEn || item.nameAr);
-    const unitPrice = item.averageUnitCost ?? item.lastPurchaseUnitCost ?? 0;
-    const status = item.reorderLevel > 0 && unitPrice === 0
-      ? 'low_stock'
-      : 'in_stock';
-
     return {
       id: item.id,
+      code: item.sku || '—',
       name,
+      barcode: item.barcode || '—',
       category: item.categoryNameAr,
-      sku: [item.sku, item.barcode].filter(Boolean).join(' · ') || '—',
-      kind: item.itemKind === 'manufactured'
-        ? this.t('inventory.kind.manufactured')
-        : this.t('inventory.kind.raw'),
       unit: item.baseUnitNameAr,
-      unitPrice,
-      totalValue: unitPrice,
-      status,
-      imageUrl: item.imageUrl
+      isActive: item.isActive
     };
   }
 

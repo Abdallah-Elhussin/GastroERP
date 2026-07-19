@@ -200,6 +200,7 @@ public sealed class RestaurantOnboardingService : IRestaurantOnboardingService
         var adminUser = new AppUser(
             tenant.Id,
             email,
+            email,
             _passwordHasher.HashPassword(wizard.Admin.Password),
             firstName,
             lastName,
@@ -280,18 +281,25 @@ public sealed class RestaurantOnboardingService : IRestaurantOnboardingService
             return;
         }
 
-        var warehouses = new (string NameAr, string NameEn, string Code)[]
+        var warehouses = new (string NameAr, string NameEn, string Code, WarehouseType Type, string TypeCode, bool IsDefault)[]
         {
-            ("المستودع الرئيسي", "Main Warehouse", "WH-001"),
-            ("مستودع المطبخ", "Kitchen Warehouse", "WH-KIT"),
-            ("مخزن جاف", "Dry Storage", "WH-DRY"),
-            ("مخزن تبريد", "Cold Storage", "WH-COLD"),
-            ("الفريزر", "Freezer", "WH-FRZ")
+            ("المستودع الرئيسي", "Main Warehouse", "WH-001", WarehouseType.Main, "MAIN", true),
+            ("مستودع المطبخ", "Kitchen Warehouse", "WH-KIT", WarehouseType.Kitchen, "KITCHEN", false),
+            ("مخزن جاف", "Dry Storage", "WH-DRY", WarehouseType.DryStore, "DRYSTORE", false),
+            ("مخزن تبريد", "Cold Storage", "WH-COLD", WarehouseType.Chiller, "CHILLER", false),
+            ("الفريزر", "Freezer", "WH-FRZ", WarehouseType.Freezer, "FREEZER", false)
         };
 
-        foreach (var (nameAr, nameEn, code) in warehouses)
+        var typeIds = await _context.WarehouseTypeDefinitions
+            .Where(t => t.TenantId == tenantId)
+            .ToDictionaryAsync(t => t.Code, t => t.Id, StringComparer.OrdinalIgnoreCase, cancellationToken);
+
+        foreach (var (nameAr, nameEn, code, type, typeCode, isDefault) in warehouses)
         {
-            _context.Warehouses.Add(new Warehouse(tenantId, nameAr, nameEn, code, branchId));
+            typeIds.TryGetValue(typeCode, out var typeId);
+            var wh = new Warehouse(tenantId, nameAr, nameEn, code, branchId, type, warehouseTypeId: typeId == Guid.Empty ? null : typeId);
+            if (isDefault) wh.MarkAsDefault(true);
+            _context.Warehouses.Add(wh);
         }
 
         await _context.SaveChangesAsync(cancellationToken);

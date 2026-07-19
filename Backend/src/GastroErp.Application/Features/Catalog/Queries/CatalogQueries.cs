@@ -17,9 +17,11 @@ public record GetProductCatalogDefinitionsQuery(
 
 public record GetProductCatalogDefinitionByIdQuery(Guid Id) : IRequest<Result<ProductCatalogDefinitionDto>>;
 
+public record GetCatalogDefinitionByInventoryItemIdQuery(Guid InventoryItemId) : IRequest<Result<ProductCatalogDefinitionDto>>;
+
 public record ExportCatalogDefinitionsQuery(Guid TenantId, ProductCatalogType? CatalogType = null, string? SearchTerm = null)
     : IRequest<Result<byte[]> >;
 
 public record GetCatalogAuditTimelineQuery(Guid Id) : IRequest<Result<List<CatalogAuditEntryDto>> >;
 
-public record GetCatalogPriceHistoryQuery(Guid Id) : IRequest<Result<List<CatalogAuditEntryDto>> >;
+public record GetCatalogPriceHistoryQuery(Guid Id) : IRequest<Result<List<CatalogPriceHistoryDto>> >;

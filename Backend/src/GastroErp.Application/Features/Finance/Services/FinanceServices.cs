@@ -43,7 +43,8 @@ public sealed class FiscalPeriodService : IFiscalPeriodService
 
         if (period is not null) return period;
 
-        period = FiscalPeriod.Create(tenantId, year, $"FY {year}", new DateOnly(year, 1, 1), new DateOnly(year, 12, 31));
+        period = FiscalPeriod.Create(tenantId, year, 1);
+        period.GenerateMonthlyDetails();
         _context.FiscalPeriods.Add(period);
         return period;
     }
@@ -63,14 +64,19 @@ public sealed class FinancialValidationService : IFinancialValidationService
     private readonly IApplicationDbContext _context;
     public FinancialValidationService(IApplicationDbContext context) => _context = context;
 
-    public async Task<Result> ValidateJournalLinesAsync(Guid tenantId, IReadOnlyList<JournalLineDto> lines, CancellationToken ct = default)
+    public async Task<Result> ValidateJournalLinesAsync(
+        Guid tenantId, IReadOnlyList<JournalLineDto> lines, CancellationToken ct = default,
+        bool requireBalance = true)
     {
         if (lines.Count == 0) return Result.Failure(ErrorCodes.JournalHasNoLines, "Journal must have at least one line.");
 
-        var totalDebit = lines.Sum(l => l.Debit);
-        var totalCredit = lines.Sum(l => l.Credit);
-        if (totalDebit != totalCredit)
-            return Result.Failure(ErrorCodes.JournalNotBalanced, "Debit and credit totals must be equal.");
+        if (requireBalance)
+        {
+            var totalDebit = lines.Sum(l => l.Debit);
+            var totalCredit = lines.Sum(l => l.Credit);
+            if (totalDebit != totalCredit)
+                return Result.Failure(ErrorCodes.JournalNotBalanced, "Debit and credit totals must be equal.");
+        }
 
         var accountIds = lines.Select(l => l.ChartOfAccountId).Distinct().ToList();
         var accounts = await _context.ChartOfAccounts
@@ -118,22 +124,31 @@ public sealed class JournalPostingService : IJournalPostingService
     {
         if (dto.Lines is null || dto.Lines.Count == 0)
             return Result<JournalEntry>.Failure(ErrorCodes.JournalHasNoLines, "Journal must have lines.");
+        if (dto.SourceModule == PostingSource.Manual && dto.Lines.Count < 2)
+            return Result<JournalEntry>.Failure(ErrorCodes.JournalMinTwoLines, "Manual journal requires at least two lines.");
 
-        var validation = await _validationService.ValidateJournalLinesAsync(tenantId, dto.Lines, ct);
+        var validation = await _validationService.ValidateJournalLinesAsync(tenantId, dto.Lines, ct, requireBalance: false);
         if (!validation.IsSuccess) return Result<JournalEntry>.Failure(validation.ErrorCode!, validation.ErrorMessage!);
 
-        var period = await _fiscalPeriodService.GetOrEnsureOpenPeriodAsync(tenantId, dto.PostingDate, ct);
-        var periodCheck = await _fiscalPeriodService.ValidatePeriodAcceptsPostingsAsync(period.Id, ct);
-        if (!periodCheck.IsSuccess) return Result<JournalEntry>.Failure(periodCheck.ErrorCode!, periodCheck.ErrorMessage!);
+        var periodResult = await ResolvePeriodAsync(tenantId, dto.PostingDate, dto.FiscalPeriodId, ct);
+        if (!periodResult.IsSuccess)
+            return Result<JournalEntry>.Failure(periodResult.ErrorCode!, periodResult.ErrorMessage!);
+        var period = periodResult.Data!;
 
+        var voucherType = ResolveVoucherType(dto);
         var entryNumber = await _numberGenerator.GenerateAsync(tenantId, ct);
         var journal = JournalEntry.CreateDraft(
             tenantId, entryNumber, dto.PostingDate, period.Id, dto.Description,
-            dto.SourceModule, dto.CompanyId, dto.BranchId, dto.Reference, dto.SourceDocumentId);
+            dto.SourceModule, dto.CompanyId, dto.BranchId, dto.Reference, dto.SourceDocumentId,
+            voucherType: voucherType);
 
         var lineNum = 1;
         foreach (var line in dto.Lines)
-            journal.AddLine(line.ChartOfAccountId, line.Debit, line.Credit, "SAR", lineNum++, line.CostCenterId, line.Description);
+            journal.AddLine(
+                line.ChartOfAccountId, line.Debit, line.Credit,
+                string.IsNullOrWhiteSpace(line.Currency) ? "SAR" : line.Currency,
+                lineNum++, line.CostCenterId, line.Description,
+                line.ExchangeRate <= 0 ? 1m : line.ExchangeRate, line.AnalyticalAccountId);
 
         _context.JournalEntries.Add(journal);
         return Result<JournalEntry>.Success(journal);
@@ -145,23 +160,33 @@ public sealed class JournalPostingService : IJournalPostingService
         if (dto.Lines is null || dto.Lines.Count == 0)
             return Result<JournalEntry>.Failure(ErrorCodes.JournalHasNoLines, "Journal must have lines.");
 
-        var validation = await _validationService.ValidateJournalLinesAsync(tenantId, dto.Lines, ct);
+        var validation = await _validationService.ValidateJournalLinesAsync(tenantId, dto.Lines, ct, requireBalance: true);
         if (!validation.IsSuccess) return Result<JournalEntry>.Failure(validation.ErrorCode!, validation.ErrorMessage!);
 
-        var period = await _fiscalPeriodService.GetOrEnsureOpenPeriodAsync(tenantId, dto.PostingDate, ct);
-        var periodCheck = await _fiscalPeriodService.ValidatePeriodAcceptsPostingsAsync(period.Id, ct);
-        if (!periodCheck.IsSuccess) return Result<JournalEntry>.Failure(periodCheck.ErrorCode!, periodCheck.ErrorMessage!);
+        var periodResult = await ResolvePeriodAsync(tenantId, dto.PostingDate, dto.FiscalPeriodId, ct);
+        if (!periodResult.IsSuccess)
+            return Result<JournalEntry>.Failure(periodResult.ErrorCode!, periodResult.ErrorMessage!);
+        var period = periodResult.Data!;
 
+        var voucherType = ResolveVoucherType(dto);
         var entryNumber = await _numberGenerator.GenerateAsync(tenantId, ct);
         var journal = JournalEntry.CreateDraft(
             tenantId, entryNumber, dto.PostingDate, period.Id, dto.Description,
-            dto.SourceModule, dto.CompanyId, dto.BranchId, dto.Reference, dto.SourceDocumentId);
+            dto.SourceModule, dto.CompanyId, dto.BranchId, dto.Reference, dto.SourceDocumentId,
+            voucherType: voucherType);
 
         var lineNum = 1;
         foreach (var line in dto.Lines)
-            journal.AddLine(line.ChartOfAccountId, line.Debit, line.Credit, "SAR", lineNum++, line.CostCenterId, line.Description);
+            journal.AddLine(
+                line.ChartOfAccountId, line.Debit, line.Credit,
+                string.IsNullOrWhiteSpace(line.Currency) ? "SAR" : line.Currency,
+                lineNum++, line.CostCenterId, line.Description,
+                line.ExchangeRate <= 0 ? 1m : line.ExchangeRate, line.AnalyticalAccountId);
 
-        journal.Post(userId);
+        try { journal.Post(userId); }
+        catch (Domain.Common.Exceptions.BusinessException ex)
+        { return Result<JournalEntry>.Failure(ex.ErrorCode, ex.Message); }
+
         _context.JournalEntries.Add(journal);
         return Result<JournalEntry>.Success(journal);
     }
@@ -200,11 +225,14 @@ public sealed class JournalPostingService : IJournalPostingService
         var reversal = JournalEntry.CreateDraft(
             original.TenantId, entryNumber, DateOnly.FromDateTime(DateTime.UtcNow),
             original.FiscalPeriodId, $"Reversal of {original.EntryNumber}", PostingSource.Manual,
-            original.CompanyId, original.BranchId, original.EntryNumber, original.SourceDocumentId, original.Id);
+            original.CompanyId, original.BranchId, original.EntryNumber, original.SourceDocumentId, original.Id,
+            JournalVoucherType.Reversal);
 
         var lineNum = 1;
         foreach (var line in original.Lines)
-            reversal.AddLine(line.ChartOfAccountId, line.Credit, line.Debit, line.Currency, lineNum++, line.CostCenterId, line.Description);
+            reversal.AddLine(
+                line.ChartOfAccountId, line.Credit, line.Debit, line.Currency, lineNum++,
+                line.CostCenterId, line.Description, line.ExchangeRate, line.AnalyticalAccountId);
 
         reversal.Post(userId);
         original.MarkReversed(reversal.Id);
@@ -212,6 +240,38 @@ public sealed class JournalPostingService : IJournalPostingService
         _context.JournalEntries.Add(reversal);
         _context.JournalEntries.Update(original);
         return Result<JournalEntry>.Success(reversal);
+    }
+
+    private static JournalVoucherType ResolveVoucherType(CreateJournalDto dto)
+    {
+        if (dto.VoucherType.HasValue) return dto.VoucherType.Value;
+        return dto.SourceModule switch
+        {
+            PostingSource.OpeningBalance => JournalVoucherType.Opening,
+            _ => JournalVoucherType.Ordinary
+        };
+    }
+
+    private async Task<Result<FiscalPeriod>> ResolvePeriodAsync(
+        Guid tenantId, DateOnly postingDate, Guid? fiscalPeriodId, CancellationToken ct)
+    {
+        if (fiscalPeriodId.HasValue)
+        {
+            var existing = await _context.FiscalPeriods
+                .FirstOrDefaultAsync(p => p.Id == fiscalPeriodId.Value && p.TenantId == tenantId, ct);
+            if (existing is null)
+                return Result<FiscalPeriod>.Failure(ErrorCodes.FiscalPeriodNotFound, "Fiscal period not found.");
+            var check = await _fiscalPeriodService.ValidatePeriodAcceptsPostingsAsync(existing.Id, ct);
+            if (!check.IsSuccess)
+                return Result<FiscalPeriod>.Failure(check.ErrorCode!, check.ErrorMessage!);
+            return Result<FiscalPeriod>.Success(existing);
+        }
+
+        var period = await _fiscalPeriodService.GetOrEnsureOpenPeriodAsync(tenantId, postingDate, ct);
+        var periodCheck = await _fiscalPeriodService.ValidatePeriodAcceptsPostingsAsync(period.Id, ct);
+        if (!periodCheck.IsSuccess)
+            return Result<FiscalPeriod>.Failure(periodCheck.ErrorCode!, periodCheck.ErrorMessage!);
+        return Result<FiscalPeriod>.Success(period);
     }
 }
 
@@ -245,7 +305,12 @@ public sealed class AutoPostingService : IAutoPostingService
         if (grandTotal <= 0) return Result.Success();
 
         var accounts = await EnsureStandardAccountsAsync(order.TenantId, ct);
-        if (accounts is null) return Result.Failure(ErrorCodes.StandardAccountsNotConfigured, "Standard accounts not configured.");
+        if (accounts is null)
+        {
+            if (await IsAutoPostDisabledAsync(order.TenantId, sales: true, ct: ct))
+                return Result.Success();
+            return Result.Failure(ErrorCodes.StandardAccountsNotConfigured, "Standard accounts not configured.");
+        }
 
         var postingDate = DateOnly.FromDateTime((order.CompletedAt ?? DateTimeOffset.UtcNow).UtcDateTime);
         var dto = new CreateJournalDto(
@@ -283,7 +348,12 @@ public sealed class AutoPostingService : IAutoPostingService
         if (amount <= 0) return Result.Success();
 
         var accounts = await EnsureStandardAccountsAsync(payment.TenantId, ct);
-        if (accounts is null) return Result.Failure(ErrorCodes.StandardAccountsNotConfigured, "Standard accounts not configured.");
+        if (accounts is null)
+        {
+            if (await IsAutoPostDisabledAsync(payment.TenantId, sales: true, ct: ct))
+                return Result.Success();
+            return Result.Failure(ErrorCodes.StandardAccountsNotConfigured, "Standard accounts not configured.");
+        }
 
         var postingDate = DateOnly.FromDateTime(payment.ProcessedAt.UtcDateTime);
         var dto = new CreateJournalDto(
@@ -315,7 +385,12 @@ public sealed class AutoPostingService : IAutoPostingService
         if (exists) return Result.Success();
 
         var accounts = await EnsurePayrollAccountsAsync(run.TenantId, ct);
-        if (accounts is null) return Result.Failure(ErrorCodes.StandardAccountsNotConfigured, "Payroll accounts not configured.");
+        if (accounts is null)
+        {
+            if (await IsAutoPostDisabledAsync(run.TenantId, payroll: true, ct: ct))
+                return Result.Success();
+            return Result.Failure(ErrorCodes.StandardAccountsNotConfigured, "Payroll accounts not configured.");
+        }
 
         var postingDate = new DateOnly(run.Year, run.Month, DateTime.DaysInMonth(run.Year, run.Month));
         var dto = new CreateJournalDto(
@@ -336,8 +411,29 @@ public sealed class AutoPostingService : IAutoPostingService
         return Result.Success();
     }
 
+    private async Task<bool> IsAutoPostDisabledAsync(
+        Guid tenantId, bool sales = false, bool payroll = false, CancellationToken ct = default)
+    {
+        var settings = await _context.AccountingSettings.AsNoTracking()
+            .FirstOrDefaultAsync(s => s.TenantId == tenantId && s.CompanyId == null, ct);
+        if (settings is null) return false;
+        if (sales && !settings.AutoPostSales) return true;
+        if (payroll && !settings.AutoPostPayroll) return true;
+        return false;
+    }
+
     private async Task<PayrollAccounts?> EnsurePayrollAccountsAsync(Guid tenantId, CancellationToken ct)
     {
+        var settings = await _context.AccountingSettings
+            .AsNoTracking()
+            .FirstOrDefaultAsync(s => s.TenantId == tenantId && s.CompanyId == null, ct);
+
+        if (settings is { AutoPostPayroll: false })
+            return null; // caller treats as skip when flagged separately
+
+        if (settings?.PayrollExpenseAccountId is Guid expId && settings.PayrollLiabilityAccountId is Guid payId)
+            return new PayrollAccounts(expId, payId);
+
         var accounts = await _context.ChartOfAccounts
             .Where(a => a.TenantId == tenantId && a.IsActive)
             .ToListAsync(ct);
@@ -347,12 +443,12 @@ public sealed class AutoPostingService : IAutoPostingService
 
         if (expense is null)
         {
-            expense = ChartOfAccount.Create(tenantId, StandardAccountCodes.SalaryExpense, "مصروف الرواتب", AccountType.Expense, AccountCategory.OperatingExpense);
+            expense = ChartOfAccount.Create(tenantId, StandardAccountCodes.SalaryExpense, "مصروف الرواتب", AccountType.Expense, AccountCategory.OperatingExpense, isSystemAccount: true);
             _context.ChartOfAccounts.Add(expense);
         }
         if (payable is null)
         {
-            payable = ChartOfAccount.Create(tenantId, StandardAccountCodes.SalariesPayable, "رواتب مستحقة", AccountType.Liability, AccountCategory.CurrentLiability);
+            payable = ChartOfAccount.Create(tenantId, StandardAccountCodes.SalariesPayable, "رواتب مستحقة", AccountType.Liability, AccountCategory.CurrentLiability, isSystemAccount: true);
             _context.ChartOfAccounts.Add(payable);
         }
 
@@ -362,6 +458,19 @@ public sealed class AutoPostingService : IAutoPostingService
 
     private async Task<StandardAccounts?> EnsureStandardAccountsAsync(Guid tenantId, CancellationToken ct)
     {
+        var settings = await _context.AccountingSettings
+            .AsNoTracking()
+            .FirstOrDefaultAsync(s => s.TenantId == tenantId && s.CompanyId == null, ct);
+
+        if (settings is { AutoPostSales: false })
+            return null;
+
+        if (settings?.CashAccountId is Guid cashId &&
+            settings.AccountsReceivableAccountId is Guid arId &&
+            settings.VatOutputAccountId is Guid vatId &&
+            settings.SalesRevenueAccountId is Guid revId)
+            return new StandardAccounts(cashId, arId, vatId, revId);
+
         var accounts = await _context.ChartOfAccounts
             .Where(a => a.TenantId == tenantId && a.IsActive)
             .ToListAsync(ct);
@@ -373,22 +482,22 @@ public sealed class AutoPostingService : IAutoPostingService
 
         if (cash is null)
         {
-            cash = ChartOfAccount.Create(tenantId, StandardAccountCodes.Cash, "النقدية", AccountType.Asset, AccountCategory.CurrentAsset);
+            cash = ChartOfAccount.Create(tenantId, StandardAccountCodes.Cash, "النقدية", AccountType.Asset, AccountCategory.CurrentAsset, isSystemAccount: true);
             _context.ChartOfAccounts.Add(cash);
         }
         if (ar is null)
         {
-            ar = ChartOfAccount.Create(tenantId, StandardAccountCodes.AccountsReceivable, "ذمم مدينة", AccountType.Asset, AccountCategory.CurrentAsset);
+            ar = ChartOfAccount.Create(tenantId, StandardAccountCodes.AccountsReceivable, "ذمم مدينة", AccountType.Asset, AccountCategory.CurrentAsset, isSystemAccount: true);
             _context.ChartOfAccounts.Add(ar);
         }
         if (vat is null)
         {
-            vat = ChartOfAccount.Create(tenantId, StandardAccountCodes.VatPayable, "ضريبة القيمة المضافة", AccountType.Liability, AccountCategory.CurrentLiability);
+            vat = ChartOfAccount.Create(tenantId, StandardAccountCodes.VatPayable, "ضريبة القيمة المضافة", AccountType.Liability, AccountCategory.CurrentLiability, isSystemAccount: true);
             _context.ChartOfAccounts.Add(vat);
         }
         if (revenue is null)
         {
-            revenue = ChartOfAccount.Create(tenantId, StandardAccountCodes.SalesRevenue, "إيرادات المبيعات", AccountType.Revenue, AccountCategory.OperatingRevenue);
+            revenue = ChartOfAccount.Create(tenantId, StandardAccountCodes.SalesRevenue, "إيرادات المبيعات", AccountType.Revenue, AccountCategory.OperatingRevenue, isSystemAccount: true);
             _context.ChartOfAccounts.Add(revenue);
         }
 
@@ -423,26 +532,213 @@ public sealed class AccountBalanceService : IAccountBalanceService
         return (totals?.Debit ?? 0) - (totals?.Credit ?? 0);
     }
 
-    public async Task<IReadOnlyList<GeneralLedgerLineDto>> GetGeneralLedgerAsync(GeneralLedgerFilterDto filter, CancellationToken ct = default)
+    public async Task<GeneralLedgerResultDto> GetGeneralLedgerAsync(Guid tenantId, GeneralLedgerFilterDto filter, CancellationToken ct = default)
     {
-        var query = _context.JournalEntryLines.AsNoTracking()
-            .Where(l => l.ChartOfAccountId == filter.AccountId)
-            .Join(_context.JournalEntries.AsNoTracking().Where(j => j.Status == JournalStatus.Posted),
-                l => l.JournalEntryId, j => j.Id, (l, j) => new { l, j });
+        var pageSize = Math.Clamp(filter.PageSize, 1, 500);
+        var page = Math.Max(filter.Page, 1);
+        var skip = (page - 1) * pageSize;
 
-        if (filter.FromDate.HasValue) query = query.Where(x => x.j.PostingDate >= filter.FromDate.Value);
-        if (filter.ToDate.HasValue) query = query.Where(x => x.j.PostingDate <= filter.ToDate.Value);
+        List<Guid>? accountIds = null;
+        if (filter.AccountId.HasValue)
+            accountIds = [filter.AccountId.Value];
+        else if (filter.ParentAccountId.HasValue || filter.AccountType.HasValue)
+            accountIds = await ResolveAccountIdsAsync(tenantId, filter, ct);
 
-        var rows = await query.OrderBy(x => x.j.PostingDate).ThenBy(x => x.j.EntryNumber)
-            .Select(x => new { x.j.PostingDate, x.j.EntryNumber, x.j.Description, x.l.Debit, x.l.Credit })
+        var posted = _context.JournalEntries.AsNoTracking()
+            .Where(j => j.TenantId == tenantId && j.Status == JournalStatus.Posted);
+
+        if (filter.CompanyId.HasValue)
+            posted = posted.Where(j => j.CompanyId == filter.CompanyId);
+        if (filter.BranchId.HasValue)
+            posted = posted.Where(j => j.BranchId == filter.BranchId);
+        if (filter.FiscalPeriodId.HasValue)
+            posted = posted.Where(j => j.FiscalPeriodId == filter.FiscalPeriodId);
+        if (filter.FiscalYear.HasValue)
+        {
+            var year = filter.FiscalYear.Value;
+            var periodIds = _context.FiscalPeriods.AsNoTracking()
+                .Where(p => p.TenantId == tenantId && p.FiscalYear == year)
+                .Select(p => p.Id);
+            posted = posted.Where(j => periodIds.Contains(j.FiscalPeriodId));
+        }
+        if (filter.SourceModule.HasValue)
+            posted = posted.Where(j => j.SourceModule == filter.SourceModule);
+        if (filter.PostedBy.HasValue)
+            posted = posted.Where(j => j.PostedBy == filter.PostedBy);
+        if (!string.IsNullOrWhiteSpace(filter.DocumentNumber))
+        {
+            var doc = filter.DocumentNumber.Trim();
+            posted = posted.Where(j => j.EntryNumber.Contains(doc));
+        }
+
+        var baseQuery = _context.JournalEntryLines.AsNoTracking()
+            .Join(posted, l => l.JournalEntryId, j => j.Id, (l, j) => new { l, j });
+
+        if (accountIds is { Count: > 0 })
+            baseQuery = baseQuery.Where(x => accountIds.Contains(x.l.ChartOfAccountId));
+        if (filter.CostCenterId.HasValue)
+            baseQuery = baseQuery.Where(x => x.l.CostCenterId == filter.CostCenterId);
+        if (!string.IsNullOrWhiteSpace(filter.Currency))
+        {
+            var currency = filter.Currency.Trim().ToUpperInvariant();
+            baseQuery = baseQuery.Where(x => x.l.Currency == currency);
+        }
+        if (!string.IsNullOrWhiteSpace(filter.Search))
+        {
+            var s = filter.Search.Trim();
+            baseQuery = baseQuery.Where(x =>
+                x.j.EntryNumber.Contains(s)
+                || x.j.Description.Contains(s)
+                || (x.j.Reference != null && x.j.Reference.Contains(s))
+                || (x.l.Description != null && x.l.Description.Contains(s)));
+        }
+
+        // Opening balance: before FromDate (same structural filters, account scoped when possible).
+        decimal openingBalance = 0;
+        if (filter.IncludeOpeningBalance && filter.FromDate.HasValue && accountIds is { Count: > 0 })
+        {
+            var openingQuery = baseQuery.Where(x => x.j.PostingDate < filter.FromDate.Value);
+            var openingTotals = await openingQuery
+                .GroupBy(_ => 1)
+                .Select(g => new { Debit = g.Sum(x => x.l.Debit), Credit = g.Sum(x => x.l.Credit) })
+                .FirstOrDefaultAsync(ct);
+            openingBalance = (openingTotals?.Debit ?? 0) - (openingTotals?.Credit ?? 0);
+        }
+
+        var periodQuery = baseQuery;
+        if (filter.FromDate.HasValue)
+            periodQuery = periodQuery.Where(x => x.j.PostingDate >= filter.FromDate.Value);
+        if (filter.ToDate.HasValue)
+            periodQuery = periodQuery.Where(x => x.j.PostingDate <= filter.ToDate.Value);
+
+        var periodTotals = await periodQuery
+            .GroupBy(_ => 1)
+            .Select(g => new
+            {
+                Count = g.Count(),
+                Debit = g.Sum(x => x.l.Debit),
+                Credit = g.Sum(x => x.l.Credit)
+            })
+            .FirstOrDefaultAsync(ct);
+
+        var totalCount = periodTotals?.Count ?? 0;
+        var totalDebit = periodTotals?.Debit ?? 0;
+        var totalCredit = periodTotals?.Credit ?? 0;
+        var closingBalance = openingBalance + totalDebit - totalCredit;
+
+        decimal priorBalance = openingBalance;
+        if (skip > 0)
+        {
+            var prior = await periodQuery
+                .OrderBy(x => x.j.PostingDate)
+                .ThenBy(x => x.j.EntryNumber)
+                .ThenBy(x => x.l.LineNumber)
+                .Take(skip)
+                .GroupBy(_ => 1)
+                .Select(g => new { Debit = g.Sum(x => x.l.Debit), Credit = g.Sum(x => x.l.Credit) })
+                .FirstOrDefaultAsync(ct);
+            priorBalance += (prior?.Debit ?? 0) - (prior?.Credit ?? 0);
+        }
+
+        var pageRows = await periodQuery
+            .OrderBy(x => x.j.PostingDate)
+            .ThenBy(x => x.j.EntryNumber)
+            .ThenBy(x => x.l.LineNumber)
+            .Skip(skip)
+            .Take(pageSize)
+            .Select(x => new
+            {
+                JournalEntryId = x.j.Id,
+                x.j.PostingDate,
+                x.j.EntryNumber,
+                Description = x.l.Description ?? x.j.Description,
+                x.l.Debit,
+                x.l.Credit,
+                x.j.SourceModule,
+                x.j.SourceDocumentId,
+                x.j.Reference,
+                x.l.CostCenterId,
+                x.l.ChartOfAccountId
+            })
             .ToListAsync(ct);
 
-        decimal running = 0;
-        return rows.Select(r =>
+        var costCenterIds = pageRows.Where(r => r.CostCenterId.HasValue).Select(r => r.CostCenterId!.Value).Distinct().ToList();
+        var accountIdsOnPage = pageRows.Select(r => r.ChartOfAccountId).Distinct().ToList();
+
+        var costCenterNames = costCenterIds.Count == 0
+            ? new Dictionary<Guid, (string NameAr, string? NameEn)>()
+            : await _context.CostCenters.AsNoTracking()
+                .Where(c => costCenterIds.Contains(c.Id))
+                .ToDictionaryAsync(c => c.Id, c => (c.NameAr, c.NameEn), ct);
+
+        var accountNames = accountIdsOnPage.Count == 0
+            ? new Dictionary<Guid, (string Number, string NameAr)>()
+            : await _context.ChartOfAccounts.AsNoTracking()
+                .Where(a => accountIdsOnPage.Contains(a.Id))
+                .ToDictionaryAsync(a => a.Id, a => (Number: a.AccountNumber, NameAr: a.NameAr), ct);
+
+        var lines = new List<GeneralLedgerLineDto>(pageRows.Count + (page == 1 && filter.IncludeOpeningBalance && filter.FromDate.HasValue ? 1 : 0));
+
+        if (page == 1 && filter.IncludeOpeningBalance && filter.FromDate.HasValue && accountIds is { Count: > 0 })
+        {
+            lines.Add(new GeneralLedgerLineDto(
+                filter.FromDate.Value,
+                string.Empty,
+                "Opening Balance",
+                0,
+                0,
+                openingBalance,
+                IsOpeningBalance: true));
+        }
+
+        var running = priorBalance;
+        foreach (var r in pageRows)
         {
             running += r.Debit - r.Credit;
-            return new GeneralLedgerLineDto(r.PostingDate, r.EntryNumber, r.Description, r.Debit, r.Credit, running);
-        }).ToList();
+            costCenterNames.TryGetValue(r.CostCenterId ?? Guid.Empty, out var cc);
+            accountNames.TryGetValue(r.ChartOfAccountId, out var acc);
+            lines.Add(new GeneralLedgerLineDto(
+                r.PostingDate,
+                r.EntryNumber,
+                r.Description,
+                r.Debit,
+                r.Credit,
+                running,
+                r.JournalEntryId,
+                r.SourceModule,
+                r.SourceDocumentId,
+                r.Reference,
+                r.CostCenterId,
+                r.CostCenterId.HasValue ? cc.NameAr : null,
+                r.CostCenterId.HasValue ? cc.NameEn : null,
+                r.ChartOfAccountId,
+                acc.Number,
+                acc.NameAr));
+        }
+
+        return new GeneralLedgerResultDto(
+            openingBalance,
+            totalDebit,
+            totalCredit,
+            closingBalance,
+            totalCount,
+            page,
+            pageSize,
+            lines);
+    }
+
+    private async Task<List<Guid>> ResolveAccountIdsAsync(Guid tenantId, GeneralLedgerFilterDto filter, CancellationToken ct)
+    {
+        var q = _context.ChartOfAccounts.AsNoTracking().Where(a => a.TenantId == tenantId);
+        if (filter.AccountType.HasValue)
+            q = q.Where(a => a.AccountType == filter.AccountType.Value);
+        if (filter.ParentAccountId.HasValue)
+        {
+            var parentId = filter.ParentAccountId.Value;
+            q = q.Where(a => a.Id == parentId || a.ParentAccountId == parentId);
+        }
+
+        return await q.Select(a => a.Id).ToListAsync(ct);
     }
 }
 

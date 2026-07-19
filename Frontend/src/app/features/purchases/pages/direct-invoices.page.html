@@ -1,0 +1,138 @@
+<app-inventory-page-shell
+  [breadcrumbs]="breadcrumbs"
+  titleKey="pur.nav.directInvoices"
+  subtitleKey="pur.dpi.subtitle"
+>
+  <section class="toolbar" shellActions>
+    <div class="search-group">
+      <mat-icon>search</mat-icon>
+      <input
+        type="search"
+        [ngModel]="search()"
+        (ngModelChange)="search.set($event)"
+        (keydown.enter)="load()"
+        [placeholder]="t('pur.dpi.searchPlaceholder')"
+      />
+      <button type="button" class="btn ghost" (click)="load()">{{ t('common.search') }}</button>
+    </div>
+    <button type="button" class="btn primary" [disabled]="!canManage()" (click)="createNew()">
+      <mat-icon>add</mat-icon>
+      {{ t('pur.dpi.new') }}
+    </button>
+    <button type="button" class="btn ghost" [disabled]="!selected()" (click)="edit()">
+      {{ t('pur.dpi.edit') }}
+    </button>
+    <button type="button" class="btn ghost" (click)="load()" [matTooltip]="t('pur.dpi.refresh')">
+      <mat-icon>refresh</mat-icon>
+    </button>
+    <button
+      type="button"
+      class="btn success"
+      [disabled]="!canManage() || !selected() || statusName(selected()!) !== 'Draft' || acting()"
+      (click)="approve()"
+    >
+      {{ t('pur.dpi.approve') }}
+    </button>
+    <button
+      type="button"
+      class="btn info"
+      [disabled]="!canManage() || !selected() || statusName(selected()!) !== 'Approved' || acting()"
+      (click)="post()"
+    >
+      {{ t('pur.dpi.post') }}
+    </button>
+    <button
+      type="button"
+      class="btn ghost"
+      [disabled]="!canManage() || !selected() || statusName(selected()!) !== 'Posted' || acting()"
+      (click)="unpost()"
+    >
+      {{ t('pur.dpi.unpost') }}
+    </button>
+    <button
+      type="button"
+      class="btn danger"
+      [disabled]="!canManage() || !selected() || statusName(selected()!) === 'Posted' || statusName(selected()!) === 'Reversed' || statusName(selected()!) === 'Cancelled' || acting()"
+      (click)="cancel()"
+    >
+      {{ t('pur.dpi.cancel') }}
+    </button>
+    <label class="deleted-toggle">
+      <input type="checkbox" [ngModel]="showDeleted()" (ngModelChange)="showDeleted.set($event)" />
+      {{ t('pur.dpi.showDeleted') }}
+    </label>
+  </section>
+
+  <div class="chips">
+    <button type="button" class="chip" [class.active]="statusFilter() === 'all'" (click)="setStatus('all')">{{ t('pur.dpi.filter.all') }}</button>
+    <button type="button" class="chip" [class.active]="statusFilter() === 'Draft'" (click)="setStatus('Draft')">{{ t('pur.dpi.status.draft') }}</button>
+    <button type="button" class="chip" [class.active]="statusFilter() === 'Approved'" (click)="setStatus('Approved')">{{ t('pur.dpi.status.approved') }}</button>
+    <button type="button" class="chip" [class.active]="statusFilter() === 'Posted'" (click)="setStatus('Posted')">{{ t('pur.dpi.status.posted') }}</button>
+    <button type="button" class="chip" [class.active]="statusFilter() === 'Cancelled'" (click)="setStatus('Cancelled')">{{ t('pur.dpi.status.cancelled') }}</button>
+    <span class="chip-sep"></span>
+    <button type="button" class="chip" [class.active]="dateFilter() === 'today'" (click)="setDate('today')">{{ t('pur.dpi.filter.today') }}</button>
+    <button type="button" class="chip" [class.active]="dateFilter() === '7d'" (click)="setDate('7d')">{{ t('pur.dpi.filter.7d') }}</button>
+    <button type="button" class="chip" [class.active]="dateFilter() === '30d'" (click)="setDate('30d')">{{ t('pur.dpi.filter.30d') }}</button>
+    <button type="button" class="chip" [class.active]="dateFilter() === 'all'" (click)="setDate('all')">{{ t('pur.dpi.filter.anyDate') }}</button>
+  </div>
+
+  @if (error()) {
+    <div class="form-error">{{ error() }}</div>
+  }
+
+  @if (loading()) {
+    <app-inventory-skeleton [count]="8" />
+  } @else if (error() && filteredRows().length === 0) {
+    <app-inventory-error-state [message]="error()!" (retry)="load()" />
+  } @else if (filteredRows().length === 0) {
+    <app-inventory-empty-state
+      icon="receipt_long"
+      [title]="t('pur.dpi.emptyTitle')"
+      [message]="t('pur.dpi.empty')"
+    />
+  } @else {
+    <div class="table-card">
+      <table>
+        <thead>
+          <tr>
+            <th>{{ t('pur.dpi.col.docNumber') }}</th>
+            <th>{{ t('pur.dpi.col.date') }}</th>
+            <th>{{ t('pur.dpi.col.supplier') }}</th>
+            <th>{{ t('pur.dpi.col.nature') }}</th>
+            <th>{{ t('pur.dpi.col.paymentMode') }}</th>
+            <th>{{ t('pur.dpi.col.status') }}</th>
+            <th>{{ t('pur.dpi.col.paymentStatus') }}</th>
+            <th>{{ t('pur.dpi.col.total') }}</th>
+            <th>{{ t('pur.dpi.col.notes') }}</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (row of filteredRows(); track row.id) {
+            <tr [class.selected]="selectedId() === row.id" (click)="select(row)" (dblclick)="edit()">
+              <td><a [routerLink]="['/purchases/direct-invoices', row.id]">{{ row.invoiceNumber }}</a></td>
+              <td>{{ row.invoiceDate | date: 'yyyy-MM-dd' }}</td>
+              <td>{{ supplierName(row) }}</td>
+              <td>{{ natureLabel(row) }}</td>
+              <td>{{ paymentModeLabel(row) }}</td>
+              <td><span class="status-badge" [attr.data-status]="statusName(row)">{{ statusLabel(row) }}</span></td>
+              <td>{{ paymentStatusLabel(row) }}</td>
+              <td>{{ row.totalAmount | number: '1.2-2' }}</td>
+              <td>{{ row.notes || row.supplierInvoiceNumber || '—' }}</td>
+            </tr>
+          }
+        </tbody>
+      </table>
+      <footer class="table-footer">
+        <span>{{ t('pur.dpi.totalRecords') }}: {{ filteredRows().length }}</span>
+        <label>
+          {{ t('pur.dpi.pageSize') }}
+          <select [ngModel]="pageSize()" (ngModelChange)="pageSize.set(+$event); load()">
+            <option [ngValue]="20">20</option>
+            <option [ngValue]="50">50</option>
+            <option [ngValue]="100">100</option>
+          </select>
+        </label>
+      </footer>
+    </div>
+  }
+</app-inventory-page-shell>

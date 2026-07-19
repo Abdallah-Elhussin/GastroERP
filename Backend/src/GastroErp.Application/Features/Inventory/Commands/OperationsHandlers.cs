@@ -1,82 +1,18 @@
 using AutoMapper;
 using GastroErp.Application.Common.Interfaces;
+using GastroErp.Application.Common.Interfaces.Inventory;
 using GastroErp.Application.Common.Responses;
 using GastroErp.Application.Features.Inventory.DTOs;
 using GastroErp.Domain.Entities.Inventory.Counting;
 using GastroErp.Domain.Entities.Inventory.Waste;
 using GastroErp.Domain.Entities.Inventory.Recipe;
 using GastroErp.Domain.Entities.Inventory.Warehouse;
+using GastroErp.Domain.Enums;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 
 namespace GastroErp.Application.Features.Inventory.Commands;
-
-// ─── StockTransfer Handlers ───────────────────────────────────────────────────
-
-public class CreateStockTransferCommandHandler : IRequestHandler<CreateStockTransferCommand, Result<StockTransferDto>>
-{
-    private readonly IApplicationDbContext _context;
-    private readonly IMapper _mapper;
-    private readonly ILogger<CreateStockTransferCommandHandler> _logger;
-
-    public CreateStockTransferCommandHandler(IApplicationDbContext context, IMapper mapper, ILogger<CreateStockTransferCommandHandler> logger)
-        => (_context, _mapper, _logger) = (context, mapper, logger);
-
-    public async Task<Result<StockTransferDto>> Handle(CreateStockTransferCommand request, CancellationToken cancellationToken)
-    {
-        var fromWh = await _context.Warehouses.AnyAsync(w => w.Id == request.Dto.SourceWarehouseId, cancellationToken);
-        if (!fromWh) return Result<StockTransferDto>.Failure("WarehouseNotFound", "Source warehouse not found.");
-        var toWh = await _context.Warehouses.AnyAsync(w => w.Id == request.Dto.DestinationWarehouseId, cancellationToken);
-        if (!toWh) return Result<StockTransferDto>.Failure("WarehouseNotFound", "Destination warehouse not found.");
-
-        var transfer = new StockTransfer(request.Dto.TenantId, request.Dto.SourceWarehouseId, request.Dto.DestinationWarehouseId, request.Dto.TransferNumber, request.Dto.Notes);
-        _context.StockTransfers.Add(transfer);
-        await _context.SaveChangesAsync(cancellationToken);
-        _logger.LogInformation("StockTransfer created: {Id}", transfer.Id);
-        return Result<StockTransferDto>.Success(_mapper.Map<StockTransferDto>(transfer));
-    }
-}
-
-public class AddTransferLineCommandHandler : IRequestHandler<AddTransferLineCommand, Result>
-{
-    private readonly IApplicationDbContext _context;
-
-    public AddTransferLineCommandHandler(IApplicationDbContext context) => _context = context;
-
-    public async Task<Result> Handle(AddTransferLineCommand request, CancellationToken cancellationToken)
-    {
-        var transfer = await _context.StockTransfers.Include(t => t.Lines).FirstOrDefaultAsync(t => t.Id == request.TransferId, cancellationToken);
-        if (transfer == null) return Result.Failure("StockTransferNotFound", "Stock transfer not found.");
-
-        transfer.AddLine(request.Dto.InventoryItemId, request.Dto.UnitId, request.Dto.Quantity);
-        _context.StockTransfers.Update(transfer);
-        await _context.SaveChangesAsync(cancellationToken);
-        return Result.Success();
-    }
-}
-
-public class CompleteStockTransferCommandHandler : IRequestHandler<CompleteStockTransferCommand, Result>
-{
-    private readonly IApplicationDbContext _context;
-    private readonly ILogger<CompleteStockTransferCommandHandler> _logger;
-
-    public CompleteStockTransferCommandHandler(IApplicationDbContext context, ILogger<CompleteStockTransferCommandHandler> logger)
-        => (_context, _logger) = (context, logger);
-
-    public async Task<Result> Handle(CompleteStockTransferCommand request, CancellationToken cancellationToken)
-    {
-        var transfer = await _context.StockTransfers.Include(t => t.Lines).FirstOrDefaultAsync(t => t.Id == request.Id, cancellationToken);
-        if (transfer == null) return Result.Failure("StockTransferNotFound", "Stock transfer not found.");
-        if (!transfer.Lines.Any()) return Result.Failure("NoLines", "Cannot complete transfer with no lines.");
-
-        transfer.Complete();
-        _context.StockTransfers.Update(transfer);
-        await _context.SaveChangesAsync(cancellationToken);
-        _logger.LogInformation("StockTransfer completed: {Id}", transfer.Id);
-        return Result.Success();
-    }
-}
 
 // ─── StockAdjustment Handlers ─────────────────────────────────────────────────
 
@@ -92,8 +28,12 @@ public class CreateStockAdjustmentCommandHandler : IRequestHandler<CreateStockAd
     public async Task<Result<StockAdjustmentDto>> Handle(CreateStockAdjustmentCommand request, CancellationToken cancellationToken)
     {
         var adj = new StockAdjustment(request.Dto.TenantId, request.Dto.WarehouseId, request.Dto.AdjustmentNumber, null, request.Dto.Notes);
-        if (request.Dto.ReasonId.HasValue)
-            adj.AddLine(request.Dto.InventoryItemId, request.Dto.UnitId, request.Dto.ReasonId.Value, request.Dto.QuantityAdjusted, request.Dto.UnitCost);
+        adj.AddLine(
+            request.Dto.InventoryItemId,
+            request.Dto.UnitId,
+            request.Dto.ReasonId ?? Guid.Empty,
+            request.Dto.QuantityAdjusted,
+            request.Dto.UnitCost);
 
         _context.StockAdjustments.Add(adj);
         await _context.SaveChangesAsync(cancellationToken);
@@ -105,19 +45,68 @@ public class CreateStockAdjustmentCommandHandler : IRequestHandler<CreateStockAd
 public class ConfirmStockAdjustmentCommandHandler : IRequestHandler<ConfirmStockAdjustmentCommand, Result>
 {
     private readonly IApplicationDbContext _context;
+    private readonly IInventoryMovementPipeline _pipeline;
     private readonly ILogger<ConfirmStockAdjustmentCommandHandler> _logger;
 
-    public ConfirmStockAdjustmentCommandHandler(IApplicationDbContext context, ILogger<ConfirmStockAdjustmentCommandHandler> logger)
-        => (_context, _logger) = (context, logger);
+    public ConfirmStockAdjustmentCommandHandler(
+        IApplicationDbContext context,
+        IInventoryMovementPipeline pipeline,
+        ILogger<ConfirmStockAdjustmentCommandHandler> logger)
+        => (_context, _pipeline, _logger) = (context, pipeline, logger);
 
     public async Task<Result> Handle(ConfirmStockAdjustmentCommand request, CancellationToken cancellationToken)
     {
-        var adj = await _context.StockAdjustments.FirstOrDefaultAsync(a => a.Id == request.Id, cancellationToken);
+        var adj = await _context.StockAdjustments.Include(a => a.Lines).FirstOrDefaultAsync(a => a.Id == request.Id, cancellationToken);
         if (adj == null) return Result.Failure("AdjustmentNotFound", "Stock adjustment not found.");
+        if (!adj.Lines.Any()) return Result.Failure("NoLines", "Cannot confirm adjustment with no lines.");
+        if (adj.Lines.Any(l => l.AdjustmentReasonId == Guid.Empty))
+            return Result.Failure("ReasonRequired", "Adjustment reason is mandatory.");
+
+        var increaseLines = adj.Lines.Where(l => l.AdjustmentQuantity > 0).ToList();
+        var decreaseLines = adj.Lines.Where(l => l.AdjustmentQuantity < 0).ToList();
+
+        if (increaseLines.Count > 0)
+        {
+            var post = await _pipeline.ApplyMovementAsync(new InventoryMovementRequest(
+                adj.TenantId,
+                InventoryMovementType.ADJ,
+                TransactionType.StockAdjustmentPositive,
+                adj.Id,
+                adj.AdjustmentNumber,
+                increaseLines.Select(l => new InventoryMovementLine(
+                    l.InventoryItemId,
+                    adj.WarehouseId,
+                    l.UnitId,
+                    Math.Abs(l.AdjustmentQuantity),
+                    l.UnitCost,
+                    AdjIncreasesOnHand: true)).ToList(),
+                adj.Notes), cancellationToken);
+            if (post.IsFailure) return Result.Failure(post.ErrorCode!, post.ErrorMessage);
+        }
+
+        if (decreaseLines.Count > 0)
+        {
+            var post = await _pipeline.ApplyMovementAsync(new InventoryMovementRequest(
+                adj.TenantId,
+                InventoryMovementType.ADJ,
+                TransactionType.StockAdjustmentNegative,
+                adj.Id,
+                adj.AdjustmentNumber,
+                decreaseLines.Select(l => new InventoryMovementLine(
+                    l.InventoryItemId,
+                    adj.WarehouseId,
+                    l.UnitId,
+                    Math.Abs(l.AdjustmentQuantity),
+                    l.UnitCost,
+                    AdjIncreasesOnHand: false)).ToList(),
+                adj.Notes), cancellationToken);
+            if (post.IsFailure) return Result.Failure(post.ErrorCode!, post.ErrorMessage);
+        }
+
         adj.Complete();
         _context.StockAdjustments.Update(adj);
         await _context.SaveChangesAsync(cancellationToken);
-        _logger.LogInformation("StockAdjustment confirmed: {Id}", adj.Id);
+        _logger.LogInformation("StockAdjustment confirmed via pipeline: {Id}", adj.Id);
         return Result.Success();
     }
 }
@@ -136,8 +125,12 @@ public class CreateWasteRecordCommandHandler : IRequestHandler<CreateWasteRecord
     public async Task<Result<WasteRecordDto>> Handle(CreateWasteRecordCommand request, CancellationToken cancellationToken)
     {
         var wasteRecord = new WasteRecord(request.Dto.TenantId, request.Dto.WarehouseId, request.Dto.WasteNumber, request.Dto.Notes);
-        if (request.Dto.ReasonId.HasValue)
-            wasteRecord.AddItem(request.Dto.InventoryItemId, request.Dto.UnitId, request.Dto.ReasonId.Value, request.Dto.Quantity, request.Dto.UnitCost);
+        wasteRecord.AddItem(
+            request.Dto.InventoryItemId,
+            request.Dto.UnitId,
+            request.Dto.ReasonId ?? Guid.Empty,
+            request.Dto.Quantity,
+            request.Dto.UnitCost);
 
         _context.WasteRecords.Add(wasteRecord);
         await _context.SaveChangesAsync(cancellationToken);
@@ -149,19 +142,40 @@ public class CreateWasteRecordCommandHandler : IRequestHandler<CreateWasteRecord
 public class ConfirmWasteRecordCommandHandler : IRequestHandler<ConfirmWasteRecordCommand, Result>
 {
     private readonly IApplicationDbContext _context;
+    private readonly IInventoryMovementPipeline _pipeline;
     private readonly ILogger<ConfirmWasteRecordCommandHandler> _logger;
 
-    public ConfirmWasteRecordCommandHandler(IApplicationDbContext context, ILogger<ConfirmWasteRecordCommandHandler> logger)
-        => (_context, _logger) = (context, logger);
+    public ConfirmWasteRecordCommandHandler(
+        IApplicationDbContext context,
+        IInventoryMovementPipeline pipeline,
+        ILogger<ConfirmWasteRecordCommandHandler> logger)
+        => (_context, _pipeline, _logger) = (context, pipeline, logger);
 
     public async Task<Result> Handle(ConfirmWasteRecordCommand request, CancellationToken cancellationToken)
     {
-        var waste = await _context.WasteRecords.FirstOrDefaultAsync(w => w.Id == request.Id, cancellationToken);
+        var waste = await _context.WasteRecords.Include(w => w.Items).FirstOrDefaultAsync(w => w.Id == request.Id, cancellationToken);
         if (waste == null) return Result.Failure("WasteRecordNotFound", "Waste record not found.");
+        if (!waste.Items.Any()) return Result.Failure("NoLines", "Cannot confirm waste with no items.");
+
+        var post = await _pipeline.ApplyMovementAsync(new InventoryMovementRequest(
+            waste.TenantId,
+            InventoryMovementType.OUT,
+            TransactionType.Waste,
+            waste.Id,
+            waste.RecordNumber,
+            waste.Items.Select(i => new InventoryMovementLine(
+                i.InventoryItemId,
+                waste.WarehouseId,
+                i.UnitId,
+                i.Quantity,
+                i.UnitCost)).ToList(),
+            waste.Notes), cancellationToken);
+        if (post.IsFailure) return Result.Failure(post.ErrorCode!, post.ErrorMessage);
+
         waste.Complete();
         _context.WasteRecords.Update(waste);
         await _context.SaveChangesAsync(cancellationToken);
-        _logger.LogWarning("WasteRecord confirmed: {Id}", waste.Id);
+        _logger.LogWarning("WasteRecord confirmed via pipeline: {Id}", waste.Id);
         return Result.Success();
     }
 }
@@ -369,13 +383,34 @@ public class FreezeInventoryCommandHandler : IRequestHandler<FreezeInventoryComm
 public class ApproveStockCountCommandHandler : IRequestHandler<ApproveStockCountCommand, Result>
 {
     private readonly IApplicationDbContext _context;
+    private readonly IInventoryMovementPipeline _pipeline;
 
-    public ApproveStockCountCommandHandler(IApplicationDbContext context) => _context = context;
+    public ApproveStockCountCommandHandler(IApplicationDbContext context, IInventoryMovementPipeline pipeline)
+        => (_context, _pipeline) = (context, pipeline);
 
     public async Task<Result> Handle(ApproveStockCountCommand request, CancellationToken cancellationToken)
     {
         var stockCount = await _context.StockCounts.Include(s => s.Lines).FirstOrDefaultAsync(s => s.Id == request.Id, cancellationToken);
         if (stockCount == null) return Result.Failure("StockCountNotFound", "Stock count not found.");
+
+        var variances = stockCount.Lines.Where(l => l.Difference != 0).ToList();
+        if (variances.Count > 0)
+        {
+            var post = await _pipeline.ApplyMovementAsync(new InventoryMovementRequest(
+                stockCount.TenantId,
+                InventoryMovementType.ADJ,
+                TransactionType.StockCountCorrection,
+                stockCount.Id,
+                stockCount.CountNumber,
+                variances.Select(l => new InventoryMovementLine(
+                    l.InventoryItemId,
+                    stockCount.WarehouseId,
+                    l.UnitId,
+                    Math.Abs(l.Difference),
+                    AdjIncreasesOnHand: l.Difference > 0)).ToList(),
+                stockCount.Notes), cancellationToken);
+            if (post.IsFailure) return Result.Failure(post.ErrorCode!, post.ErrorMessage);
+        }
 
         stockCount.Complete();
         _context.StockCounts.Update(stockCount);
@@ -390,9 +425,13 @@ public class ReserveStockCommandHandler : IRequestHandler<ReserveStockCommand, R
 {
     private readonly IApplicationDbContext _context;
     private readonly IMapper _mapper;
+    private readonly IInventoryMovementPipeline _pipeline;
 
-    public ReserveStockCommandHandler(IApplicationDbContext context, IMapper mapper)
-        => (_context, _mapper) = (context, mapper);
+    public ReserveStockCommandHandler(
+        IApplicationDbContext context,
+        IMapper mapper,
+        IInventoryMovementPipeline pipeline)
+        => (_context, _mapper, _pipeline) = (context, mapper, pipeline);
 
     public async Task<Result<InventoryReservationDto>> Handle(ReserveStockCommand request, CancellationToken cancellationToken)
     {
@@ -406,6 +445,12 @@ public class ReserveStockCommandHandler : IRequestHandler<ReserveStockCommand, R
         );
 
         _context.InventoryReservations.Add(reservation);
+        await _pipeline.ReserveAsync(
+            request.TenantId,
+            request.Dto.WarehouseId,
+            request.Dto.InventoryItemId,
+            request.Dto.ReservedQuantity,
+            cancellationToken);
         await _context.SaveChangesAsync(cancellationToken);
         return Result<InventoryReservationDto>.Success(_mapper.Map<InventoryReservationDto>(reservation));
     }
@@ -414,13 +459,22 @@ public class ReserveStockCommandHandler : IRequestHandler<ReserveStockCommand, R
 public class ReleaseStockCommandHandler : IRequestHandler<ReleaseStockCommand, Result>
 {
     private readonly IApplicationDbContext _context;
+    private readonly IInventoryMovementPipeline _pipeline;
 
-    public ReleaseStockCommandHandler(IApplicationDbContext context) => _context = context;
+    public ReleaseStockCommandHandler(IApplicationDbContext context, IInventoryMovementPipeline pipeline)
+        => (_context, _pipeline) = (context, pipeline);
 
     public async Task<Result> Handle(ReleaseStockCommand request, CancellationToken cancellationToken)
     {
         var reservation = await _context.InventoryReservations.FirstOrDefaultAsync(r => r.Id == request.Id, cancellationToken);
         if (reservation == null) return Result.Failure("ReservationNotFound", "Reservation not found.");
+
+        await _pipeline.ReleaseReservationAsync(
+            reservation.TenantId,
+            reservation.WarehouseId,
+            reservation.InventoryItemId,
+            reservation.ReservedQuantity,
+            cancellationToken);
 
         reservation.Cancel();
         _context.InventoryReservations.Update(reservation);
@@ -432,13 +486,22 @@ public class ReleaseStockCommandHandler : IRequestHandler<ReleaseStockCommand, R
 public class ExpireStockReservationCommandHandler : IRequestHandler<ExpireStockReservationCommand, Result>
 {
     private readonly IApplicationDbContext _context;
+    private readonly IInventoryMovementPipeline _pipeline;
 
-    public ExpireStockReservationCommandHandler(IApplicationDbContext context) => _context = context;
+    public ExpireStockReservationCommandHandler(IApplicationDbContext context, IInventoryMovementPipeline pipeline)
+        => (_context, _pipeline) = (context, pipeline);
 
     public async Task<Result> Handle(ExpireStockReservationCommand request, CancellationToken cancellationToken)
     {
         var reservation = await _context.InventoryReservations.FirstOrDefaultAsync(r => r.Id == request.Id, cancellationToken);
         if (reservation == null) return Result.Failure("ReservationNotFound", "Reservation not found.");
+
+        await _pipeline.ReleaseReservationAsync(
+            reservation.TenantId,
+            reservation.WarehouseId,
+            reservation.InventoryItemId,
+            reservation.ReservedQuantity,
+            cancellationToken);
 
         reservation.Expire();
         _context.InventoryReservations.Update(reservation);

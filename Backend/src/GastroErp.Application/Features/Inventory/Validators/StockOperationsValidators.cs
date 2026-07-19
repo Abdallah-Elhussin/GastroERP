@@ -8,8 +8,12 @@ public class CreateStockTransferCommandValidator : AbstractValidator<CreateStock
     public CreateStockTransferCommandValidator()
     {
         RuleFor(x => x.Dto.SourceWarehouseId).NotEmpty();
-        RuleFor(x => x.Dto.DestinationWarehouseId).NotEmpty();
-        RuleFor(x => x.Dto.TransferNumber).NotEmpty().MaximumLength(50);
+        RuleFor(x => x.Dto.DestinationWarehouseId).NotEmpty()
+            .NotEqual(x => x.Dto.SourceWarehouseId);
+        RuleFor(x => x.Dto.TransferNumber)
+            .MaximumLength(50)
+            .Must((cmd, num) => cmd.Dto.AutoGenerateNumber || !string.IsNullOrWhiteSpace(num))
+            .WithMessage("TransferNumber is required when AutoGenerateNumber is false.");
     }
 }
 

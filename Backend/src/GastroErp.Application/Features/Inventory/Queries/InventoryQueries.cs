@@ -1,4 +1,5 @@
 using GastroErp.Application.Common.Responses;
+using GastroErp.Application.Features.Inventory.Commands;
 using GastroErp.Application.Features.Inventory.DTOs;
 using GastroErp.Domain.Enums;
 using MediatR;
@@ -17,24 +18,124 @@ public record GetInventoryItemsQuery(Guid TenantId, Guid? CategoryId = null, boo
 public record GetInventoryItemByIdQuery(Guid Id) : IRequest<Result<InventoryItemDto>>;
 public record GetLowStockItemsQuery(Guid TenantId, Guid? WarehouseId = null) : IRequest<Result<List<InventoryItemDto>>>;
 
+// ─── Product Details (Phase D) ────────────────────────────────────────────────
+public record GetInventoryItemStockByWarehouseQuery(Guid InventoryItemId) : IRequest<Result<List<WarehouseStockBalanceDto>>>;
+public record GetInventoryItemMovementsQuery(Guid InventoryItemId, int PageNumber = 1, int PageSize = 50) : IRequest<PagedResult<ItemStockMovementDto>>;
+public record GetInventoryItemPurchaseHistoryQuery(Guid InventoryItemId, int PageNumber = 1, int PageSize = 50) : IRequest<PagedResult<ItemPurchaseHistoryDto>>;
+public record GetInventoryItemSalesHistoryQuery(Guid InventoryItemId, int PageNumber = 1, int PageSize = 50) : IRequest<PagedResult<ItemSalesHistoryDto>>;
+
 // ─── Warehouse ────────────────────────────────────────────────────────────────
-public record GetWarehousesQuery(Guid TenantId, Guid? BranchId = null, bool? IsActive = null, int PageNumber = 1, int PageSize = 20) : IRequest<PagedResult<WarehouseDto>>;
-public record GetWarehouseByIdQuery(Guid Id) : IRequest<Result<WarehouseDto>>;
+public record GetWarehousesQuery(
+    Guid TenantId,
+    Guid? BranchId = null,
+    bool? IsActive = null,
+    WarehouseType? WarehouseType = null,
+    Guid? WarehouseTypeId = null,
+    bool? IsPosWarehouse = null,
+    bool? IsDefault = null,
+    string? SearchTerm = null,
+    string? SortBy = null,
+    bool SortDesc = false,
+    int PageNumber = 1,
+    int PageSize = 50) : IRequest<PagedResult<WarehouseDto>>;
+public record GetWarehouseByIdQuery(Guid Id) : IRequest<Result<WarehouseDetailDto>>;
+public record GetWarehouseLookupQuery(Guid TenantId, Guid? BranchId = null, bool ActiveOnly = true) : IRequest<Result<List<WarehouseDto>>>;
+public record GetWarehouseTypeDefinitionsQuery(Guid TenantId, bool? IsActive = null) : IRequest<Result<List<WarehouseTypeDefinitionDto>>>;
+
+// ─── Phase J Master Data ──────────────────────────────────────────────────────
+public record GetInventoryBrandsQuery(Guid TenantId, bool? IsActive = null) : IRequest<Result<List<InventoryBrandDto>>>;
+public record GetInventoryManufacturersQuery(Guid TenantId, bool? IsActive = null) : IRequest<Result<List<InventoryManufacturerDto>>>;
+public record GetInventoryAttributesQuery(Guid TenantId, bool? IsActive = null) : IRequest<Result<List<InventoryAttributeDto>>>;
+public record GetInventoryAttributeByIdQuery(Guid Id) : IRequest<Result<InventoryAttributeDto>>;
+public record GetInventoryPriceListsQuery(Guid TenantId, bool? IsActive = null) : IRequest<Result<List<InventoryPriceListDto>>>;
+public record GetInventoryPriceListByIdQuery(Guid Id) : IRequest<Result<InventoryPriceListDto>>;
 
 // ─── Supplier ─────────────────────────────────────────────────────────────────
-public record GetSuppliersQuery(Guid TenantId, bool? IsActive = null, bool? IsPreferred = null, int PageNumber = 1, int PageSize = 20) : IRequest<PagedResult<SupplierDto>>;
-public record GetSupplierByIdQuery(Guid Id) : IRequest<Result<SupplierDto>>;
+public record GetSuppliersQuery(
+    Guid TenantId,
+    bool? IsActive = null,
+    bool? IsPreferred = null,
+    bool? IsBlacklisted = null,
+    bool? HasBalance = null,
+    bool? OverCreditLimit = null,
+    SupplierCategory? Category = null,
+    string? City = null,
+    string? Country = null,
+    string? Search = null,
+    string? Code = null,
+    int PageNumber = 1,
+    int PageSize = 20) : IRequest<PagedResult<SupplierListItemDto>>;
+public record GetSupplierByIdQuery(Guid Id, bool IncludeStats = true) : IRequest<Result<SupplierDto>>;
+public record GetSupplierPurchasingDefaultsQuery(Guid Id) : IRequest<Result<SupplierPurchasingDefaultsDto>>;
 
 // ─── PurchaseOrder ────────────────────────────────────────────────────────────
 public record GetPurchaseOrdersQuery(Guid TenantId, Guid? SupplierId = null, PurchaseOrderStatus? Status = null, int PageNumber = 1, int PageSize = 20) : IRequest<PagedResult<PurchaseOrderDto>>;
 public record GetPurchaseOrderByIdQuery(Guid Id) : IRequest<Result<PurchaseOrderDto>>;
 
 // ─── GoodsReceipt ─────────────────────────────────────────────────────────────
-public record GetGoodsReceiptsQuery(Guid TenantId, Guid? SupplierId = null, int PageNumber = 1, int PageSize = 20) : IRequest<PagedResult<GoodsReceiptDto>>;
+public record GetGoodsReceiptsQuery(
+    Guid TenantId,
+    Guid? SupplierId = null,
+    GoodsReceiptStatus? Status = null,
+    string? Search = null,
+    DateTimeOffset? From = null,
+    DateTimeOffset? To = null,
+    int PageNumber = 1,
+    int PageSize = 20) : IRequest<PagedResult<GoodsReceiptDto>>;
 public record GetGoodsReceiptByIdQuery(Guid Id) : IRequest<Result<GoodsReceiptDto>>;
+public record PreviewGoodsReceiptFromPoQuery(Guid TenantId, Guid PurchaseOrderId) : IRequest<Result<GoodsReceiptDto>>;
+
+// ─── PurchaseInvoice ──────────────────────────────────────────────────────────
+public record GetPurchaseInvoicesQuery(
+    Guid TenantId,
+    PurchaseInvoiceKind? Kind = null,
+    PurchasingDocumentStatus? Status = null,
+    Guid? SupplierId = null,
+    Guid? WarehouseId = null,
+    PurchaseInvoicePaymentMode? PaymentMode = null,
+    DirectPurchaseNature? Nature = null,
+    string? Search = null,
+    DateOnly? From = null,
+    DateOnly? To = null,
+    int PageNumber = 1,
+    int PageSize = 20) : IRequest<PagedResult<PurchaseInvoiceDto>>;
+public record GetPurchaseInvoiceByIdQuery(Guid Id) : IRequest<Result<PurchaseInvoiceDto>>;
+
+// ─── GoodsIssue ───────────────────────────────────────────────────────────────
+public record GetGoodsIssuesQuery(
+    Guid TenantId,
+    byte? Status = null,
+    string? Search = null,
+    DateTimeOffset? From = null,
+    DateTimeOffset? To = null,
+    int PageNumber = 1,
+    int PageSize = 20) : IRequest<PagedResult<GoodsIssueDto>>;
+public record GetGoodsIssueByIdQuery(Guid Id) : IRequest<Result<GoodsIssueDto>>;
+
+// ─── IssueDestination ─────────────────────────────────────────────────────────
+public record GetIssueDestinationsQuery(
+    Guid TenantId,
+    bool ActiveOnly = false,
+    string? Search = null,
+    byte? DestinationType = null) : IRequest<Result<IReadOnlyList<IssueDestinationDto>>>;
+public record GetIssueDestinationByIdQuery(Guid Id) : IRequest<Result<IssueDestinationDto>>;
+
+// ─── OpeningBalance ───────────────────────────────────────────────────────────
+public record GetOpeningBalancesQuery(Guid TenantId, int PageNumber = 1, int PageSize = 20) : IRequest<PagedResult<OpeningBalanceDto>>;
+public record GetOpeningBalanceByIdQuery(Guid Id) : IRequest<Result<OpeningBalanceDto>>;
 
 // ─── StockTransfer ────────────────────────────────────────────────────────────
-public record GetStockTransfersQuery(Guid TenantId, Guid? SourceWarehouseId = null, Guid? DestinationWarehouseId = null, int PageNumber = 1, int PageSize = 20) : IRequest<PagedResult<StockTransferDto>>;
+public record GetStockTransfersQuery(
+    Guid TenantId,
+    Guid? SourceWarehouseId = null,
+    Guid? DestinationWarehouseId = null,
+    byte? Status = null,
+    string? Search = null,
+    DateTimeOffset? From = null,
+    DateTimeOffset? To = null,
+    int PageNumber = 1,
+    int PageSize = 20) : IRequest<PagedResult<StockTransferDto>>;
+public record GetStockTransferByIdQuery(Guid Id) : IRequest<Result<StockTransferDto>>;
 
 // ─── StockAdjustment ─────────────────────────────────────────────────────────
 public record GetStockAdjustmentsQuery(Guid TenantId, Guid? WarehouseId = null, int PageNumber = 1, int PageSize = 20) : IRequest<PagedResult<StockAdjustmentDto>>;
@@ -50,13 +151,35 @@ public record GetRecipeByIdQuery(Guid Id) : IRequest<Result<RecipeDto>>;
 // ─── InventoryTransaction ─────────────────────────────────────────────────────
 public record GetInventoryTransactionsQuery(Guid TenantId, Guid? WarehouseId = null, int PageNumber = 1, int PageSize = 50) : IRequest<PagedResult<InventoryTransactionDto>>;
 
+// ─── Dashboard (Phase F) ──────────────────────────────────────────────────────
+public record GetInventoryDashboardQuery(Guid TenantId) : IRequest<Result<InventoryDashboardDto>>;
+
+// ─── Inventory Settings (Phase I) ─────────────────────────────────────────────
+public record GetInventorySettingQuery(Guid TenantId, Guid? BranchId = null, Guid? CompanyId = null)
+    : IRequest<Result<InventorySettingDto>>;
+public record GetInventorySettingsByCompanyQuery(Guid TenantId, Guid CompanyId)
+    : IRequest<Result<InventorySettingDto>>;
+
 // ─── StockCount ───────────────────────────────────────────────────────────────
 public record GetStockCountsQuery(Guid TenantId, Guid? WarehouseId = null, StockCountStatus? Status = null, int PageNumber = 1, int PageSize = 20) : IRequest<PagedResult<StockCountDto>>;
 public record GetStockCountByIdQuery(Guid Id) : IRequest<Result<StockCountDto>>;
 
 // ─── PurchaseReturn ───────────────────────────────────────────────────────────
-public record GetPurchaseReturnsQuery(Guid TenantId, Guid? SupplierId = null, Guid? WarehouseId = null, int PageNumber = 1, int PageSize = 20) : IRequest<PagedResult<PurchaseReturnDto>>;
+public record GetPurchaseReturnsQuery(
+    Guid TenantId,
+    Guid? SupplierId = null,
+    Guid? WarehouseId = null,
+    PurchaseReturnType? ReturnType = null,
+    PurchasingDocumentStatus? Status = null,
+    string? Search = null,
+    DateTimeOffset? From = null,
+    DateTimeOffset? To = null,
+    int PageNumber = 1,
+    int PageSize = 20) : IRequest<PagedResult<PurchaseReturnDto>>;
 public record GetPurchaseReturnByIdQuery(Guid Id) : IRequest<Result<PurchaseReturnDto>>;
+public record PreviewPurchaseReturnFromGrnQuery(Guid TenantId, Guid GoodsReceiptId) : IRequest<Result<PurchaseReturnDto>>;
+public record PreviewPurchaseReturnFromInvoiceQuery(Guid TenantId, Guid PurchaseInvoiceId) : IRequest<Result<PurchaseReturnDto>>;
+public record GetPurchaseReturnReasonsQuery(Guid TenantId, bool ActiveOnly = true) : IRequest<Result<IReadOnlyList<PurchaseReturnReasonDto>>>;
 
 // ─── InventoryReservation ─────────────────────────────────────────────────────
 public record GetInventoryReservationsQuery(Guid TenantId, Guid? WarehouseId = null, Guid? InventoryItemId = null, int PageNumber = 1, int PageSize = 20) : IRequest<PagedResult<InventoryReservationDto>>;

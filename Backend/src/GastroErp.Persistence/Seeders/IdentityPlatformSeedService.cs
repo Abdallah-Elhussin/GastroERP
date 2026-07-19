@@ -43,24 +43,32 @@ public sealed class IdentityPlatformSeedService : IIdentityPlatformSeedService
 
     public async Task EnsureGlobalPermissionsAsync(CancellationToken cancellationToken = default)
     {
-        if (await _context.Permissions.AnyAsync(cancellationToken))
-        {
-            return;
-        }
+        var definitions = PermissionCatalog.GetAll();
+        var existingNames = await _context.Permissions
+            .AsNoTracking()
+            .Select(p => p.Name)
+            .ToListAsync(cancellationToken);
+        var existingSet = existingNames.ToHashSet(StringComparer.OrdinalIgnoreCase);
 
-        foreach (var definition in PermissionCatalog.GetAll())
+        var added = 0;
+        foreach (var definition in definitions)
         {
-            var permission = new Permission(
+            if (existingSet.Contains(definition.Name))
+                continue;
+
+            _context.Permissions.Add(new Permission(
                 Permission.CreateStableId(definition.Name),
                 definition.Module,
                 definition.Name,
-                definition.DisplayName);
-
-            _context.Permissions.Add(permission);
+                definition.DisplayName));
+            added++;
         }
 
-        await _context.SaveChangesAsync(cancellationToken);
-        _logger.LogInformation("Seeded {Count} permissions", PermissionCatalog.GetAll().Count);
+        if (added > 0)
+        {
+            await _context.SaveChangesAsync(cancellationToken);
+            _logger.LogInformation("Seeded {Added} new permissions (catalog total {Total})", added, definitions.Count);
+        }
     }
 
     public Task<Role> EnsureTenantRolesAsync(Guid tenantId, CancellationToken cancellationToken = default)

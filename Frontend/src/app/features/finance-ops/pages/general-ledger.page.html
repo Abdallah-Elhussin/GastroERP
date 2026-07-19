@@ -1,0 +1,266 @@
+<div class="gl-page">
+  <section class="toolbar">
+    <div class="search-box">
+      <mat-icon>search</mat-icon>
+      <input
+        type="search"
+        [ngModel]="search()"
+        (ngModelChange)="search.set($event)"
+        (keydown.enter)="apply()"
+        [placeholder]="t('fin.ops.gl.searchPlaceholder')"
+      />
+    </div>
+    <button type="button" class="btn primary" (click)="apply()">
+      <mat-icon>search</mat-icon>
+      {{ t('common.search') }}
+    </button>
+    <button type="button" class="btn ghost" (click)="refresh()" [matTooltip]="t('common.refresh')">
+      <mat-icon>sync</mat-icon>
+      {{ t('common.refresh') }}
+    </button>
+    <button
+      type="button"
+      class="btn ghost"
+      [disabled]="!canExport()"
+      (click)="exportExcel()"
+      [matTooltip]="t('fin.ops.gl.exportExcel')"
+    >
+      <mat-icon>grid_on</mat-icon>
+      {{ t('fin.ops.gl.exportExcel') }}
+    </button>
+    <button
+      type="button"
+      class="btn ghost"
+      [disabled]="!canExport()"
+      (click)="exportPdf()"
+      [matTooltip]="t('fin.ops.gl.exportPdf')"
+    >
+      <mat-icon>picture_as_pdf</mat-icon>
+      {{ t('fin.ops.gl.exportPdf') }}
+    </button>
+    <button
+      type="button"
+      class="btn ghost"
+      [disabled]="!canPrint()"
+      (click)="print()"
+      [matTooltip]="t('common.print')"
+    >
+      <mat-icon>print</mat-icon>
+      {{ t('common.print') }}
+    </button>
+  </section>
+
+  <section class="filters">
+    <div class="date-presets">
+      <button type="button" class="btn chip" (click)="setPreset(1)">{{ t('fin.ops.gl.preset.today') }}</button>
+      <button type="button" class="btn chip" (click)="setPreset(7)">{{ t('fin.ops.gl.preset.last7') }}</button>
+      <button type="button" class="btn chip" (click)="setPreset(30)">{{ t('fin.ops.gl.preset.last30') }}</button>
+    </div>
+
+    <label>
+      <span>{{ t('fin.ops.gl.filter.fromDate') }}</span>
+      <input type="date" [ngModel]="fromDate()" (ngModelChange)="fromDate.set($event)" />
+    </label>
+    <label>
+      <span>{{ t('fin.ops.gl.filter.toDate') }}</span>
+      <input type="date" [ngModel]="toDate()" (ngModelChange)="toDate.set($event)" />
+    </label>
+    <label>
+      <span>{{ t('fin.ops.gl.filter.company') }}</span>
+      <select [ngModel]="companyId()" (ngModelChange)="companyId.set($event); branchId.set('')">
+        <option value="">{{ t('common.all') }}</option>
+        @for (c of companies(); track c.id) {
+          <option [value]="c.id">{{ c.nameAr }}</option>
+        }
+      </select>
+    </label>
+    <label>
+      <span>{{ t('fin.ops.gl.filter.branch') }}</span>
+      <select [ngModel]="branchId()" (ngModelChange)="branchId.set($event)">
+        <option value="">{{ t('common.all') }}</option>
+        @for (b of filteredBranches(); track b.id) {
+          <option [value]="b.id">{{ b.nameAr }}</option>
+        }
+      </select>
+    </label>
+    <label>
+      <span>{{ t('fin.ops.gl.filter.fiscalYear') }}</span>
+      <select [ngModel]="fiscalYear()" (ngModelChange)="fiscalYear.set($event === '' ? '' : +$event); fiscalPeriodId.set('')">
+        <option value="">{{ t('common.all') }}</option>
+        @for (y of fiscalYears(); track y) {
+          <option [value]="y">{{ y }}</option>
+        }
+      </select>
+    </label>
+    <label>
+      <span>{{ t('fin.ops.gl.filter.fiscalPeriod') }}</span>
+      <select [ngModel]="fiscalPeriodId()" (ngModelChange)="fiscalPeriodId.set($event)">
+        <option value="">{{ t('common.all') }}</option>
+        @for (p of filteredPeriods(); track p.id) {
+          <option [value]="p.id">{{ p.name }}</option>
+        }
+      </select>
+    </label>
+    <label>
+      <span>{{ t('fin.ops.gl.filter.account') }}</span>
+      <select [ngModel]="accountId()" (ngModelChange)="accountId.set($event)">
+        <option value="">{{ t('common.all') }}</option>
+        @for (a of accounts(); track a.id) {
+          <option [value]="a.id">{{ a.accountNumber }} — {{ a.nameAr }}</option>
+        }
+      </select>
+    </label>
+    <label>
+      <span>{{ t('fin.ops.gl.filter.costCenter') }}</span>
+      <select [ngModel]="costCenterId()" (ngModelChange)="costCenterId.set($event)">
+        <option value="">{{ t('common.all') }}</option>
+        @for (c of costCenters(); track c.id) {
+          <option [value]="c.id">{{ c.code }} — {{ c.nameAr }}</option>
+        }
+      </select>
+    </label>
+    <label>
+      <span>{{ t('fin.ops.gl.filter.docType') }}</span>
+      <select [ngModel]="sourceModule()" (ngModelChange)="sourceModule.set($event === '' ? '' : +$event)">
+        <option value="">{{ t('common.all') }}</option>
+        @for (s of sources; track s.value) {
+          <option [value]="s.value">{{ t(s.labelKey) }}</option>
+        }
+      </select>
+    </label>
+    <label>
+      <span>{{ t('fin.ops.gl.filter.docNumber') }}</span>
+      <input type="text" [ngModel]="documentNumber()" (ngModelChange)="documentNumber.set($event)" />
+    </label>
+    <label>
+      <span>{{ t('fin.ops.gl.filter.currency') }}</span>
+      <select [ngModel]="currency()" (ngModelChange)="currency.set($event)">
+        <option value="">{{ t('common.all') }}</option>
+        @for (c of currencies(); track c.code) {
+          <option [value]="c.code">{{ c.code }} — {{ c.nameAr }}</option>
+        }
+      </select>
+    </label>
+
+    <div class="filter-actions">
+      <button type="button" class="btn primary" (click)="apply()">{{ t('common.apply') }}</button>
+      <button type="button" class="btn ghost" (click)="reset()">{{ t('common.reset') }}</button>
+    </div>
+  </section>
+
+  @if (result(); as res) {
+    <section class="summary">
+      <div class="summary-card">
+        <span>{{ t('fin.ops.gl.summary.opening') }}</span>
+        <strong>{{ res.openingBalance | number: '1.2-2' }}</strong>
+      </div>
+      <div class="summary-card">
+        <span>{{ t('fin.ops.gl.summary.totalDebit') }}</span>
+        <strong>{{ res.totalDebit | number: '1.2-2' }}</strong>
+      </div>
+      <div class="summary-card">
+        <span>{{ t('fin.ops.gl.summary.totalCredit') }}</span>
+        <strong>{{ res.totalCredit | number: '1.2-2' }}</strong>
+      </div>
+      <div class="summary-card">
+        <span>{{ t('fin.ops.gl.summary.closing') }}</span>
+        <strong>{{ res.closingBalance | number: '1.2-2' }}</strong>
+      </div>
+    </section>
+  }
+
+  @if (error()) {
+    <div class="form-error">{{ error() }}</div>
+  }
+
+  <section class="grid-wrap">
+    <table class="data-grid">
+      <thead>
+        <tr>
+          <th>{{ t('fin.ops.gl.col.date') }}</th>
+          <th>{{ t('fin.ops.gl.col.docNumber') }}</th>
+          <th>{{ t('fin.ops.gl.col.docType') }}</th>
+          <th>{{ t('fin.ops.gl.col.reference') }}</th>
+          <th>{{ t('fin.ops.gl.col.description') }}</th>
+          <th>{{ t('fin.ops.gl.col.costCenter') }}</th>
+          <th>{{ t('fin.ops.gl.col.analytical') }}</th>
+          <th class="num">{{ t('fin.ops.gl.col.debit') }}</th>
+          <th class="num">{{ t('fin.ops.gl.col.credit') }}</th>
+          <th class="num">{{ t('fin.ops.gl.col.runningBalance') }}</th>
+        </tr>
+      </thead>
+      <tbody>
+        @if (loading()) {
+          <tr>
+            <td colspan="10" class="empty">{{ t('common.loading') }}</td>
+          </tr>
+        } @else if (lines().length === 0) {
+          <tr>
+            <td colspan="10" class="empty">{{ t('fin.ops.gl.empty') }}</td>
+          </tr>
+        } @else {
+          @for (row of lines(); track $index) {
+            <tr
+              [class.opening]="row.isOpeningBalance"
+              [class.clickable]="!row.isOpeningBalance && !!(row.sourceDocumentId || row.journalEntryId)"
+              (click)="openSource(row)"
+            >
+              <td>{{ row.postingDate }}</td>
+              <td>{{ row.entryNumber || '—' }}</td>
+              <td>
+                @if (row.isOpeningBalance) {
+                  {{ t('fin.ops.gl.openingBalance') }}
+                } @else {
+                  {{ sourceLabel(row.sourceModule) }}
+                }
+              </td>
+              <td>{{ row.reference || '—' }}</td>
+              <td>
+                @if (row.isOpeningBalance) {
+                  {{ t('fin.ops.gl.openingBalance') }}
+                } @else {
+                  {{ row.description }}
+                }
+              </td>
+              <td>{{ row.costCenterNameAr || '—' }}</td>
+              <td>—</td>
+              <td class="num">{{ row.debit | number: '1.2-2' }}</td>
+              <td class="num">{{ row.credit | number: '1.2-2' }}</td>
+              <td class="num">{{ row.runningBalance | number: '1.2-2' }}</td>
+            </tr>
+          }
+        }
+      </tbody>
+    </table>
+  </section>
+
+  <footer class="pager">
+    <div class="pager-info">
+      {{ t('fin.ops.gl.totalRecords') }}: {{ result()?.totalCount ?? 0 }} {{ t('fin.ops.gl.records') }}
+    </div>
+    <div class="pager-controls">
+      <button type="button" class="btn ghost" [disabled]="page() <= 1 || loading()" (click)="prevPage()">
+        <mat-icon>chevron_left</mat-icon>
+      </button>
+      <span>{{ page() }} / {{ totalPages() }}</span>
+      <button
+        type="button"
+        class="btn ghost"
+        [disabled]="page() >= totalPages() || loading()"
+        (click)="nextPage()"
+      >
+        <mat-icon>chevron_right</mat-icon>
+      </button>
+      <select
+        [ngModel]="pageSize()"
+        (ngModelChange)="changePageSize(+$event)"
+        [matTooltip]="t('fin.ops.gl.pageSize')"
+      >
+        <option [value]="25">25</option>
+        <option [value]="50">50</option>
+        <option [value]="100">100</option>
+        <option [value]="200">200</option>
+      </select>
+    </div>
+  </footer>
+</div>

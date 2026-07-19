@@ -1,0 +1,243 @@
+<app-inventory-page-shell [breadcrumbs]="breadcrumbs()" [title]="pageTitle()">
+  <section class="toolbar" shellActions>
+    <span class="status-pill" [attr.data-status]="status()">
+      {{ returnNumber() || t('pur.pr.new') }} · {{ statusLabel() }}
+    </span>
+    <span class="type-pill">{{ returnTypeLabel() }}</span>
+    <button type="button" class="btn ghost" (click)="back()">{{ t('pur.pr.back') }}</button>
+    <button
+      type="button"
+      class="btn success"
+      [disabled]="!canManage() || !docId() || !isDraft() || saving()"
+      (click)="approve()"
+    >
+      {{ t('pur.pr.approve') }}
+    </button>
+    <button
+      type="button"
+      class="btn info"
+      [disabled]="!canManage() || !docId() || isPosted() || status() === 'Cancelled' || saving()"
+      (click)="post()"
+    >
+      {{ t('pur.pr.post') }}
+    </button>
+    <button
+      type="button"
+      class="btn ghost"
+      [disabled]="!canManage() || !docId() || !isPosted() || saving()"
+      (click)="unpost()"
+    >
+      {{ t('pur.pr.unpost') }}
+    </button>
+    <button
+      type="button"
+      class="btn danger"
+      [disabled]="!canManage() || !docId() || isPosted() || status() === 'Cancelled' || status() === 'Reversed' || saving()"
+      (click)="cancelDoc()"
+    >
+      {{ t('pur.pr.cancelDoc') }}
+    </button>
+    <button
+      type="button"
+      class="btn primary"
+      [disabled]="!canManage() || !isDraft() || saving()"
+      (click)="save()"
+    >
+      {{ t('pur.pr.save') }}
+    </button>
+  </section>
+
+  @if (error()) {
+    <div class="form-error">{{ error() }}</div>
+  }
+
+  @if (showCreditNote()) {
+    <div class="credit-note">
+      <mat-icon>info</mat-icon>
+      {{ t('pur.pr.creditNoteHint') }}
+    </div>
+  }
+
+  @if (loading()) {
+    <p class="muted">{{ t('common.loading') }}</p>
+  } @else {
+    <section class="card">
+      <h3>{{ t('pur.pr.headerTitle') }}</h3>
+      <div class="grid-4">
+        <label class="field">
+          <span>{{ t('pur.pr.col.docNumber') }}</span>
+          <input type="text" [ngModel]="returnNumber()" disabled [placeholder]="t('pur.pr.autoNumber')" />
+        </label>
+        <label class="field">
+          <span>{{ t('pur.pr.col.date') }}</span>
+          <input type="date" [ngModel]="returnDate()" (ngModelChange)="returnDate.set($event)" [disabled]="!isDraft()" />
+        </label>
+        <label class="field">
+          <span>{{ t('pur.pr.col.returnType') }}</span>
+          @if (isDirectRoute() || !!docId()) {
+            <input type="text" [ngModel]="returnTypeLabel()" disabled />
+          } @else {
+            <select
+              [ngModel]="returnType()"
+              (ngModelChange)="onReturnTypeChange(+$event)"
+              [disabled]="!isDraft()"
+            >
+              <option [ngValue]="1">{{ t('pur.pr.type.beforeInvoice') }}</option>
+              <option [ngValue]="2">{{ t('pur.pr.type.afterInvoice') }}</option>
+              <option [ngValue]="3">{{ t('pur.pr.type.direct') }}</option>
+            </select>
+          }
+        </label>
+        <label class="field">
+          <span>{{ t('pur.pr.col.supplier') }}</span>
+          <input type="text" [ngModel]="supplierNameAr()" disabled [placeholder]="t('pur.pr.supplierLocked')" />
+        </label>
+
+        @if (usesGrnSource()) {
+          <label class="field span-2">
+            <span>{{ t('pur.pr.sourceGrn') }}</span>
+            <div class="inline">
+              <select
+                [ngModel]="goodsReceiptId()"
+                (ngModelChange)="goodsReceiptId.set($event || null)"
+                [disabled]="!isDraft() || !!docId()"
+              >
+                <option [ngValue]="null">{{ t('pur.pr.pickGrn') }}</option>
+                @for (g of goodsReceipts(); track g.id) {
+                  <option [ngValue]="g.id">{{ g.grnNumber }} — {{ g.supplierNameAr }}</option>
+                }
+              </select>
+              <button type="button" class="btn ghost" [disabled]="!isDraft() || !!docId()" (click)="loadFromGrn()">
+                {{ t('pur.pr.loadFromSource') }}
+              </button>
+            </div>
+          </label>
+        } @else {
+          <label class="field span-2">
+            <span>{{ t('pur.pr.sourceInvoice') }}</span>
+            <div class="inline">
+              <select
+                [ngModel]="purchaseInvoiceId()"
+                (ngModelChange)="purchaseInvoiceId.set($event || null)"
+                [disabled]="!isDraft() || !!docId()"
+              >
+                <option [ngValue]="null">{{ t('pur.pr.pickInvoice') }}</option>
+                @for (inv of invoices(); track inv.id) {
+                  <option [ngValue]="inv.id">{{ inv.invoiceNumber }}</option>
+                }
+              </select>
+              <button type="button" class="btn ghost" [disabled]="!isDraft() || !!docId()" (click)="loadFromInvoice()">
+                {{ t('pur.pr.loadFromSource') }}
+              </button>
+            </div>
+          </label>
+        }
+
+        <div class="field span-2 status-track">
+          <span>{{ t('pur.pr.col.status') }}</span>
+          <div class="steps">
+            <span [class.active]="unifiedStatusCode() === 0 || status() === 'Draft'">0 · {{ t('pur.pr.status.draft') }}</span>
+            <span [class.active]="status() === 'Approved'">1 · {{ t('pur.pr.status.approved') }}</span>
+            <span [class.active]="status() === 'Posted'">2 · {{ t('pur.pr.status.posted') }}</span>
+            <span [class.active]="status() === 'Cancelled'">9 · {{ t('pur.pr.status.cancelled') }}</span>
+          </div>
+        </div>
+
+        <label class="field">
+          <span>{{ t('pur.pr.col.warehouse') }}</span>
+          <select [ngModel]="warehouseId()" (ngModelChange)="warehouseId.set($event || null)" [disabled]="!isDraft() || !!supplierNameAr()">
+            <option [ngValue]="null">{{ t('pur.pr.pickWarehouse') }}</option>
+            @for (w of warehouses(); track w.id) {
+              <option [ngValue]="w.id">{{ w.nameAr }}</option>
+            }
+          </select>
+        </label>
+        <label class="field">
+          <span>{{ t('pur.pr.col.reason') }}</span>
+          <select [ngModel]="returnReasonId()" (ngModelChange)="returnReasonId.set($event || null)" [disabled]="!isDraft()">
+            <option [ngValue]="null">{{ t('pur.pr.pickReason') }}</option>
+            @for (r of reasons(); track r.id) {
+              <option [ngValue]="r.id">{{ r.nameAr }}</option>
+            }
+          </select>
+        </label>
+        <label class="field">
+          <span>{{ t('pur.pr.col.ref') }}</span>
+          <input type="text" [ngModel]="referenceNumber()" (ngModelChange)="referenceNumber.set($event)" [disabled]="!isDraft()" />
+        </label>
+        <label class="field">
+          <span>{{ t('pur.pr.col.currency') }}</span>
+          <input type="text" [ngModel]="currency()" disabled />
+        </label>
+        <label class="field span-2">
+          <span>{{ t('pur.pr.col.reasonNotes') }}</span>
+          <input type="text" [ngModel]="reasonNotes()" (ngModelChange)="reasonNotes.set($event)" [disabled]="!isDraft()" />
+        </label>
+        <label class="field span-2">
+          <span>{{ t('pur.pr.col.notes') }}</span>
+          <input type="text" [ngModel]="notes()" (ngModelChange)="notes.set($event)" [disabled]="!isDraft()" />
+        </label>
+      </div>
+    </section>
+
+    <section class="card">
+      <div class="card-head">
+        <h3>{{ t('pur.pr.linesTitle') }}</h3>
+        <div class="row-actions">
+          <button type="button" class="btn ghost" [disabled]="!isDraft() || !!docId()" (click)="loadFromSource()">
+            {{ t('pur.pr.loadFromSource') }}
+          </button>
+        </div>
+      </div>
+
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>{{ t('pur.pr.col.item') }}</th>
+              <th>{{ t('pur.pr.col.originalQty') }}</th>
+              <th>{{ t('pur.pr.col.returnQty') }}</th>
+              <th>{{ t('pur.pr.col.unit') }}</th>
+              <th>{{ t('pur.pr.col.unitPrice') }}</th>
+              <th>{{ t('pur.pr.col.warehouse') }}</th>
+              <th>{{ t('pur.pr.col.tax') }}</th>
+              <th>{{ t('pur.pr.col.lineTotal') }}</th>
+            </tr>
+          </thead>
+          <tbody>
+            @if (lines().length === 0) {
+              <tr>
+                <td colspan="8" class="muted">{{ t('pur.pr.noLines') }}</td>
+              </tr>
+            }
+            @for (line of lines(); track $index; let i = $index) {
+              <tr [class.selected]="selectedLineIndex() === i" (click)="selectLine(i)">
+                <td>{{ line.itemNameAr || line.inventoryItemId }}</td>
+                <td>{{ line.originalQuantity | number: '1.0-3' }}</td>
+                <td>
+                  <input
+                    type="number"
+                    class="cell-input"
+                    [ngModel]="line.returnQuantity"
+                    (ngModelChange)="updateLine(i, { returnQuantity: +$event })"
+                    [disabled]="!isDraft()"
+                    [attr.max]="line.availableToReturn"
+                  />
+                </td>
+                <td>{{ line.unitNameAr || '—' }}</td>
+                <td>{{ line.unitCost | number: '1.2-2' }}</td>
+                <td>{{ warehouseNameAr() || '—' }}</td>
+                <td>{{ line.taxAmount | number: '1.2-2' }}</td>
+                <td>{{ line.lineTotal | number: '1.2-2' }}</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+      <div class="totals">
+        <strong>{{ t('pur.pr.grandTotal') }}: {{ grandTotal() | number: '1.2-2' }} {{ currency() }}</strong>
+      </div>
+      <p class="tip"><mat-icon>lightbulb</mat-icon> {{ t('pur.pr.tip') }}</p>
+    </section>
+  }
+</app-inventory-page-shell>

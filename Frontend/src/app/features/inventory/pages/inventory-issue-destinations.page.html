@@ -1,0 +1,217 @@
+<app-inventory-page-shell
+  [breadcrumbs]="breadcrumbs"
+  titleKey="inv.nav.issueDestinations"
+  subtitleKey="inv.dest.subtitle"
+>
+  <section class="toolbar" shellActions>
+    <div class="search-group">
+      <mat-icon>search</mat-icon>
+      <input
+        type="search"
+        [ngModel]="search()"
+        (ngModelChange)="search.set($event)"
+        (keydown.enter)="load()"
+        [placeholder]="t('inv.dest.searchPlaceholder')"
+      />
+      <button type="button" class="btn primary" (click)="load()">
+        <mat-icon>search</mat-icon>
+        {{ t('common.search') }}
+      </button>
+    </div>
+    <button type="button" class="btn primary" [disabled]="!canCreate()" (click)="openCreate()">
+      <mat-icon>add</mat-icon>
+      {{ t('inv.dest.new') }}
+    </button>
+    <button type="button" class="btn ghost" [disabled]="!canEdit() || !selected()" (click)="openEdit()">
+      <mat-icon>edit</mat-icon>
+      {{ t('inv.dest.edit') }}
+    </button>
+    <button
+      type="button"
+      class="btn ghost"
+      [disabled]="!canDelete() || !selected() || selected()?.isSystem"
+      (click)="remove()"
+      [matTooltip]="selected()?.isSystem ? t('inv.dest.systemNoDelete') : ''"
+    >
+      <mat-icon>delete</mat-icon>
+      {{ t('common.delete') }}
+    </button>
+    <button type="button" class="btn ghost" (click)="load()">
+      <mat-icon>sync</mat-icon>
+      {{ t('inv.dest.refresh') }}
+    </button>
+  </section>
+
+  @if (error() && !showModal()) {
+    <div class="form-error">{{ error() }}</div>
+  }
+
+  @if (loading()) {
+    <app-inventory-skeleton [count]="8" />
+  } @else if (error() && rows().length === 0) {
+    <app-inventory-error-state [message]="error()!" (retry)="load()" />
+  } @else if (rows().length === 0) {
+    <app-inventory-empty-state icon="place" [title]="t('inv.empty.title')" [message]="t('inv.dest.empty')" />
+  } @else {
+    <div class="table-card">
+      <table>
+        <thead>
+          <tr>
+            <th>{{ t('inv.dest.col.code') }}</th>
+            <th>{{ t('inv.dest.col.name') }}</th>
+            <th>{{ t('inv.dest.col.nameEn') }}</th>
+            <th>{{ t('inv.dest.col.type') }}</th>
+            <th>{{ t('inv.dest.col.account') }}</th>
+            <th>{{ t('inv.dest.col.costCenter') }}</th>
+            <th>{{ t('inv.dest.col.policies') }}</th>
+            <th>{{ t('inv.dest.col.status') }}</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (row of rows(); track row.id) {
+            <tr [class.selected]="selectedId() === row.id" (click)="select(row)" (dblclick)="openEdit()">
+              <td><code>{{ row.code }}</code></td>
+              <td>{{ row.nameAr }}</td>
+              <td>{{ row.nameEn || '—' }}</td>
+              <td>{{ typeLabel(row.destinationTypeCode) }}</td>
+              <td>{{ row.glAccountNameAr || '—' }}</td>
+              <td>{{ row.costCenterNameAr || '—' }}</td>
+              <td class="policies">{{ row.policySummary }}</td>
+              <td>
+                <span class="status-badge" [attr.data-active]="row.isActive">
+                  {{ row.isActive ? t('inv.dest.status.active') : t('inv.dest.status.inactive') }}
+                </span>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  }
+</app-inventory-page-shell>
+
+@if (showModal()) {
+  <div class="overlay" (click)="closeModal()">
+    <div class="dialog" (click)="$event.stopPropagation()">
+      <header class="dialog-header">
+        <h3>{{ isEditing() ? t('inv.dest.editTitle') : t('inv.dest.createTitle') }}</h3>
+        <div class="dialog-actions">
+          <button type="button" class="btn primary" [disabled]="saving()" (click)="save()">
+            <mat-icon>save</mat-icon>
+            {{ t('inv.dest.save') }}
+          </button>
+          <button type="button" class="btn ghost" (click)="closeModal()">
+            <mat-icon>close</mat-icon>
+            {{ t('inv.dest.cancel') }}
+          </button>
+        </div>
+      </header>
+
+      <nav class="tabs">
+        <button type="button" class="tab" [class.active]="formTab() === 'general'" (click)="formTab.set('general')">
+          {{ t('inv.dest.tab.general') }}
+        </button>
+        <button type="button" class="tab" [class.active]="formTab() === 'accounting'" (click)="formTab.set('accounting')">
+          {{ t('inv.dest.tab.accounting') }}
+        </button>
+        <button type="button" class="tab" [class.active]="formTab() === 'policies'" (click)="formTab.set('policies')">
+          {{ t('inv.dest.tab.policies') }}
+        </button>
+        <button type="button" class="tab" [class.active]="formTab() === 'status'" (click)="formTab.set('status')">
+          {{ t('inv.dest.tab.status') }}
+        </button>
+      </nav>
+
+      @if (error()) {
+        <div class="form-error">{{ error() }}</div>
+      }
+
+      <div class="dialog-body">
+        @if (formTab() === 'general') {
+          <div class="grid-2">
+            <label class="field">
+              <span>{{ t('inv.dest.col.code') }}</span>
+              <input type="text" [ngModel]="code()" (ngModelChange)="code.set($event)" [disabled]="isEditing()" />
+            </label>
+            <label class="field">
+              <span>{{ t('inv.dest.col.name') }}</span>
+              <input type="text" [ngModel]="nameAr()" (ngModelChange)="nameAr.set($event)" />
+            </label>
+            <label class="field">
+              <span>{{ t('inv.dest.col.nameEn') }}</span>
+              <input type="text" [ngModel]="nameEn()" (ngModelChange)="nameEn.set($event)" />
+            </label>
+            <label class="field">
+              <span>{{ t('inv.dest.col.type') }}</span>
+              <select [ngModel]="destinationType()" (ngModelChange)="destinationType.set(+$event)">
+                @for (tp of types; track tp.value) {
+                  <option [ngValue]="tp.value">{{ t(tp.labelKey) }}</option>
+                }
+              </select>
+            </label>
+            <label class="field span">
+              <span>{{ t('inv.dest.col.description') }}</span>
+              <textarea rows="3" [ngModel]="description()" (ngModelChange)="description.set($event)"></textarea>
+            </label>
+          </div>
+        }
+
+        @if (formTab() === 'accounting') {
+          <div class="grid-2">
+            <label class="field">
+              <span>{{ t('inv.dest.col.account') }}</span>
+              <select [ngModel]="defaultGlAccountId()" (ngModelChange)="defaultGlAccountId.set($event || null)">
+                <option [ngValue]="null">—</option>
+                @for (a of accounts(); track a.id) {
+                  <option [ngValue]="a.id">{{ a.nameAr }}</option>
+                }
+              </select>
+            </label>
+            <label class="field">
+              <span>{{ t('inv.dest.col.costCenter') }}</span>
+              <select [ngModel]="defaultCostCenterId()" (ngModelChange)="defaultCostCenterId.set($event || null)">
+                <option [ngValue]="null">—</option>
+                @for (c of costCenters(); track c.id) {
+                  <option [ngValue]="c.id">{{ c.nameAr }}</option>
+                }
+              </select>
+            </label>
+            <label class="check span">
+              <input type="checkbox" [ngModel]="allowChangeAccountOnIssue()" (ngModelChange)="allowChangeAccountOnIssue.set($event)" />
+              {{ t('inv.dest.policy.allowChangeAccount') }}
+            </label>
+          </div>
+        }
+
+        @if (formTab() === 'policies') {
+          <div class="checks">
+            <label class="check"><input type="checkbox" [ngModel]="requireEmployee()" (ngModelChange)="requireEmployee.set($event)" /> {{ t('inv.dest.policy.requireEmployee') }}</label>
+            <label class="check"><input type="checkbox" [ngModel]="requireProject()" (ngModelChange)="requireProject.set($event)" /> {{ t('inv.dest.policy.requireProject') }}</label>
+            <label class="check"><input type="checkbox" [ngModel]="requireCostCenter()" (ngModelChange)="requireCostCenter.set($event)" /> {{ t('inv.dest.policy.requireCostCenter') }}</label>
+            <label class="check"><input type="checkbox" [ngModel]="requireBranch()" (ngModelChange)="requireBranch.set($event)" /> {{ t('inv.dest.policy.requireBranch') }}</label>
+            <label class="check"><input type="checkbox" [ngModel]="requireReason()" (ngModelChange)="requireReason.set($event)" /> {{ t('inv.dest.policy.requireReason') }}</label>
+            <label class="check"><input type="checkbox" [ngModel]="requireApproval()" (ngModelChange)="requireApproval.set($event)" /> {{ t('inv.dest.policy.requireApproval') }}</label>
+            <label class="check"><input type="checkbox" [ngModel]="allowDirectIssue()" (ngModelChange)="allowDirectIssue.set($event)" /> {{ t('inv.dest.policy.allowDirect') }}</label>
+            <label class="check"><input type="checkbox" [ngModel]="allowNegativeStock()" (ngModelChange)="allowNegativeStock.set($event)" /> {{ t('inv.dest.policy.allowNegative') }}</label>
+          </div>
+        }
+
+        @if (formTab() === 'status') {
+          <div class="grid-2">
+            <label class="field">
+              <span>{{ t('inv.dest.col.status') }}</span>
+              <select [ngModel]="isActive()" (ngModelChange)="isActive.set($event === true || $event === 'true')">
+                <option [ngValue]="true">{{ t('inv.dest.status.active') }}</option>
+                <option [ngValue]="false">{{ t('inv.dest.status.inactive') }}</option>
+              </select>
+            </label>
+            <label class="field">
+              <span>{{ t('inv.dest.col.sort') }}</span>
+              <input type="number" [ngModel]="sortOrder()" (ngModelChange)="sortOrder.set(+$event)" />
+            </label>
+          </div>
+        }
+      </div>
+    </div>
+  </div>
+}

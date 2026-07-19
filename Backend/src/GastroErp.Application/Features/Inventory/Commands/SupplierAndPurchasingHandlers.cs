@@ -1,9 +1,12 @@
 using AutoMapper;
 using GastroErp.Application.Common.Interfaces;
+using GastroErp.Application.Common.Interfaces.Inventory;
 using GastroErp.Application.Common.Responses;
 using GastroErp.Application.Features.Inventory.DTOs;
+using GastroErp.Application.Features.Inventory.Services;
 using GastroErp.Domain.Entities.Inventory.Suppliers;
 using GastroErp.Domain.Entities.Inventory.Purchasing;
+using GastroErp.Domain.Enums;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
@@ -11,25 +14,7 @@ using Microsoft.Extensions.Logging;
 namespace GastroErp.Application.Features.Inventory.Commands;
 
 // ─── Supplier Handlers ────────────────────────────────────────────────────────
-
-public class CreateSupplierCommandHandler : IRequestHandler<CreateSupplierCommand, Result<SupplierDto>>
-{
-    private readonly IApplicationDbContext _context;
-    private readonly IMapper _mapper;
-    private readonly ILogger<CreateSupplierCommandHandler> _logger;
-
-    public CreateSupplierCommandHandler(IApplicationDbContext context, IMapper mapper, ILogger<CreateSupplierCommandHandler> logger)
-        => (_context, _mapper, _logger) = (context, mapper, logger);
-
-    public async Task<Result<SupplierDto>> Handle(CreateSupplierCommand request, CancellationToken cancellationToken)
-    {
-        var supplier = new Supplier(request.Dto.TenantId, request.Dto.NameAr, request.Dto.NameEn, request.Dto.Currency);
-        _context.Suppliers.Add(supplier);
-        await _context.SaveChangesAsync(cancellationToken);
-        _logger.LogInformation("Supplier created: {Id}", supplier.Id);
-        return Result<SupplierDto>.Success(_mapper.Map<SupplierDto>(supplier));
-    }
-}
+// CreateSupplier / UpsertMaster / Delete / Blacklist → SupplierMasterCommandHandlers.cs
 
 public class UpdateSupplierFinancialCommandHandler : IRequestHandler<UpdateSupplierFinancialCommand, Result>
 {
@@ -97,7 +82,7 @@ public class AddSupplierContactCommandHandler : IRequestHandler<AddSupplierConta
     {
         var supplier = await _context.Suppliers.Include(s => s.Contacts).FirstOrDefaultAsync(s => s.Id == request.SupplierId, cancellationToken);
         if (supplier == null) return Result.Failure("SupplierNotFound", "Supplier not found.");
-        supplier.AddContact(request.Dto.NameAr, request.Dto.PhoneNumber, request.Dto.Email, request.Dto.Position, request.Dto.NameEn);
+        supplier.AddContact(request.Dto.NameAr, request.Dto.PhoneNumber, request.Dto.Email, request.Dto.Position, request.Dto.NameEn, request.Dto.Mobile);
         _context.Suppliers.Update(supplier);
         await _context.SaveChangesAsync(cancellationToken);
         _logger.LogInformation("Contact added to Supplier {SupplierId}", supplier.Id);
@@ -172,8 +157,11 @@ public class CreatePurchaseOrderCommandHandler : IRequestHandler<CreatePurchaseO
 
     public async Task<Result<PurchaseOrderDto>> Handle(CreatePurchaseOrderCommand request, CancellationToken cancellationToken)
     {
-        var supplierExists = await _context.Suppliers.AnyAsync(s => s.Id == request.Dto.SupplierId, cancellationToken);
-        if (!supplierExists) return Result<PurchaseOrderDto>.Failure("SupplierNotFound", "Supplier not found.");
+        var supplier = await _context.Suppliers.FirstOrDefaultAsync(s => s.Id == request.Dto.SupplierId, cancellationToken);
+        if (supplier is null) return Result<PurchaseOrderDto>.Failure("SupplierNotFound", "Supplier not found.");
+        try { supplier.EnsureCanPurchase(); }
+        catch (Domain.Common.Exceptions.BusinessException ex)
+        { return Result<PurchaseOrderDto>.Failure(ex.ErrorCode, ex.Message); }
 
         var po = new PurchaseOrder(
             request.Dto.TenantId,
@@ -181,7 +169,7 @@ public class CreatePurchaseOrderCommandHandler : IRequestHandler<CreatePurchaseO
             request.Dto.DestinationWarehouseId,
             request.Dto.PoNumber,
             request.Dto.ExpectedDeliveryDate,
-            request.Dto.Currency,
+            string.IsNullOrWhiteSpace(request.Dto.Currency) ? supplier.Currency : request.Dto.Currency,
             request.Dto.Notes
         );
 
@@ -294,81 +282,7 @@ public class CancelPurchaseOrderCommandHandler : IRequestHandler<CancelPurchaseO
     }
 }
 
-// ─── GoodsReceipt Handlers ────────────────────────────────────────────────────
-
-public class CreateGoodsReceiptCommandHandler : IRequestHandler<CreateGoodsReceiptCommand, Result<GoodsReceiptDto>>
-{
-    private readonly IApplicationDbContext _context;
-    private readonly IMapper _mapper;
-    private readonly ILogger<CreateGoodsReceiptCommandHandler> _logger;
-
-    public CreateGoodsReceiptCommandHandler(IApplicationDbContext context, IMapper mapper, ILogger<CreateGoodsReceiptCommandHandler> logger)
-        => (_context, _mapper, _logger) = (context, mapper, logger);
-
-    public async Task<Result<GoodsReceiptDto>> Handle(CreateGoodsReceiptCommand request, CancellationToken cancellationToken)
-    {
-        var po = await _context.PurchaseOrders.FirstOrDefaultAsync(p => p.Id == request.Dto.PurchaseOrderId, cancellationToken);
-        if (po == null) return Result<GoodsReceiptDto>.Failure("PurchaseOrderNotFound", "Purchase order not found.");
-
-        var gr = new GoodsReceipt(
-            request.Dto.TenantId,
-            po.SupplierId,
-            request.Dto.WarehouseId,
-            request.Dto.GrnNumber,
-            request.Dto.PurchaseOrderId,
-            null,
-            request.Dto.Notes
-        );
-
-        _context.GoodsReceipts.Add(gr);
-        await _context.SaveChangesAsync(cancellationToken);
-        _logger.LogInformation("GoodsReceipt created: {Id}", gr.Id);
-        return Result<GoodsReceiptDto>.Success(_mapper.Map<GoodsReceiptDto>(gr));
-    }
-}
-
-public class AddGoodsReceiptLineCommandHandler : IRequestHandler<AddGoodsReceiptLineCommand, Result>
-{
-    private readonly IApplicationDbContext _context;
-    private readonly ILogger<AddGoodsReceiptLineCommandHandler> _logger;
-
-    public AddGoodsReceiptLineCommandHandler(IApplicationDbContext context, ILogger<AddGoodsReceiptLineCommandHandler> logger)
-        => (_context, _logger) = (context, logger);
-
-    public async Task<Result> Handle(AddGoodsReceiptLineCommand request, CancellationToken cancellationToken)
-    {
-        var gr = await _context.GoodsReceipts.Include(g => g.Lines).FirstOrDefaultAsync(g => g.Id == request.GoodsReceiptId, cancellationToken);
-        if (gr == null) return Result.Failure("GoodsReceiptNotFound", "Goods receipt not found.");
-
-        gr.AddLine(request.Dto.InventoryItemId, request.Dto.UnitId, request.Dto.ReceivedQuantity, request.Dto.UnitCost);
-        _context.GoodsReceipts.Update(gr);
-        await _context.SaveChangesAsync(cancellationToken);
-        _logger.LogInformation("Line added to GoodsReceipt {GrId}", gr.Id);
-        return Result.Success();
-    }
-}
-
-public class ConfirmGoodsReceiptCommandHandler : IRequestHandler<ConfirmGoodsReceiptCommand, Result>
-{
-    private readonly IApplicationDbContext _context;
-    private readonly ILogger<ConfirmGoodsReceiptCommandHandler> _logger;
-
-    public ConfirmGoodsReceiptCommandHandler(IApplicationDbContext context, ILogger<ConfirmGoodsReceiptCommandHandler> logger)
-        => (_context, _logger) = (context, logger);
-
-    public async Task<Result> Handle(ConfirmGoodsReceiptCommand request, CancellationToken cancellationToken)
-    {
-        var gr = await _context.GoodsReceipts.Include(g => g.Lines).FirstOrDefaultAsync(g => g.Id == request.Id, cancellationToken);
-        if (gr == null) return Result.Failure("GoodsReceiptNotFound", "Goods receipt not found.");
-        if (!gr.Lines.Any()) return Result.Failure("NoLines", "Cannot confirm goods receipt with no lines.");
-
-        gr.Complete();
-        _context.GoodsReceipts.Update(gr);
-        await _context.SaveChangesAsync(cancellationToken);
-        _logger.LogInformation("GoodsReceipt confirmed: {Id}", gr.Id);
-        return Result.Success();
-    }
-}
+// ─── GoodsReceipt Handlers moved to GoodsReceiptCommandHandlers.cs ────────────
 
 public class UpdateSupplierCommandHandler : IRequestHandler<UpdateSupplierCommand, Result>
 {
@@ -392,76 +306,7 @@ public class UpdateSupplierCommandHandler : IRequestHandler<UpdateSupplierComman
     }
 }
 
-// ─── PurchaseReturn Handlers ──────────────────────────────────────────────────
-
-public class CreatePurchaseReturnCommandHandler : IRequestHandler<CreatePurchaseReturnCommand, Result<PurchaseReturnDto>>
-{
-    private readonly IApplicationDbContext _context;
-    private readonly IMapper _mapper;
-    private readonly ILogger<CreatePurchaseReturnCommandHandler> _logger;
-
-    public CreatePurchaseReturnCommandHandler(IApplicationDbContext context, IMapper mapper, ILogger<CreatePurchaseReturnCommandHandler> logger)
-        => (_context, _mapper, _logger) = (context, mapper, logger);
-
-    public async Task<Result<PurchaseReturnDto>> Handle(CreatePurchaseReturnCommand request, CancellationToken cancellationToken)
-    {
-        var supplierExists = await _context.Suppliers.AnyAsync(s => s.Id == request.Dto.SupplierId, cancellationToken);
-        if (!supplierExists) return Result<PurchaseReturnDto>.Failure("SupplierNotFound", "Supplier not found.");
-
-        var warehouseExists = await _context.Warehouses.AnyAsync(w => w.Id == request.Dto.WarehouseId, cancellationToken);
-        if (!warehouseExists) return Result<PurchaseReturnDto>.Failure("WarehouseNotFound", "Warehouse not found.");
-
-        var purchaseReturn = new PurchaseReturn(
-            request.TenantId,
-            request.Dto.SupplierId,
-            request.Dto.WarehouseId,
-            request.Dto.ReturnNumber,
-            request.Dto.GoodsReceiptId,
-            request.Dto.Reason
-        );
-
-        _context.PurchaseReturns.Add(purchaseReturn);
-        await _context.SaveChangesAsync(cancellationToken);
-        _logger.LogInformation("PurchaseReturn created: {Id}", purchaseReturn.Id);
-        return Result<PurchaseReturnDto>.Success(_mapper.Map<PurchaseReturnDto>(purchaseReturn));
-    }
-}
-
-public class AddPurchaseReturnLineCommandHandler : IRequestHandler<AddPurchaseReturnLineCommand, Result>
-{
-    private readonly IApplicationDbContext _context;
-
-    public AddPurchaseReturnLineCommandHandler(IApplicationDbContext context) => _context = context;
-
-    public async Task<Result> Handle(AddPurchaseReturnLineCommand request, CancellationToken cancellationToken)
-    {
-        var purchaseReturn = await _context.PurchaseReturns.Include(r => r.Lines).FirstOrDefaultAsync(r => r.Id == request.PurchaseReturnId, cancellationToken);
-        if (purchaseReturn == null) return Result.Failure("PurchaseReturnNotFound", "Purchase return not found.");
-
-        purchaseReturn.AddLine(request.Dto.InventoryItemId, request.Dto.UnitId, request.Dto.ReturnQuantity, request.Dto.UnitCost, request.Dto.Notes);
-        _context.PurchaseReturns.Update(purchaseReturn);
-        await _context.SaveChangesAsync(cancellationToken);
-        return Result.Success();
-    }
-}
-
-public class ApprovePurchaseReturnCommandHandler : IRequestHandler<ApprovePurchaseReturnCommand, Result>
-{
-    private readonly IApplicationDbContext _context;
-
-    public ApprovePurchaseReturnCommandHandler(IApplicationDbContext context) => _context = context;
-
-    public async Task<Result> Handle(ApprovePurchaseReturnCommand request, CancellationToken cancellationToken)
-    {
-        var purchaseReturn = await _context.PurchaseReturns.Include(r => r.Lines).FirstOrDefaultAsync(r => r.Id == request.Id, cancellationToken);
-        if (purchaseReturn == null) return Result.Failure("PurchaseReturnNotFound", "Purchase return not found.");
-
-        purchaseReturn.Complete();
-        _context.PurchaseReturns.Update(purchaseReturn);
-        await _context.SaveChangesAsync(cancellationToken);
-        return Result.Success();
-    }
-}
+// ─── PurchaseReturn Handlers moved to PurchaseReturnCommandHandlers.cs ────────
 
 // ─── Additional PurchaseOrder Workflow Handlers ─────────────────────────────────
 

@@ -1,0 +1,157 @@
+<app-inventory-page-shell [breadcrumbs]="breadcrumbs" [title]="pageTitle()">
+  <section class="toolbar" shellActions>
+    @if (isNew()) {
+      <span class="new-tag">{{ t('inv.st.newTag') }}</span>
+    } @else {
+      <span class="status-pill" [attr.data-status]="status()">{{ statusLabel() }}</span>
+    }
+    <button type="button" class="btn primary" [disabled]="!canManage() || !isDraft() || saving()" (click)="save()">
+      <mat-icon>save</mat-icon>
+      {{ t('inv.st.save') }}
+    </button>
+    <button type="button" class="btn ghost" (click)="cancel()">
+      <mat-icon>close</mat-icon>
+      {{ t('inv.st.cancel') }}
+    </button>
+  </section>
+
+  @if (error()) {
+    <div class="form-error">{{ error() }}</div>
+  }
+
+  @if (loading()) {
+    <p class="muted">{{ t('common.loading') }}</p>
+  } @else {
+    <section class="card">
+      <h3>{{ t('inv.st.headerTitle') }}</h3>
+      <div class="grid-3">
+        <label class="field">
+          <span>{{ t('inv.st.col.docNumber') }}</span>
+          <input type="text" [ngModel]="transferNumber()" disabled />
+        </label>
+        <label class="field">
+          <span>{{ t('inv.st.col.date') }}</span>
+          <input type="date" [ngModel]="transferDate()" (ngModelChange)="transferDate.set($event)" [disabled]="!isDraft()" />
+        </label>
+        <label class="field">
+          <span>{{ t('inv.st.col.source') }} *</span>
+          <select
+            [ngModel]="sourceWarehouseId()"
+            (ngModelChange)="sourceWarehouseId.set($event || null)"
+            [disabled]="!isDraft()"
+          >
+            <option [ngValue]="null">{{ t('inv.st.pickSource') }}</option>
+            @for (w of warehouses(); track w.id) {
+              <option [ngValue]="w.id">{{ w.nameAr }}</option>
+            }
+          </select>
+        </label>
+        <label class="field">
+          <span>{{ t('inv.st.col.destination') }} *</span>
+          <select
+            [ngModel]="destinationWarehouseId()"
+            (ngModelChange)="destinationWarehouseId.set($event || null)"
+            [disabled]="!isDraft()"
+          >
+            <option [ngValue]="null">{{ t('inv.st.pickDestination') }}</option>
+            @for (w of warehouses(); track w.id) {
+              <option [ngValue]="w.id">{{ w.nameAr }}</option>
+            }
+          </select>
+        </label>
+        <label class="field">
+          <span>{{ t('inv.st.col.type') }}</span>
+          <select [ngModel]="transferType()" (ngModelChange)="transferType.set(+$event)" [disabled]="!isDraft()">
+            <option [ngValue]="1">{{ t('inv.st.type.outbound') }}</option>
+            <option [ngValue]="2">{{ t('inv.st.type.inbound') }}</option>
+          </select>
+        </label>
+        <label class="field span-2">
+          <span>{{ t('inv.st.col.notes') }}</span>
+          <textarea rows="2" [ngModel]="notes()" (ngModelChange)="notes.set($event)" [disabled]="!isDraft()"></textarea>
+        </label>
+      </div>
+    </section>
+
+    <section class="card">
+      <div class="lines-head">
+        <h3>{{ t('inv.st.linesTitle') }}</h3>
+        <div class="line-actions">
+          <button type="button" class="btn primary" [disabled]="!isDraft()" (click)="addLine()">
+            <mat-icon>add</mat-icon>
+            {{ t('inv.st.addLine') }}
+          </button>
+          <button type="button" class="btn ghost" [disabled]="!isDraft() || selectedLineIndex() == null" (click)="removeLine()">
+            <mat-icon>delete</mat-icon>
+            {{ t('inv.st.deleteLine') }}
+          </button>
+        </div>
+      </div>
+
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>{{ t('inv.st.col.item') }}</th>
+              <th>{{ t('inv.st.col.qty') }}</th>
+              <th>{{ t('inv.st.col.unit') }}</th>
+              <th>{{ t('inv.st.col.unitCost') }}</th>
+              <th>{{ t('inv.st.col.lineTotal') }}</th>
+              <th>{{ t('inv.st.col.received') }}</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (line of lines(); track $index; let i = $index) {
+              <tr [class.selected]="selectedLineIndex() === i" (click)="selectLine(i)">
+                <td>{{ i + 1 }}</td>
+                <td>
+                  <select [ngModel]="line.inventoryItemId" (ngModelChange)="onItemChange(i, $event)" [disabled]="!isDraft()">
+                    @for (item of items(); track item.id) {
+                      <option [ngValue]="item.id">{{ item.nameAr }}</option>
+                    }
+                  </select>
+                </td>
+                <td>
+                  <input
+                    type="number"
+                    min="0.0001"
+                    step="0.0001"
+                    [ngModel]="line.quantity"
+                    (ngModelChange)="patchLine(i, { quantity: +$event })"
+                    [disabled]="!isDraft()"
+                  />
+                </td>
+                <td>
+                  <select [ngModel]="line.unitId" (ngModelChange)="patchLine(i, { unitId: $event })" [disabled]="!isDraft()">
+                    @for (u of units(); track u.id) {
+                      <option [ngValue]="u.id">{{ u.nameAr }}</option>
+                    }
+                  </select>
+                </td>
+                <td>
+                  <input
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    [ngModel]="line.unitCost"
+                    (ngModelChange)="patchLine(i, { unitCost: +$event })"
+                    [disabled]="!isDraft()"
+                  />
+                </td>
+                <td>{{ line.quantity * line.unitCost | number: '1.2-2' }}</td>
+                <td>
+                  <input type="checkbox" [checked]="(line.receivedQuantity ?? 0) >= line.quantity" disabled />
+                </td>
+              </tr>
+            } @empty {
+              <tr>
+                <td colspan="7" class="empty">{{ t('inv.st.noLines') }}</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    </section>
+  }
+</app-inventory-page-shell>

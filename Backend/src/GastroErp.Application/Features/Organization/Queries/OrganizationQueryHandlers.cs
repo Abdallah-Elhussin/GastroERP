@@ -1,7 +1,10 @@
 using AutoMapper;
 using GastroErp.Application.Common.Interfaces;
 using GastroErp.Application.Common.Responses;
+using GastroErp.Application.Features.Organization.Commands;
 using GastroErp.Application.Features.Organization.DTOs;
+using GastroErp.Domain.Common.Localization;
+using GastroErp.Domain.Enums;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 
@@ -10,48 +13,67 @@ namespace GastroErp.Application.Features.Organization.Queries;
 public class GetBranchByIdQueryHandler : IRequestHandler<GetBranchByIdQuery, Result<BranchDto>>
 {
     private readonly IApplicationDbContext _context;
-    private readonly IMapper _mapper;
 
-    public GetBranchByIdQueryHandler(IApplicationDbContext context, IMapper mapper)
-    {
-        _context = context;
-        _mapper = mapper;
-    }
+    public GetBranchByIdQueryHandler(IApplicationDbContext context) => _context = context;
 
     public async Task<Result<BranchDto>> Handle(GetBranchByIdQuery request, CancellationToken cancellationToken)
     {
         var branch = await _context.Branches.AsNoTracking().FirstOrDefaultAsync(b => b.Id == request.Id, cancellationToken);
-        if (branch == null) return Result<BranchDto>.Failure("BranchNotFound", "Branch not found.");
-        return Result<BranchDto>.Success(_mapper.Map<BranchDto>(branch));
+        if (branch is null)
+            return Result<BranchDto>.Failure(ErrorCodes.OrgBranchNotFound, "Branch not found.");
+
+        var companyName = await _context.Companies.AsNoTracking()
+            .Where(c => c.Id == branch.CompanyId).Select(c => c.NameAr).FirstOrDefaultAsync(cancellationToken);
+        return Result<BranchDto>.Success(BranchCodingMapper.ToDto(branch, companyName));
     }
 }
 
 public class GetBranchesQueryHandler : IRequestHandler<GetBranchesQuery, PagedResult<BranchDto>>
 {
     private readonly IApplicationDbContext _context;
-    private readonly IMapper _mapper;
 
-    public GetBranchesQueryHandler(IApplicationDbContext context, IMapper mapper)
-    {
-        _context = context;
-        _mapper = mapper;
-    }
+    public GetBranchesQueryHandler(IApplicationDbContext context) => _context = context;
 
     public async Task<PagedResult<BranchDto>> Handle(GetBranchesQuery request, CancellationToken cancellationToken)
     {
-        var query = _context.Branches.AsNoTracking();
+        var query = _context.Branches.AsNoTracking().AsQueryable();
 
         if (request.TenantId.HasValue) query = query.Where(b => b.TenantId == request.TenantId.Value);
         if (request.CompanyId.HasValue) query = query.Where(b => b.CompanyId == request.CompanyId.Value);
+        if (request.IsActive == true)
+            query = query.Where(b => b.Status == BranchStatus.Active);
+        if (request.IsActive == false)
+            query = query.Where(b => b.Status != BranchStatus.Active);
         if (!string.IsNullOrWhiteSpace(request.SearchTerm))
-            query = query.Where(b => b.NameAr.Contains(request.SearchTerm) || (b.NameEn != null && b.NameEn.Contains(request.SearchTerm)));
+        {
+            var s = request.SearchTerm.Trim();
+            query = query.Where(b =>
+                b.NameAr.Contains(s) ||
+                (b.NameEn != null && b.NameEn.Contains(s)) ||
+                (b.Code != null && b.Code.Contains(s)) ||
+                (b.Address.CityAr != null && b.Address.CityAr.Contains(s)));
+        }
 
         var totalCount = await query.CountAsync(cancellationToken);
-        var items = await query.OrderByDescending(b => b.CreatedAt)
-            .Skip((request.PageNumber - 1) * request.PageSize)
-            .Take(request.PageSize).ToListAsync(cancellationToken);
+        var pageSize = Math.Clamp(request.PageSize, 1, 500);
+        var page = Math.Max(request.PageNumber, 1);
+        var items = await query
+            .OrderBy(b => b.Code)
+            .ThenBy(b => b.NameAr)
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
+            .ToListAsync(cancellationToken);
 
-        return PagedResult<BranchDto>.Success(_mapper.Map<List<BranchDto>>(items), totalCount, request.PageNumber, request.PageSize);
+        var companyIds = items.Select(b => b.CompanyId).Distinct().ToList();
+        var companies = await _context.Companies.AsNoTracking()
+            .Where(c => companyIds.Contains(c.Id))
+            .ToDictionaryAsync(c => c.Id, c => c.NameAr, cancellationToken);
+
+        var dtos = items
+            .Select(b => BranchCodingMapper.ToDto(b, companies.GetValueOrDefault(b.CompanyId)))
+            .ToList();
+
+        return PagedResult<BranchDto>.Success(dtos, page, pageSize, totalCount);
     }
 }
 

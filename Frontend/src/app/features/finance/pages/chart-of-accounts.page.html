@@ -1,0 +1,243 @@
+<div class="coa-page">
+  <header class="coa-header">
+    <div>
+      <h1>{{ t('fin.coa.title') }}</h1>
+      <p>{{ t('fin.coa.subtitle') }}</p>
+    </div>
+    <div class="header-actions">
+      <button type="button" class="btn ghost" (click)="downloadTemplate()">
+        <mat-icon>download</mat-icon>
+        {{ t('fin.coa.downloadTemplate') }}
+      </button>
+      <label class="btn ghost file-btn">
+        <mat-icon>upload</mat-icon>
+        {{ t('fin.coa.uploadExcel') }}
+        <input type="file" accept=".csv,text/csv" hidden (change)="onImportFile($event)" />
+      </label>
+      <button type="button" class="btn ghost" (click)="exportExcel()">
+        <mat-icon>file_download</mat-icon>
+        {{ t('fin.coa.export') }}
+      </button>
+    </div>
+  </header>
+
+  <div class="toolbar">
+    <div class="search-box">
+      <mat-icon>search</mat-icon>
+      <input
+        type="search"
+        [ngModel]="search()"
+        (ngModelChange)="search.set($event)"
+        (keydown.enter)="load()"
+        [placeholder]="t('fin.coa.searchPlaceholder')"
+      />
+      <button type="button" class="btn primary" (click)="load()">{{ t('common.search') }}</button>
+    </div>
+    <button type="button" class="btn ghost" (click)="load()" [matTooltip]="t('common.refresh')">
+      <mat-icon>sync</mat-icon>
+    </button>
+  </div>
+
+  <nav class="type-tabs">
+    @for (tab of types; track tab.value) {
+      <button
+        type="button"
+        class="tab"
+        [class.active]="activeType() === tab.value"
+        (click)="setType(tab.value)"
+      >
+        {{ t(tab.labelKey) }}
+      </button>
+    }
+  </nav>
+
+  @if (error()) {
+    <div class="form-error">{{ error() }}</div>
+  }
+
+  <div class="workspace">
+    <aside class="details-panel">
+      @if (!selected() && !isCreate()) {
+        <div class="empty-details">
+          <mat-icon>account_tree</mat-icon>
+          <p>{{ t('fin.coa.selectHint') }}</p>
+        </div>
+      } @else {
+        <div class="details-grid">
+          <label>
+            <span>{{ t('fin.coa.accountNumber') }}</span>
+            @if (isCreate()) {
+              <input [ngModel]="accountNumber()" (ngModelChange)="accountNumber.set($event)" [disabled]="!editMode()" />
+            } @else if (editMode() && !isSystemAccount()) {
+              <input [ngModel]="renumberValue()" (ngModelChange)="renumberValue.set($event)" />
+            } @else {
+              <input [ngModel]="accountNumber()" disabled />
+            }
+          </label>
+          <label>
+            <span>{{ t('fin.coa.nameAr') }}</span>
+            <input [ngModel]="nameAr()" (ngModelChange)="nameAr.set($event)" [disabled]="!editMode()" />
+          </label>
+          <label>
+            <span>{{ t('fin.coa.nameEn') }}</span>
+            <input [ngModel]="nameEn()" (ngModelChange)="nameEn.set($event)" [disabled]="!editMode()" />
+          </label>
+          <label>
+            <span>{{ t('fin.coa.parent') }}</span>
+            <select
+              [ngModel]="parentAccountId()"
+              (ngModelChange)="parentAccountId.set($event || null)"
+              [disabled]="!editMode()"
+            >
+              <option [ngValue]="null">—</option>
+              @for (p of flatParents(); track p.id) {
+                <option [ngValue]="p.id">{{ p.accountNumber }} — {{ p.nameAr }}</option>
+              }
+            </select>
+          </label>
+          <label>
+            <span>{{ t('fin.coa.type') }}</span>
+            <input [value]="typeLabel(accountType())" disabled />
+          </label>
+          <label>
+            <span>{{ t('fin.coa.classification') }}</span>
+            <select
+              [ngModel]="accountClassificationId()"
+              (ngModelChange)="onClassificationChange($event)"
+              [disabled]="!editMode()"
+            >
+              <option [ngValue]="null">—</option>
+              @for (c of filteredClassifications(); track c.id) {
+                <option [ngValue]="c.id">{{ c.nameAr }}</option>
+              }
+            </select>
+          </label>
+          <label>
+            <span>{{ t('fin.coa.category') }}</span>
+            <select
+              [ngModel]="accountCategory()"
+              (ngModelChange)="accountCategory.set(+$event)"
+              [disabled]="!editMode() || isSystemAccount()"
+            >
+              @for (c of categories; track c.value) {
+                <option [ngValue]="c.value">{{ t(c.labelKey) }}</option>
+              }
+            </select>
+          </label>
+          <label>
+            <span>{{ t('fin.coa.currency') }}</span>
+            <input [ngModel]="currency()" (ngModelChange)="currency.set($event)" [disabled]="!editMode()" />
+          </label>
+          <label>
+            <span>{{ t('fin.coa.sortOrder') }}</span>
+            <input type="number" [ngModel]="sortOrder()" (ngModelChange)="sortOrder.set(+$event)" [disabled]="!editMode()" />
+          </label>
+          <label class="check">
+            <input type="checkbox" [ngModel]="isSummaryAccount()" (ngModelChange)="isSummaryAccount.set($event)" [disabled]="!editMode()" />
+            <span>{{ t('fin.coa.summary') }}</span>
+          </label>
+          <label class="check">
+            <input type="checkbox" [ngModel]="isPostingAllowed()" disabled />
+            <span>{{ t('fin.coa.posting') }}</span>
+          </label>
+          <label class="check">
+            <input type="checkbox" [ngModel]="isActive()" disabled />
+            <span>{{ t('fin.coa.active') }}</span>
+          </label>
+          <label class="check">
+            <input type="checkbox" [ngModel]="isSystemAccount()" disabled />
+            <span>{{ t('fin.coa.system') }}</span>
+          </label>
+          <label class="full">
+            <span>{{ t('fin.coa.notes') }}</span>
+            <textarea rows="3" [ngModel]="notes()" (ngModelChange)="notes.set($event)" [disabled]="!editMode()"></textarea>
+          </label>
+        </div>
+
+        @if (editMode()) {
+          <div class="detail-actions">
+            <button type="button" class="btn primary" [disabled]="saving()" (click)="save()">
+              <mat-icon>save</mat-icon>
+              {{ t('common.save') }}
+            </button>
+            <button type="button" class="btn ghost" (click)="cancelEdit()">{{ t('common.cancel') }}</button>
+          </div>
+        }
+      }
+    </aside>
+
+    <section class="tree-panel">
+      @if (loading()) {
+        <div class="tree-loading">{{ t('common.loading') }}</div>
+      } @else if (tree().length === 0) {
+        <div class="tree-empty">{{ t('fin.coa.empty') }}</div>
+      } @else {
+        <ul class="tree">
+          <ng-container *ngTemplateOutlet="nodeTpl; context: { $implicit: tree(), level: 0 }" />
+        </ul>
+      }
+    </section>
+  </div>
+
+  <footer class="coa-footer">
+    <button type="button" class="btn primary" [disabled]="!canCreate()" (click)="openCreate()">
+      <mat-icon>add</mat-icon>
+      {{ t('fin.coa.add') }}
+    </button>
+    <button type="button" class="btn ghost" [disabled]="!canEdit() || !selected()" (click)="openEdit()">
+      <mat-icon>edit</mat-icon>
+      {{ t('fin.coa.edit') }}
+    </button>
+    <button
+      type="button"
+      class="btn ghost"
+      [disabled]="!canDelete() || !selected() || selected()?.isSystemAccount"
+      (click)="remove()"
+      [matTooltip]="selected()?.isSystemAccount ? t('fin.coa.systemNoDelete') : ''"
+    >
+      <mat-icon>delete</mat-icon>
+      {{ t('common.delete') }}
+    </button>
+    <button type="button" class="btn ghost" [disabled]="!canEdit() || !selected() || selected()?.isActive" (click)="activate()">
+      {{ t('fin.coa.activate') }}
+    </button>
+    <button type="button" class="btn ghost" [disabled]="!canEdit() || !selected() || !selected()?.isActive" (click)="deactivate()">
+      {{ t('fin.coa.deactivate') }}
+    </button>
+  </footer>
+</div>
+
+<ng-template #nodeTpl let-nodes let-level="level">
+  @for (node of nodes; track node.id) {
+    <li>
+      <div
+        class="tree-row"
+        [class.selected]="selectedId() === node.id"
+        [style.paddingInline-start.px]="12 + level * 18"
+        (click)="select(node)"
+        (dblclick)="openEdit()"
+      >
+        @if (node.children?.length) {
+          <button type="button" class="expand" (click)="toggleExpand(node.id, $event)">
+            <mat-icon>{{ isExpanded(node.id) ? 'expand_more' : 'chevron_left' }}</mat-icon>
+          </button>
+        } @else {
+          <span class="expand-spacer"></span>
+        }
+        <span class="code">{{ node.accountNumber }}</span>
+        <span class="name">{{ node.nameAr }}</span>
+        @if (node.isSystemAccount) {
+          <span class="badge">{{ t('fin.coa.system') }}</span>
+        }
+        @if (!node.isActive) {
+          <span class="badge muted">{{ t('fin.coa.inactive') }}</span>
+        }
+      </div>
+      @if (node.children?.length && isExpanded(node.id)) {
+        <ul>
+          <ng-container *ngTemplateOutlet="nodeTpl; context: { $implicit: node.children, level: level + 1 }" />
+        </ul>
+      }
+    </li>
+  }
+</ng-template>

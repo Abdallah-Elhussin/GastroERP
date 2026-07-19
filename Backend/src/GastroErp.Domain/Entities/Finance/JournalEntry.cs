@@ -17,6 +17,7 @@ public sealed class JournalEntry : AuditableBaseEntity, ITenantEntity
     public Guid FiscalPeriodId { get; private set; }
     public string Description { get; private set; }
     public string? Reference { get; private set; }
+    public JournalVoucherType VoucherType { get; private set; }
     public PostingSource SourceModule { get; private set; }
     public Guid? SourceDocumentId { get; private set; }
     public JournalStatus Status { get; private set; }
@@ -32,15 +33,22 @@ public sealed class JournalEntry : AuditableBaseEntity, ITenantEntity
     {
         EntryNumber = string.Empty;
         Description = string.Empty;
+        VoucherType = JournalVoucherType.Ordinary;
     }
 
     public static JournalEntry CreateDraft(
         Guid tenantId, string entryNumber, DateOnly postingDate, Guid fiscalPeriodId,
         string description, PostingSource source, Guid? companyId = null, Guid? branchId = null,
-        string? reference = null, Guid? sourceDocumentId = null, Guid? reversalOfJournalId = null)
+        string? reference = null, Guid? sourceDocumentId = null, Guid? reversalOfJournalId = null,
+        JournalVoucherType voucherType = JournalVoucherType.Ordinary)
     {
         if (string.IsNullOrWhiteSpace(entryNumber)) throw new BusinessException(ErrorCodes.JournalNumberRequired);
         if (string.IsNullOrWhiteSpace(description)) throw new BusinessException(ErrorCodes.RequiredField);
+
+        if (source == PostingSource.Manual
+            && voucherType is JournalVoucherType.Opening or JournalVoucherType.Reversal
+            && reversalOfJournalId is null)
+            throw new BusinessException(ErrorCodes.JournalInvalidVoucherType);
 
         return new JournalEntry
         {
@@ -52,6 +60,7 @@ public sealed class JournalEntry : AuditableBaseEntity, ITenantEntity
             FiscalPeriodId = fiscalPeriodId,
             Description = description,
             Reference = reference,
+            VoucherType = voucherType,
             SourceModule = source,
             SourceDocumentId = sourceDocumentId,
             ReversalOfJournalId = reversalOfJournalId,
@@ -61,22 +70,93 @@ public sealed class JournalEntry : AuditableBaseEntity, ITenantEntity
 
     public JournalEntryLine AddLine(
         Guid accountId, decimal debit, decimal credit, string currency,
-        int lineNumber, Guid? costCenterId = null, string? lineDescription = null)
+        int lineNumber, Guid? costCenterId = null, string? lineDescription = null,
+        decimal exchangeRate = 1m, Guid? analyticalAccountId = null)
     {
         EnsureModifiable();
         if (debit < 0 || credit < 0) throw new BusinessException(ErrorCodes.InvalidJournalAmount);
         if (debit > 0 && credit > 0) throw new BusinessException(ErrorCodes.JournalLineBothSides);
         if (debit == 0 && credit == 0) throw new BusinessException(ErrorCodes.InvalidJournalAmount);
+        if (exchangeRate <= 0) throw new BusinessException(ErrorCodes.InvalidJournalAmount);
 
-        var line = new JournalEntryLine(Id, accountId, debit, credit, currency, lineNumber, costCenterId, lineDescription);
+        var line = new JournalEntryLine(
+            Id, accountId, debit, credit, currency, lineNumber, costCenterId, lineDescription,
+            exchangeRate, analyticalAccountId);
         _lines.Add(line);
         return line;
     }
 
-    public void Post(Guid postedBy)
+    public void UpdateDraft(
+        DateOnly postingDate,
+        Guid fiscalPeriodId,
+        string description,
+        Guid? companyId,
+        Guid? branchId,
+        string? reference,
+        JournalVoucherType? voucherType = null)
+    {
+        EnsureModifiable();
+        if (string.IsNullOrWhiteSpace(description))
+            throw new BusinessException(ErrorCodes.RequiredField);
+
+        if (voucherType.HasValue)
+        {
+            if (voucherType is JournalVoucherType.Opening or JournalVoucherType.Reversal)
+                throw new BusinessException(ErrorCodes.JournalInvalidVoucherType);
+            VoucherType = voucherType.Value;
+        }
+
+        PostingDate = postingDate;
+        FiscalPeriodId = fiscalPeriodId;
+        Description = description.Trim();
+        CompanyId = companyId;
+        BranchId = branchId;
+        Reference = string.IsNullOrWhiteSpace(reference) ? null : reference.Trim();
+    }
+
+    public void ClearLines()
+    {
+        EnsureModifiable();
+        _lines.Clear();
+    }
+
+    public void EnsureCanDelete()
+    {
+        if (Status != JournalStatus.Draft)
+            throw new BusinessException(ErrorCodes.JournalNotEditable, "Only draft journals can be deleted.");
+        if (SourceModule != PostingSource.Manual)
+            throw new BusinessException(ErrorCodes.JournalNotEditable, "Only manual draft journals can be deleted.");
+    }
+
+    /// <summary>Draft → Approved. Manual vouchers require ≥2 balanced lines.</summary>
+    public void Approve()
     {
         if (Status != JournalStatus.Draft)
             throw new BusinessException(ErrorCodes.JournalNotDraft);
+        if (!_lines.Any())
+            throw new BusinessException(ErrorCodes.JournalHasNoLines);
+        if (SourceModule == PostingSource.Manual && _lines.Count < 2)
+            throw new BusinessException(ErrorCodes.JournalMinTwoLines);
+
+        var totalDebit = _lines.Sum(l => l.Debit);
+        var totalCredit = _lines.Sum(l => l.Credit);
+        if (totalDebit != totalCredit)
+            throw new BusinessException(ErrorCodes.JournalNotBalanced);
+
+        Status = JournalStatus.Approved;
+    }
+
+    public void Post(Guid postedBy)
+    {
+        // System / reversal drafts can be posted without a separate Approve API call.
+        if (Status == JournalStatus.Draft
+            && (SourceModule != PostingSource.Manual || ReversalOfJournalId.HasValue))
+        {
+            Approve();
+        }
+
+        if (Status != JournalStatus.Approved)
+            throw new BusinessException(ErrorCodes.JournalNotApproved);
         if (!_lines.Any())
             throw new BusinessException(ErrorCodes.JournalHasNoLines);
 
@@ -112,24 +192,33 @@ public sealed class JournalEntryLine : AuditableBaseEntity
     public Guid JournalEntryId { get; private set; }
     public Guid ChartOfAccountId { get; private set; }
     public Guid? CostCenterId { get; private set; }
+    public Guid? AnalyticalAccountId { get; private set; }
     public int LineNumber { get; private set; }
     public decimal Debit { get; private set; }
     public decimal Credit { get; private set; }
     public string Currency { get; private set; }
+    public decimal ExchangeRate { get; private set; }
     public string? Description { get; private set; }
 
-    private JournalEntryLine() { Currency = "SAR"; }
+    private JournalEntryLine()
+    {
+        Currency = "SAR";
+        ExchangeRate = 1m;
+    }
 
     internal JournalEntryLine(
         Guid journalEntryId, Guid accountId, decimal debit, decimal credit,
-        string currency, int lineNumber, Guid? costCenterId, string? description)
+        string currency, int lineNumber, Guid? costCenterId, string? description,
+        decimal exchangeRate = 1m, Guid? analyticalAccountId = null)
     {
         JournalEntryId = journalEntryId;
         ChartOfAccountId = accountId;
         CostCenterId = costCenterId;
+        AnalyticalAccountId = analyticalAccountId == Guid.Empty ? null : analyticalAccountId;
         Debit = debit;
         Credit = credit;
         Currency = currency.ToUpperInvariant();
+        ExchangeRate = exchangeRate <= 0 ? 1m : exchangeRate;
         LineNumber = lineNumber;
         Description = description;
     }

@@ -1,0 +1,304 @@
+<app-inventory-page-shell
+  [breadcrumbs]="breadcrumbs"
+  titleKey="inv.nav.itemTypes"
+  subtitleKey="inv.itemTypes.subtitle"
+>
+  <section class="toolbar" shellActions>
+    <div class="toolbar-row">
+      <button type="button" class="btn primary" [disabled]="!canCreate()" (click)="openCreate()">
+        <mat-icon>add</mat-icon>
+        {{ t('inv.items.toolbar.new') }}
+      </button>
+      <button type="button" class="btn ghost" [disabled]="!canEdit() || !selected()" (click)="openEdit()">
+        <mat-icon>edit</mat-icon>
+        {{ t('inv.items.toolbar.edit') }}
+      </button>
+      <button
+        type="button"
+        class="btn ghost"
+        [disabled]="!canDelete() || !selected() || selected()?.isSystem"
+        (click)="deleteSelected()"
+        [matTooltip]="selected()?.isSystem ? t('inv.itemTypes.systemNoDelete') : ''"
+      >
+        <mat-icon>delete</mat-icon>
+        {{ t('inv.items.toolbar.delete') }}
+      </button>
+      <button type="button" class="btn ghost" (click)="load()">
+        <mat-icon>refresh</mat-icon>
+        {{ t('inv.items.toolbar.refresh') }}
+      </button>
+
+      <div class="search-group">
+        <input
+          type="search"
+          [ngModel]="search()"
+          (ngModelChange)="search.set($event)"
+          (keydown.enter)="onSearch()"
+          [placeholder]="t('inv.itemTypes.searchPlaceholder')"
+        />
+        <button type="button" class="btn primary" (click)="onSearch()">
+          <mat-icon>search</mat-icon>
+          {{ t('inv.items.toolbar.search') }}
+        </button>
+      </div>
+
+      <button type="button" class="btn ghost" [class.active]="showFilters()" (click)="showFilters.set(!showFilters())">
+        <mat-icon>filter_list</mat-icon>
+        {{ t('inv.itemTypes.filters') }}
+      </button>
+      <button type="button" class="btn ghost" [disabled]="!canExport()" (click)="exportExcel()">
+        <mat-icon>grid_on</mat-icon>
+        {{ t('inv.itemTypes.exportExcel') }}
+      </button>
+      <button type="button" class="btn ghost" [disabled]="!canExport()" (click)="exportPdf()">
+        <mat-icon>picture_as_pdf</mat-icon>
+        {{ t('inv.itemTypes.exportPdf') }}
+      </button>
+      <button type="button" class="btn ghost" (click)="showHelp.set(true)">
+        <mat-icon>help_outline</mat-icon>
+        {{ t('common.help') }}
+      </button>
+    </div>
+
+    @if (showFilters()) {
+      <div class="filters-row">
+        <label>
+          <span>{{ t('inv.itemTypes.col.category') }}</span>
+          <select [ngModel]="filterCategory()" (ngModelChange)="filterCategory.set($event); pageIndex.set(0); load()">
+            <option [ngValue]="null">{{ t('common.all') }}</option>
+            @for (c of categories; track c.value) {
+              <option [ngValue]="c.value">{{ t(c.labelKey) }}</option>
+            }
+          </select>
+        </label>
+        <label class="check">
+          <input type="checkbox" [ngModel]="filterInventory() === true" (ngModelChange)="filterInventory.set($event ? true : null); pageIndex.set(0); load()" />
+          {{ t('inv.itemTypes.filter.inventory') }}
+        </label>
+        <label class="check">
+          <input type="checkbox" [ngModel]="filterSellable() === true" (ngModelChange)="filterSellable.set($event ? true : null); pageIndex.set(0); load()" />
+          {{ t('inv.itemTypes.filter.sellable') }}
+        </label>
+        <label class="check">
+          <input type="checkbox" [ngModel]="filterPurchasable() === true" (ngModelChange)="filterPurchasable.set($event ? true : null); pageIndex.set(0); load()" />
+          {{ t('inv.itemTypes.filter.purchasable') }}
+        </label>
+        <label class="check">
+          <input type="checkbox" [ngModel]="filterRecipe() === true" (ngModelChange)="filterRecipe.set($event ? true : null); pageIndex.set(0); load()" />
+          {{ t('inv.itemTypes.filter.recipe') }}
+        </label>
+        <label class="check">
+          <input type="checkbox" [ngModel]="filterProduction() === true" (ngModelChange)="filterProduction.set($event ? true : null); pageIndex.set(0); load()" />
+          {{ t('inv.itemTypes.filter.production') }}
+        </label>
+        <label class="check">
+          <input type="checkbox" [ngModel]="filterActive() === true" (ngModelChange)="filterActive.set($event ? true : null); pageIndex.set(0); load()" />
+          {{ t('inv.itemTypes.filter.active') }}
+        </label>
+      </div>
+    }
+  </section>
+
+  @if (loading()) {
+    <app-inventory-skeleton [count]="8" />
+  } @else if (error()) {
+    <app-inventory-error-state [message]="error()!" (retry)="load()" />
+  } @else if (rows().length === 0) {
+    <app-inventory-empty-state
+      icon="category"
+      [title]="t('inv.empty.title')"
+      [message]="t('inv.itemTypes.empty')"
+      actionLabelKey="inv.items.toolbar.new"
+      (action)="openCreate()"
+    />
+  } @else {
+    <div class="table-card">
+      <table mat-table [dataSource]="dataSource" matSort (matSortChange)="onSort($event)" class="item-types-table">
+        <ng-container matColumnDef="select">
+          <th mat-header-cell *matHeaderCellDef></th>
+          <td mat-cell *matCellDef="let row">
+            <input type="radio" name="itemTypeSelect" [checked]="selectedId() === row.id" (change)="selectRow(row)" />
+          </td>
+        </ng-container>
+
+        <ng-container matColumnDef="code">
+          <th mat-header-cell *matHeaderCellDef mat-sort-header="code">{{ t('inv.field.code') }}</th>
+          <td mat-cell *matCellDef="let row"><code>{{ row.code }}</code></td>
+        </ng-container>
+
+        <ng-container matColumnDef="nameAr">
+          <th mat-header-cell *matHeaderCellDef mat-sort-header="nameAr">{{ t('inv.field.nameAr') }}</th>
+          <td mat-cell *matCellDef="let row"><strong>{{ row.nameAr }}</strong></td>
+        </ng-container>
+
+        <ng-container matColumnDef="nameEn">
+          <th mat-header-cell *matHeaderCellDef mat-sort-header="nameEn">{{ t('inv.field.nameEn') }}</th>
+          <td mat-cell *matCellDef="let row">{{ row.nameEn || '—' }}</td>
+        </ng-container>
+
+        <ng-container matColumnDef="codeStart">
+          <th mat-header-cell *matHeaderCellDef mat-sort-header="codeStart">{{ t('inv.itemTypes.col.codeStart') }}</th>
+          <td mat-cell *matCellDef="let row">{{ row.codeStart ?? '—' }}</td>
+        </ng-container>
+
+        <ng-container matColumnDef="codeEnd">
+          <th mat-header-cell *matHeaderCellDef mat-sort-header="codeEnd">{{ t('inv.itemTypes.col.codeEnd') }}</th>
+          <td mat-cell *matCellDef="let row">{{ row.codeEnd ?? '—' }}</td>
+        </ng-container>
+
+        <ng-container matColumnDef="category">
+          <th mat-header-cell *matHeaderCellDef mat-sort-header="category">{{ t('inv.itemTypes.col.category') }}</th>
+          <td mat-cell *matCellDef="let row">{{ categoryLabel(row.category) }}</td>
+        </ng-container>
+
+        <ng-container matColumnDef="isInventory">
+          <th mat-header-cell *matHeaderCellDef mat-sort-header="isInventory">{{ t('inv.itemTypes.col.inventory') }}</th>
+          <td mat-cell *matCellDef="let row">{{ row.isInventory ? t('common.yes') : t('common.no') }}</td>
+        </ng-container>
+
+        <ng-container matColumnDef="canSell">
+          <th mat-header-cell *matHeaderCellDef mat-sort-header="canSell">{{ t('inv.itemTypes.col.sellable') }}</th>
+          <td mat-cell *matCellDef="let row">{{ row.canSell ? t('common.yes') : t('common.no') }}</td>
+        </ng-container>
+
+        <ng-container matColumnDef="canPurchase">
+          <th mat-header-cell *matHeaderCellDef mat-sort-header="canPurchase">{{ t('inv.itemTypes.col.purchasable') }}</th>
+          <td mat-cell *matCellDef="let row">{{ row.canPurchase ? t('common.yes') : t('common.no') }}</td>
+        </ng-container>
+
+        <ng-container matColumnDef="isRecipe">
+          <th mat-header-cell *matHeaderCellDef mat-sort-header="isRecipe">{{ t('inv.itemTypes.col.recipe') }}</th>
+          <td mat-cell *matCellDef="let row">{{ row.isRecipe ? t('common.yes') : t('common.no') }}</td>
+        </ng-container>
+
+        <ng-container matColumnDef="isProduction">
+          <th mat-header-cell *matHeaderCellDef mat-sort-header="isProduction">{{ t('inv.itemTypes.col.production') }}</th>
+          <td mat-cell *matCellDef="let row">{{ row.isProduction ? t('common.yes') : t('common.no') }}</td>
+        </ng-container>
+
+        <ng-container matColumnDef="allowNegativeStock">
+          <th mat-header-cell *matHeaderCellDef mat-sort-header="allowNegativeStock">{{ t('inv.itemTypes.col.negativeStock') }}</th>
+          <td mat-cell *matCellDef="let row">{{ row.allowNegativeStock ? t('common.yes') : t('common.no') }}</td>
+        </ng-container>
+
+        <ng-container matColumnDef="isActive">
+          <th mat-header-cell *matHeaderCellDef mat-sort-header="isActive">{{ t('inv.field.status') }}</th>
+          <td mat-cell *matCellDef="let row">
+            <span class="badge" [class.on]="row.isActive">
+              {{ row.isActive ? t('inv.status.active') : t('inv.status.inactive') }}
+            </span>
+          </td>
+        </ng-container>
+
+        <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+        <tr
+          mat-row
+          *matRowDef="let row; columns: displayedColumns"
+          [style.background]="row.color"
+          [class.selected]="selectedId() === row.id"
+          [class.inactive]="!row.isActive"
+          (click)="selectRow(row)"
+        ></tr>
+      </table>
+
+      <mat-paginator
+        [length]="totalCount()"
+        [pageIndex]="pageIndex()"
+        [pageSize]="pageSize()"
+        [pageSizeOptions]="[10, 25, 50, 100]"
+        (page)="onPage($event)"
+        showFirstLastButtons
+      />
+    </div>
+  }
+
+  @if (showForm()) {
+    <div class="drawer-backdrop" (click)="closeForm()"></div>
+    <aside class="drawer" role="dialog">
+      <header>
+        <h2>{{ editingId() ? t('inv.form.editTitle') : t('inv.form.createTitle') }}</h2>
+        <button type="button" class="icon-btn" (click)="closeForm()"><mat-icon>close</mat-icon></button>
+      </header>
+
+      <div class="form-grid">
+        <label>
+          <span>{{ t('inv.field.code') }} *</span>
+          <input [(ngModel)]="form.code" [disabled]="!!editingId()" />
+        </label>
+        <label>
+          <span>{{ t('inv.field.nameAr') }} *</span>
+          <input [(ngModel)]="form.nameAr" />
+        </label>
+        <label>
+          <span>{{ t('inv.field.nameEn') }}</span>
+          <input [(ngModel)]="form.nameEn" />
+        </label>
+        <label>
+          <span>{{ t('inv.itemTypes.col.category') }}</span>
+          <select [(ngModel)]="form.category">
+            @for (c of categories; track c.value) {
+              <option [ngValue]="c.value">{{ t(c.labelKey) }}</option>
+            }
+          </select>
+        </label>
+        <label>
+          <span>{{ t('inv.itemTypes.col.codeStart') }}</span>
+          <input type="number" [(ngModel)]="form.codeStart" />
+        </label>
+        <label>
+          <span>{{ t('inv.itemTypes.col.codeEnd') }}</span>
+          <input type="number" [(ngModel)]="form.codeEnd" />
+        </label>
+        <label>
+          <span>{{ t('inv.field.color') }}</span>
+          <input type="color" [(ngModel)]="form.color" />
+        </label>
+        <label>
+          <span>{{ t('inv.field.sortOrder') }}</span>
+          <input type="number" [(ngModel)]="form.sortOrder" min="0" />
+        </label>
+        <label class="full">
+          <span>{{ t('inv.field.description') }}</span>
+          <textarea rows="2" [(ngModel)]="form.description"></textarea>
+        </label>
+
+        <label class="check"><input type="checkbox" [(ngModel)]="form.isInventory" /> {{ t('inv.itemTypes.col.inventory') }}</label>
+        <label class="check"><input type="checkbox" [(ngModel)]="form.canSell" /> {{ t('inv.itemTypes.col.sellable') }}</label>
+        <label class="check"><input type="checkbox" [(ngModel)]="form.canPurchase" /> {{ t('inv.itemTypes.col.purchasable') }}</label>
+        <label class="check"><input type="checkbox" [(ngModel)]="form.isRecipe" /> {{ t('inv.itemTypes.col.recipe') }}</label>
+        <label class="check"><input type="checkbox" [(ngModel)]="form.isProduction" /> {{ t('inv.itemTypes.col.production') }}</label>
+        <label class="check"><input type="checkbox" [(ngModel)]="form.allowNegativeStock" /> {{ t('inv.itemTypes.col.negativeStock') }}</label>
+        @if (editingId()) {
+          <label class="check"><input type="checkbox" [(ngModel)]="form.isActive" /> {{ t('inv.status.active') }}</label>
+        }
+      </div>
+
+      @if (formError()) {
+        <p class="form-error">{{ formError() }}</p>
+      }
+
+      <footer>
+        <button type="button" class="btn-secondary" (click)="closeForm()">{{ t('common.cancel') }}</button>
+        <button type="button" class="btn-primary" [disabled]="saving()" (click)="save()">
+          {{ editingId() ? t('inv.form.update') : t('inv.form.create') }}
+        </button>
+      </footer>
+    </aside>
+  }
+
+  @if (showHelp()) {
+    <div class="drawer-backdrop" (click)="showHelp.set(false)"></div>
+    <aside class="drawer help-drawer" role="dialog">
+      <header>
+        <h2>{{ t('inv.itemTypes.helpTitle') }}</h2>
+        <button type="button" class="icon-btn" (click)="showHelp.set(false)"><mat-icon>close</mat-icon></button>
+      </header>
+      <p>{{ t('inv.itemTypes.helpBody') }}</p>
+      <ul>
+        <li>{{ t('inv.itemTypes.help.rule1') }}</li>
+        <li>{{ t('inv.itemTypes.help.rule2') }}</li>
+        <li>{{ t('inv.itemTypes.help.rule3') }}</li>
+      </ul>
+    </aside>
+  }
+</app-inventory-page-shell>

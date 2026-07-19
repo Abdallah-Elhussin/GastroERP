@@ -1,0 +1,147 @@
+<section class="form">
+  <header class="toolbar">
+    <div>
+      <h1>
+        {{ isNew() ? t('bos.dnte.createTitle') : t('bos.dnte.docTitle') }}
+        @if (debitNoteNumber()) {
+          <span>— {{ debitNoteNumber() }}</span>
+        }
+      </h1>
+      <span class="pill">{{ status() }}</span>
+    </div>
+    <div class="btns">
+      <button type="button" class="btn" (click)="back()">{{ t('bos.dnte.back') }}</button>
+      <button type="button" class="btn success" [disabled]="!docId() || !isDraft() || saving()" (click)="approve()">
+        {{ t('bos.dnte.approve') }}
+      </button>
+      <button type="button" class="btn info" [disabled]="!docId() || !isApproved() || saving()" (click)="post()">
+        {{ t('bos.dnte.post') }}
+      </button>
+      <button type="button" class="btn" [disabled]="!docId() || !isPosted() || saving()" (click)="unpost()">
+        {{ t('bos.dnte.unpost') }}
+      </button>
+      <button
+        type="button"
+        class="btn danger"
+        [disabled]="!docId() || isPosted() || isCancelled() || saving()"
+        (click)="cancel()"
+      >
+        {{ t('bos.dnte.cancel') }}
+      </button>
+      <button type="button" class="btn primary" [disabled]="!isDraft() || saving()" (click)="save()">
+        {{ t('bos.dnte.save') }}
+      </button>
+    </div>
+  </header>
+
+  @if (error()) {
+    <div class="err">{{ error() }}</div>
+  }
+
+  @if (loading()) {
+    <p class="muted">{{ t('common.loading') }}</p>
+  } @else {
+    <section class="card">
+      <h3>{{ t('bos.dnte.header') }}</h3>
+      <div class="grid">
+        <label>
+          <span>{{ t('bos.dnte.col.customer') }} *</span>
+          <select
+            [ngModel]="customerId()"
+            (ngModelChange)="customerId.set($event || null)"
+            [disabled]="!isDraft() || !!docId()"
+          >
+            <option [ngValue]="null">{{ t('bos.dnte.pickCustomer') }}</option>
+            @for (c of customers(); track c.id) {
+              <option [ngValue]="c.id">{{ c.fullName }} ({{ c.customerNumber }})</option>
+            }
+          </select>
+        </label>
+        <label>
+          <span>{{ t('bos.dnte.col.date') }} *</span>
+          <input type="date" [ngModel]="debitDate()" (ngModelChange)="debitDate.set($event)" [disabled]="!isDraft()" />
+        </label>
+        <label>
+          <span>{{ t('bos.dnte.col.invoice') }}</span>
+          <select [ngModel]="invoiceId()" (ngModelChange)="invoiceId.set($event || null)" [disabled]="!isDraft()">
+            <option [ngValue]="null">{{ t('bos.dnte.pickInvoice') }}</option>
+            @for (inv of invoices(); track inv.id) {
+              <option [ngValue]="inv.id">{{ inv.invoiceNumber }}</option>
+            }
+          </select>
+        </label>
+        <label class="full">
+          <span>{{ t('bos.dnte.col.notes') }}</span>
+          <input type="text" [ngModel]="notes()" (ngModelChange)="notes.set($event)" [disabled]="!isDraft()" />
+        </label>
+      </div>
+    </section>
+
+    <section class="card">
+      <div class="lines-head">
+        <h3>{{ t('bos.dnte.lines') }}</h3>
+        <button type="button" class="btn primary" [disabled]="!isDraft()" (click)="addLine()">
+          <mat-icon>add</mat-icon>
+          {{ t('bos.dnte.addLine') }}
+        </button>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>{{ t('bos.dnte.col.description') }}</th>
+              <th>{{ t('bos.dnte.col.qty') }}</th>
+              <th>{{ t('bos.dnte.col.price') }}</th>
+              <th>{{ t('bos.dnte.col.tax') }}</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (line of lines(); track $index; let i = $index) {
+              <tr>
+                <td>
+                  <input
+                    type="text"
+                    [ngModel]="line.description"
+                    (ngModelChange)="updateLine(i, { description: $event })"
+                    [disabled]="!isDraft()"
+                  />
+                </td>
+                <td>
+                  <input
+                    type="number"
+                    [ngModel]="line.quantity"
+                    (ngModelChange)="updateLine(i, { quantity: +$event })"
+                    [disabled]="!isDraft()"
+                  />
+                </td>
+                <td>
+                  <input
+                    type="number"
+                    [ngModel]="line.unitPrice"
+                    (ngModelChange)="updateLine(i, { unitPrice: +$event })"
+                    [disabled]="!isDraft()"
+                  />
+                </td>
+                <td>
+                  <input
+                    type="number"
+                    [ngModel]="line.taxPercent"
+                    (ngModelChange)="updateLine(i, { taxPercent: +$event })"
+                    [disabled]="!isDraft()"
+                  />
+                </td>
+                <td>
+                  <button type="button" class="btn danger" [disabled]="!isDraft()" (click)="removeLine(i)">
+                    <mat-icon>delete</mat-icon>
+                  </button>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+      <div class="total">{{ t('bos.dnte.col.total') }}: {{ total() | number: '1.2-2' }}</div>
+    </section>
+  }
+</section>

@@ -1,0 +1,106 @@
+<div class="settings-page">
+  <header>
+    <div>
+      <h1>{{ t('fin.settings.title') }}</h1>
+      <p>{{ t('fin.settings.subtitle') }}</p>
+    </div>
+    <div class="actions">
+      <a routerLink="/finance/chart-of-accounts" class="btn ghost">{{ t('fin.coa.title') }}</a>
+      <button type="button" class="btn primary" [disabled]="!canEdit() || saving()" (click)="save()">
+        <mat-icon>save</mat-icon>
+        {{ t('common.save') }}
+      </button>
+    </div>
+  </header>
+
+  <nav class="tabs">
+    <button type="button" class="tab" [class.active]="tab() === 'numbering'" (click)="tab.set('numbering')">
+      {{ t('fin.settings.tab.numbering') }}
+    </button>
+    <button type="button" class="tab" [class.active]="tab() === 'mapping'" (click)="tab.set('mapping')">
+      {{ t('fin.settings.tab.mapping') }}
+    </button>
+    <button type="button" class="tab" [class.active]="tab() === 'posting'" (click)="tab.set('posting')">
+      {{ t('fin.settings.tab.posting') }}
+    </button>
+  </nav>
+
+  @if (error()) {
+    <div class="form-error">{{ error() }}</div>
+  }
+
+  @if (loading() || !settings()) {
+    <p>{{ t('common.loading') }}</p>
+  } @else {
+    @if (tab() === 'numbering') {
+      <section class="card grid-2">
+        <label>
+          <span>{{ t('fin.settings.maxLength') }}</span>
+          <input
+            type="number"
+            [ngModel]="settings()!.accountNumberMaxLength"
+            (ngModelChange)="setNumbering('accountNumberMaxLength', +$event)"
+          />
+        </label>
+        <label>
+          <span>{{ t('fin.settings.maxLevels') }}</span>
+          <input
+            type="number"
+            [ngModel]="settings()!.maxTreeLevels"
+            (ngModelChange)="setNumbering('maxTreeLevels', +$event)"
+          />
+        </label>
+        <label>
+          <span>{{ t('fin.settings.levelLengths') }}</span>
+          <input
+            [ngModel]="settings()!.levelLengthsCsv"
+            (ngModelChange)="setNumbering('levelLengthsCsv', $event)"
+            placeholder="4,2,3"
+          />
+        </label>
+        <label>
+          <span>{{ t('fin.settings.separator') }}</span>
+          <input
+            [ngModel]="settings()!.levelSeparator"
+            (ngModelChange)="setNumbering('levelSeparator', $event)"
+          />
+        </label>
+        <p class="hint">{{ t('fin.settings.numberingHint') }}</p>
+      </section>
+    }
+
+    @if (tab() === 'mapping') {
+      <section class="card mapping-grid">
+        @for (field of mappingFields; track field.key) {
+          <label>
+            <span>{{ t(field.labelKey) }}</span>
+            <select
+              [ngModel]="settings()![field.key]"
+              (ngModelChange)="setAccount(field.key, $event)"
+            >
+              <option [ngValue]="null">—</option>
+              @for (a of accounts(); track a.id) {
+                <option [ngValue]="a.id">{{ a.accountNumber }} — {{ a.nameAr }}</option>
+              }
+            </select>
+          </label>
+        }
+      </section>
+    }
+
+    @if (tab() === 'posting') {
+      <section class="card posting-list">
+        @for (field of postingFields; track field.key) {
+          <label class="check">
+            <input
+              type="checkbox"
+              [ngModel]="settings()![field.key]"
+              (ngModelChange)="setFlag(field.key, $event)"
+            />
+            <span>{{ t(field.labelKey) }}</span>
+          </label>
+        }
+      </section>
+    }
+  }
+</div>

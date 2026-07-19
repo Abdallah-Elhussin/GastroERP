@@ -1,0 +1,214 @@
+<app-inventory-page-shell
+  [breadcrumbs]="breadcrumbs"
+  titleKey="inv.nav.units"
+  subtitleKey="inv.units.subtitle"
+>
+  <section class="toolbar" shellActions>
+    <div class="toolbar-row">
+      <div class="search-group">
+        <input
+          type="search"
+          [ngModel]="search()"
+          (ngModelChange)="search.set($event)"
+          [placeholder]="t('inv.units.searchPlaceholder')"
+        />
+        <button type="button" class="btn primary" (click)="refresh()">
+          <mat-icon>search</mat-icon>
+          {{ t('inv.items.toolbar.search') }}
+        </button>
+      </div>
+
+      <button type="button" class="btn primary" [disabled]="!canManage()" (click)="openCreate()">
+        <mat-icon>add</mat-icon>
+        {{ t('inv.items.toolbar.new') }}
+      </button>
+      <button type="button" class="btn ghost" [disabled]="!canManage() || !selected()" (click)="openEdit()">
+        <mat-icon>edit</mat-icon>
+        {{ t('inv.items.toolbar.edit') }}
+      </button>
+      <button type="button" class="btn ghost" [disabled]="!canManage() || !selected()" (click)="deleteSelected()">
+        <mat-icon>delete</mat-icon>
+        {{ t('inv.items.toolbar.delete') }}
+      </button>
+      <button type="button" class="btn ghost" (click)="refresh()">
+        <mat-icon>refresh</mat-icon>
+        {{ t('inv.items.toolbar.refresh') }}
+      </button>
+
+      <label class="filter">
+        <span>{{ t('inv.units.col.type') }}</span>
+        <select [ngModel]="typeFilter()" (ngModelChange)="typeFilter.set($event)">
+          <option [ngValue]="null">{{ t('common.all') }}</option>
+          @for (ut of unitTypes; track ut.value) {
+            <option [ngValue]="ut.value">{{ t(ut.labelKey) }}</option>
+          }
+        </select>
+      </label>
+
+      <button type="button" class="btn icon-only" (click)="showHelp.set(true)" [matTooltip]="t('common.help')">
+        <mat-icon>help_outline</mat-icon>
+      </button>
+    </div>
+  </section>
+
+  @if (inventory.loading()) {
+    <app-inventory-skeleton [count]="8" />
+  } @else if (inventory.error()) {
+    <app-inventory-error-state [message]="inventory.error()!" (retry)="refresh()" />
+  } @else if (filtered().length === 0) {
+    <app-inventory-empty-state
+      icon="straighten"
+      [title]="t('inv.empty.title')"
+      [message]="t('inv.units.empty')"
+      actionLabelKey="inv.items.toolbar.new"
+      (action)="openCreate()"
+    />
+  } @else {
+    <div class="table-card">
+      <table mat-table [dataSource]="filtered()" matSort (matSortChange)="onSort($event)" class="units-table">
+        <ng-container matColumnDef="number">
+          <th mat-header-cell *matHeaderCellDef mat-sort-header="number">{{ t('inv.units.col.number') }}</th>
+          <td mat-cell *matCellDef="let row">{{ row.sortOrder || '—' }}</td>
+        </ng-container>
+
+        <ng-container matColumnDef="code">
+          <th mat-header-cell *matHeaderCellDef mat-sort-header="code">{{ t('inv.units.col.code') }}</th>
+          <td mat-cell *matCellDef="let row"><code>{{ row.code }}</code></td>
+        </ng-container>
+
+        <ng-container matColumnDef="nameAr">
+          <th mat-header-cell *matHeaderCellDef mat-sort-header="nameAr">{{ t('inv.units.col.name') }}</th>
+          <td mat-cell *matCellDef="let row">
+            <strong>{{ row.nameAr }}</strong>
+            @if (row.nameEn) {
+              <div class="muted">{{ row.nameEn }}</div>
+            }
+          </td>
+        </ng-container>
+
+        <ng-container matColumnDef="unitType">
+          <th mat-header-cell *matHeaderCellDef mat-sort-header="unitType">{{ t('inv.units.col.type') }}</th>
+          <td mat-cell *matCellDef="let row">{{ typeLabel(row.unitType) }}</td>
+        </ng-container>
+
+        <ng-container matColumnDef="factor">
+          <th mat-header-cell *matHeaderCellDef mat-sort-header="factor">{{ t('inv.units.col.factor') }}</th>
+          <td mat-cell *matCellDef="let row">{{ row.conversionFactor }}</td>
+        </ng-container>
+
+        <ng-container matColumnDef="baseUnit">
+          <th mat-header-cell *matHeaderCellDef mat-sort-header="baseUnit">{{ t('inv.field.baseUnit') }}</th>
+          <td mat-cell *matCellDef="let row">{{ baseUnitName(row.baseUnitId) }}</td>
+        </ng-container>
+
+        <ng-container matColumnDef="isActive">
+          <th mat-header-cell *matHeaderCellDef mat-sort-header="isActive">{{ t('inv.units.col.active') }}</th>
+          <td mat-cell *matCellDef="let row">{{ row.isActive ? t('common.yes') : t('common.no') }}</td>
+        </ng-container>
+
+        <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+        <tr
+          mat-row
+          *matRowDef="let row; columns: displayedColumns"
+          [class.selected]="selectedId() === row.id"
+          [class.inactive]="!row.isActive"
+          (click)="selectRow(row)"
+        ></tr>
+      </table>
+    </div>
+  }
+
+  @if (showForm()) {
+    <div class="drawer-backdrop" (click)="closeForm()"></div>
+    <aside class="drawer unit-form" role="dialog">
+      <header class="form-top">
+        <div class="form-actions">
+          <button type="button" class="btn primary" [disabled]="saving()" (click)="save()">
+            {{ t('common.save') }}
+          </button>
+          <button type="button" class="btn ghost" (click)="closeForm()">{{ t('common.cancel') }}</button>
+        </div>
+        <h2>{{ editingId() ? t('inv.units.editTitle') : t('inv.units.createTitle') }}</h2>
+      </header>
+
+      <section class="card-block">
+        <h3>{{ t('inv.units.section.info') }}</h3>
+        <div class="two-col">
+          <div class="col">
+            <label>
+              <span>{{ t('inv.units.col.code') }}</span>
+              <input [(ngModel)]="form.code" />
+            </label>
+            <label>
+              <span>{{ t('inv.units.col.name') }} *</span>
+              <input [(ngModel)]="form.nameAr" required />
+            </label>
+            <label>
+              <span>{{ t('inv.field.nameEn') }}</span>
+              <input [(ngModel)]="form.nameEn" />
+            </label>
+            <label>
+              <span>{{ t('inv.units.col.type') }}</span>
+              <select [(ngModel)]="form.unitType">
+                <option [ngValue]="null" disabled>{{ t('inv.units.selectType') }}</option>
+                @for (ut of unitTypes; track ut.value) {
+                  <option [ngValue]="ut.value">{{ t(ut.labelKey) }}</option>
+                }
+              </select>
+            </label>
+          </div>
+          <div class="col">
+            <label>
+              <span>{{ t('inv.units.col.classification') }}</span>
+              <select [(ngModel)]="form.classification">
+                @for (c of classifications; track c.value) {
+                  <option [ngValue]="c.value">{{ t(c.labelKey) }}</option>
+                }
+              </select>
+            </label>
+            <label>
+              <span>{{ t('inv.field.baseUnit') }}</span>
+              <select [(ngModel)]="form.baseUnitId">
+                <option [ngValue]="null">{{ t('inv.field.none') }}</option>
+                @for (u of baseUnitOptions(); track u.id) {
+                  <option [ngValue]="u.id">{{ u.nameAr }} ({{ u.symbol }})</option>
+                }
+              </select>
+            </label>
+            <label>
+              <span>{{ t('inv.units.col.factor') }}</span>
+              <input type="number" step="any" min="0.000001" [(ngModel)]="form.conversionFactor" />
+            </label>
+            <label>
+              <span>{{ t('inv.field.symbol') }} *</span>
+              <input [(ngModel)]="form.symbol" required />
+            </label>
+          </div>
+        </div>
+      </section>
+
+      <section class="card-block">
+        <h3>{{ t('inv.units.section.traits') }}</h3>
+        <label class="check">
+          <input type="checkbox" [(ngModel)]="form.isActive" />
+          {{ t('inv.units.col.active') }}
+        </label>
+      </section>
+
+      @if (formError()) {
+        <p class="form-error">{{ formError() }}</p>
+      }
+    </aside>
+  }
+
+  @if (showHelp()) {
+    <div class="drawer-backdrop" (click)="showHelp.set(false)"></div>
+    <aside class="drawer help-drawer" role="dialog">
+      <header>
+        <h2>{{ t('inv.units.helpTitle') }}</h2>
+        <button type="button" class="icon-btn" (click)="showHelp.set(false)"><mat-icon>close</mat-icon></button>
+      </header>
+      <p>{{ t('inv.units.helpBody') }}</p>
+    </aside>
+  }
+</app-inventory-page-shell>

@@ -25,23 +25,23 @@ public static class PermissionCatalog
 
     private static void CollectFromType(Type type, ICollection<PermissionDefinition> results, string? module = null)
     {
-        if (type.IsNested && type.GetFields(BindingFlags.Public | BindingFlags.Static | BindingFlags.FlattenHierarchy)
-                .Any(f => f.IsLiteral && !f.IsInitOnly && f.FieldType == typeof(string)))
+        if (type.IsNested)
         {
-            module ??= type.Name;
-            foreach (var field in type.GetFields(BindingFlags.Public | BindingFlags.Static | BindingFlags.FlattenHierarchy))
-            {
-                if (!field.IsLiteral || field.IsInitOnly || field.FieldType != typeof(string))
-                {
-                    continue;
-                }
+            var fields = type.GetFields(BindingFlags.Public | BindingFlags.Static | BindingFlags.FlattenHierarchy)
+                .Where(f => f.IsLiteral && !f.IsInitOnly && f.FieldType == typeof(string))
+                .ToList();
 
-                var permissionName = (string)field.GetRawConstantValue()!;
-                var dotIndex = permissionName.IndexOf('.');
-                var resolvedModule = dotIndex > 0 ? permissionName[..dotIndex] : module;
-                results.Add(new PermissionDefinition(resolvedModule, permissionName, permissionName, resolvedModule, type.Name));
+            if (fields.Count > 0)
+            {
+                module ??= type.Name;
+                foreach (var field in fields)
+                {
+                    var permissionName = (string)field.GetRawConstantValue()!;
+                    var dotIndex = permissionName.IndexOf('.');
+                    var resolvedModule = dotIndex > 0 ? permissionName[..dotIndex] : module;
+                    results.Add(new PermissionDefinition(resolvedModule, permissionName, permissionName, resolvedModule, type.Name));
+                }
             }
-            return;
         }
 
         foreach (var nested in type.GetNestedTypes(BindingFlags.Public))

@@ -4,6 +4,7 @@ import { CatalogRepository } from '../repositories/catalog.repository';
 import {
   CatalogAuditEntry,
   CatalogImportRow,
+  CatalogPriceHistoryEntry,
   CreateCatalogDraftPayload,
   ProductCatalogDefinition,
   ProductCatalogTypeDefinition,
@@ -60,6 +61,10 @@ export class CatalogService {
     return this.repo.getDefinitionById(id);
   }
 
+  getDefinitionByInventoryItemId(inventoryItemId: string) {
+    return this.repo.getDefinitionByInventoryItemId(inventoryItemId);
+  }
+
   createDraft(payload: CreateCatalogDraftPayload) {
     return this.repo.createDraft(payload);
   }
@@ -106,5 +111,9 @@ export class CatalogService {
 
   getAuditTimeline(id: string) {
     return this.repo.getAuditTimeline(id);
+  }
+
+  getPriceHistory(id: string) {
+    return this.repo.getPriceHistory(id);
   }
 }

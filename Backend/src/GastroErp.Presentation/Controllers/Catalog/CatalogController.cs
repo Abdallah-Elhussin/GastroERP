@@ -46,6 +46,11 @@ public class CatalogController : BaseApiController
     public async Task<IActionResult> GetDefinitionById(Guid id)
         => HandleResult(await Mediator.Send(new GetProductCatalogDefinitionByIdQuery(id)));
 
+    [HttpGet($"{ApiRoutes.Catalog.Definitions}/by-inventory-item/{{inventoryItemId:guid}}")]
+    [HasPermission(Permissions.Catalog.View)]
+    public async Task<IActionResult> GetDefinitionByInventoryItem(Guid inventoryItemId)
+        => HandleResult(await Mediator.Send(new GetCatalogDefinitionByInventoryItemIdQuery(inventoryItemId)));
+
     [HttpGet($"{ApiRoutes.Catalog.Definitions}/{{id:guid}}/audit")]
     [HasPermission(Permissions.Catalog.View)]
     public async Task<IActionResult> GetAuditTimeline(Guid id)

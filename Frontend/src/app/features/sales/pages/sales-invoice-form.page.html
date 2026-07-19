@@ -1,0 +1,194 @@
+<section class="form">
+  <header class="toolbar">
+    <div>
+      <h1>
+        {{ isNew() ? t('bos.inv.createTitle') : t('bos.inv.docTitle') }}
+        @if (invoiceNumber()) {
+          <span>— {{ invoiceNumber() }}</span>
+        }
+      </h1>
+      <span class="pill">{{ status() }}</span>
+    </div>
+    <div class="btns">
+      <button type="button" class="btn" (click)="back()">{{ t('bos.inv.back') }}</button>
+      <button type="button" class="btn success" [disabled]="!docId() || !isDraft() || saving()" (click)="approve()">
+        {{ t('bos.inv.approve') }}
+      </button>
+      <button type="button" class="btn info" [disabled]="!docId() || !isApproved() || saving()" (click)="post()">
+        {{ t('bos.inv.post') }}
+      </button>
+      <button type="button" class="btn" [disabled]="!docId() || !isPosted() || saving()" (click)="unpost()">
+        {{ t('bos.inv.unpost') }}
+      </button>
+      <button type="button" class="btn primary" [disabled]="!isDraft() || saving()" (click)="save()">
+        {{ t('bos.inv.save') }}
+      </button>
+    </div>
+  </header>
+
+  @if (error()) {
+    <div class="err">{{ error() }}</div>
+  }
+
+  @if (loading()) {
+    <p class="muted">{{ t('common.loading') }}</p>
+  } @else {
+    <section class="card">
+      <h3>{{ t('bos.inv.header') }}</h3>
+      <div class="grid">
+        <label>
+          <span>{{ t('bos.inv.col.customer') }} *</span>
+          <select
+            [ngModel]="customerId()"
+            (ngModelChange)="onCustomerChange($event || null)"
+            [disabled]="!isDraft() || !!docId()"
+          >
+            <option [ngValue]="null">{{ t('bos.inv.pickCustomer') }}</option>
+            @for (c of customers(); track c.id) {
+              <option [ngValue]="c.id">{{ c.fullName }} ({{ c.customerNumber }})</option>
+            }
+          </select>
+        </label>
+        <label>
+          <span>{{ t('bos.inv.col.date') }} *</span>
+          <input type="date" [ngModel]="invoiceDate()" (ngModelChange)="invoiceDate.set($event)" [disabled]="!isDraft()" />
+        </label>
+        <label>
+          <span>{{ t('bos.inv.col.dueDate') }}</span>
+          <input type="date" [ngModel]="dueDate()" (ngModelChange)="dueDate.set($event)" [disabled]="!isDraft()" />
+        </label>
+        <label>
+          <span>{{ t('bos.inv.col.paymentMode') }}</span>
+          <select [ngModel]="paymentMode()" (ngModelChange)="paymentMode.set(+$event)" [disabled]="!isDraft()">
+            <option [ngValue]="1">{{ t('bos.inv.payment.credit') }}</option>
+            <option [ngValue]="2">{{ t('bos.inv.payment.cash') }}</option>
+          </select>
+        </label>
+        <label>
+          <span>{{ t('bos.inv.col.nature') }}</span>
+          <select [ngModel]="nature()" (ngModelChange)="nature.set(+$event)" [disabled]="!isDraft()">
+            <option [ngValue]="1">{{ t('bos.inv.nature.inventory') }}</option>
+            <option [ngValue]="2">{{ t('bos.inv.nature.services') }}</option>
+            <option [ngValue]="4">{{ t('bos.inv.nature.assets') }}</option>
+            <option [ngValue]="5">{{ t('bos.inv.nature.mixed') }}</option>
+          </select>
+        </label>
+        <label>
+          <span>{{ t('bos.inv.col.warehouse') }}</span>
+          <select [ngModel]="warehouseId()" (ngModelChange)="warehouseId.set($event || null)" [disabled]="!isDraft()">
+            <option [ngValue]="null">{{ t('bos.inv.pickWarehouse') }}</option>
+            @for (w of warehouses(); track w.id) {
+              <option [ngValue]="w.id">{{ w.nameAr }}</option>
+            }
+          </select>
+        </label>
+        <label class="full">
+          <span>{{ t('bos.inv.col.notes') }}</span>
+          <input type="text" [ngModel]="notes()" (ngModelChange)="notes.set($event)" [disabled]="!isDraft()" />
+        </label>
+      </div>
+    </section>
+
+    <section class="card">
+      <div class="lines-head">
+        <h3>{{ t('bos.inv.lines') }}</h3>
+        <button type="button" class="btn primary" [disabled]="!isDraft()" (click)="addLine()">
+          <mat-icon>add</mat-icon>
+          {{ t('bos.inv.addLine') }}
+        </button>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>{{ t('bos.inv.col.description') }}</th>
+              <th>{{ t('bos.inv.col.item') }}</th>
+              <th>{{ t('bos.inv.col.unit') }}</th>
+              <th>{{ t('bos.inv.col.qty') }}</th>
+              <th>{{ t('bos.inv.col.price') }}</th>
+              <th>{{ t('bos.inv.col.cost') }}</th>
+              <th>{{ t('bos.inv.col.tax') }}</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (line of lines(); track $index; let i = $index) {
+              <tr>
+                <td>
+                  <input
+                    type="text"
+                    [ngModel]="line.description"
+                    (ngModelChange)="updateLine(i, { description: $event })"
+                    [disabled]="!isDraft()"
+                  />
+                </td>
+                <td>
+                  <select
+                    [ngModel]="line.inventoryItemId || null"
+                    (ngModelChange)="onItemChange(i, $event || '')"
+                    [disabled]="!isDraft()"
+                  >
+                    <option [ngValue]="null">{{ t('bos.inv.pickItem') }}</option>
+                    @for (it of items(); track it.id) {
+                      <option [ngValue]="it.id">{{ it.nameAr }}</option>
+                    }
+                  </select>
+                </td>
+                <td>
+                  <select
+                    [ngModel]="line.unitId || null"
+                    (ngModelChange)="updateLine(i, { unitId: $event || '' })"
+                    [disabled]="!isDraft()"
+                  >
+                    <option [ngValue]="null">{{ t('bos.inv.pickUnit') }}</option>
+                    @for (u of units(); track u.id) {
+                      <option [ngValue]="u.id">{{ u.nameAr }}</option>
+                    }
+                  </select>
+                </td>
+                <td>
+                  <input
+                    type="number"
+                    [ngModel]="line.quantity"
+                    (ngModelChange)="updateLine(i, { quantity: +$event })"
+                    [disabled]="!isDraft()"
+                  />
+                </td>
+                <td>
+                  <input
+                    type="number"
+                    [ngModel]="line.unitPrice"
+                    (ngModelChange)="updateLine(i, { unitPrice: +$event })"
+                    [disabled]="!isDraft()"
+                  />
+                </td>
+                <td>
+                  <input
+                    type="number"
+                    [ngModel]="line.unitCost"
+                    (ngModelChange)="updateLine(i, { unitCost: +$event })"
+                    [disabled]="!isDraft()"
+                  />
+                </td>
+                <td>
+                  <input
+                    type="number"
+                    [ngModel]="line.taxPercent"
+                    (ngModelChange)="updateLine(i, { taxPercent: +$event })"
+                    [disabled]="!isDraft()"
+                  />
+                </td>
+                <td>
+                  <button type="button" class="btn danger" [disabled]="!isDraft()" (click)="removeLine(i)">
+                    <mat-icon>delete</mat-icon>
+                  </button>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+      <div class="total">{{ t('bos.inv.col.total') }}: {{ total() | number: '1.2-2' }}</div>
+    </section>
+  }
+</section>

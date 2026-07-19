@@ -1,0 +1,335 @@
+<app-inventory-page-shell [breadcrumbs]="breadcrumbs" [title]="pageTitle()">
+  <section class="toolbar" shellActions>
+    <span class="status-pill" [attr.data-status]="status()">
+      {{ invoiceNumber() || t('pur.dpi.new') }} · {{ statusLabel() }}
+    </span>
+    <span class="payment-pill">{{ paymentStatusLabel() }}</span>
+    <button type="button" class="btn ghost" (click)="back()">{{ t('pur.dpi.back') }}</button>
+    <button
+      type="button"
+      class="btn success"
+      [disabled]="!canManage() || !docId() || !isDraft() || saving()"
+      (click)="approve()"
+    >
+      {{ t('pur.dpi.approve') }}
+    </button>
+    <button
+      type="button"
+      class="btn info"
+      [disabled]="!canManage() || !docId() || !isApproved() || saving()"
+      (click)="post()"
+    >
+      {{ t('pur.dpi.post') }}
+    </button>
+    <button
+      type="button"
+      class="btn ghost"
+      [disabled]="!canManage() || !docId() || !isPosted() || saving()"
+      (click)="unpost()"
+    >
+      {{ t('pur.dpi.unpost') }}
+    </button>
+    <button
+      type="button"
+      class="btn danger"
+      [disabled]="!canManage() || !docId() || isPosted() || status() === 'Cancelled' || status() === 'Reversed' || saving()"
+      (click)="cancelDoc()"
+    >
+      {{ t('pur.dpi.cancelDoc') }}
+    </button>
+    <button
+      type="button"
+      class="btn primary"
+      [disabled]="!docId() || !isPosted()"
+      (click)="createReturn()"
+    >
+      {{ t('pur.dpi.createReturn') }}
+    </button>
+    <button
+      type="button"
+      class="btn primary"
+      [disabled]="!canManage() || !isDraft() || saving()"
+      (click)="save()"
+    >
+      {{ t('pur.dpi.save') }}
+    </button>
+  </section>
+
+  @if (error()) {
+    <div class="form-error">{{ error() }}</div>
+  }
+
+  @if (loading()) {
+    <p class="muted">{{ t('common.loading') }}</p>
+  } @else {
+    <section class="card">
+      <h3>{{ t('pur.dpi.headerTitle') }}</h3>
+      <div class="grid-4">
+        <label class="field">
+          <span>{{ t('pur.dpi.col.docNumber') }}</span>
+          <input type="text" [ngModel]="invoiceNumber()" disabled [placeholder]="t('pur.dpi.autoNumber')" />
+        </label>
+        <label class="field">
+          <span>{{ t('pur.dpi.col.date') }} *</span>
+          <input type="date" [ngModel]="invoiceDate()" (ngModelChange)="invoiceDate.set($event)" [disabled]="!isDraft()" />
+        </label>
+        <label class="field">
+          <span>{{ t('pur.dpi.col.dueDate') }}</span>
+          <input type="date" [ngModel]="dueDate()" (ngModelChange)="dueDate.set($event || null)" [disabled]="!isDraft()" />
+        </label>
+        <label class="field">
+          <span>{{ t('pur.dpi.col.nature') }} *</span>
+          <select [ngModel]="nature()" (ngModelChange)="onNatureChange(+$event)" [disabled]="!isDraft()">
+            <option [ngValue]="1">{{ t('pur.dpi.nature.inventory') }}</option>
+            <option [ngValue]="2">{{ t('pur.dpi.nature.services') }}</option>
+            <option [ngValue]="3">{{ t('pur.dpi.nature.fixedAssets') }}</option>
+          </select>
+        </label>
+
+        <label class="field">
+          <span>{{ t('pur.dpi.col.supplier') }} *</span>
+          <select [ngModel]="supplierId()" (ngModelChange)="supplierId.set($event || null)" [disabled]="!isDraft()">
+            <option [ngValue]="null">{{ t('pur.dpi.pickSupplier') }}</option>
+            @for (s of suppliers(); track s.id) {
+              <option [ngValue]="s.id">{{ s.nameAr }}</option>
+            }
+          </select>
+        </label>
+        <label class="field">
+          <span>{{ t('pur.dpi.col.paymentMode') }} *</span>
+          <select [ngModel]="paymentMode()" (ngModelChange)="paymentMode.set(+$event)" [disabled]="!isDraft()">
+            <option [ngValue]="1">{{ t('pur.dpi.paymentMode.credit') }}</option>
+            <option [ngValue]="2">{{ t('pur.dpi.paymentMode.cash') }}</option>
+          </select>
+        </label>
+        <label class="field">
+          <span>{{ t('pur.dpi.col.warehouse') }}@if (isInventoryNature()) { *}</span>
+          <select [ngModel]="warehouseId()" (ngModelChange)="warehouseId.set($event || null)" [disabled]="!isDraft()">
+            <option [ngValue]="null">{{ t('pur.dpi.pickWarehouse') }}</option>
+            @for (w of warehouses(); track w.id) {
+              <option [ngValue]="w.id">{{ w.nameAr }}</option>
+            }
+          </select>
+        </label>
+        <label class="field">
+          <span>{{ t('pur.dpi.col.currency') }}</span>
+          <input type="text" [ngModel]="currency()" (ngModelChange)="currency.set($event)" [disabled]="!isDraft()" />
+        </label>
+
+        <label class="field">
+          <span>{{ t('pur.dpi.col.exchangeRate') }}</span>
+          <input type="number" step="0.0001" [ngModel]="exchangeRate()" (ngModelChange)="exchangeRate.set(+$event)" [disabled]="!isDraft()" />
+        </label>
+        <label class="field">
+          <span>{{ t('pur.dpi.col.supplierInvoiceNumber') }}</span>
+          <input type="text" [ngModel]="supplierInvoiceNumber()" (ngModelChange)="supplierInvoiceNumber.set($event)" [disabled]="!isDraft()" />
+        </label>
+        <label class="field">
+          <span>{{ t('pur.dpi.col.externalReference') }}</span>
+          <input type="text" [ngModel]="externalReference()" (ngModelChange)="externalReference.set($event)" [disabled]="!isDraft()" />
+        </label>
+
+        <div class="field span-2 status-track">
+          <span>{{ t('pur.dpi.col.status') }}</span>
+          <div class="steps">
+            <span [class.active]="status() === 'Draft'">0 · {{ t('pur.dpi.status.draft') }}</span>
+            <span [class.active]="status() === 'Approved'">1 · {{ t('pur.dpi.status.approved') }}</span>
+            <span [class.active]="status() === 'Posted'">2 · {{ t('pur.dpi.status.posted') }}</span>
+            <span [class.active]="status() === 'Cancelled'">9 · {{ t('pur.dpi.status.cancelled') }}</span>
+          </div>
+        </div>
+
+        <label class="field span-2">
+          <span>{{ t('pur.dpi.col.notes') }}</span>
+          <input type="text" [ngModel]="notes()" (ngModelChange)="notes.set($event)" [disabled]="!isDraft()" />
+        </label>
+      </div>
+    </section>
+
+    <div class="layout-split">
+      <section class="card lines-card">
+        <div class="card-head">
+          <h3>{{ t('pur.dpi.linesTitle') }}</h3>
+          <div class="row-actions">
+            <button type="button" class="btn ghost" [disabled]="!isDraft()" (click)="addLine()">
+              <mat-icon>add</mat-icon>
+              {{ t('pur.dpi.addLine') }}
+            </button>
+            <button type="button" class="btn ghost" [disabled]="!isDraft() || selectedLineIndex() == null" (click)="removeSelectedLine()">
+              {{ t('pur.dpi.deleteLine') }}
+            </button>
+            <button type="button" class="btn ghost" [disabled]="!isDraft()" (click)="recalculateAll()">
+              {{ t('pur.dpi.recalc') }}
+            </button>
+          </div>
+        </div>
+
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>{{ t('pur.dpi.col.item') }}</th>
+                <th>{{ t('pur.dpi.col.quantity') }}</th>
+                <th>{{ t('pur.dpi.col.unit') }}</th>
+                <th>{{ t('pur.dpi.col.unitPrice') }}</th>
+                @if (isInventoryNature()) {
+                  <th>{{ t('pur.dpi.col.warehouse') }}</th>
+                }
+                <th>{{ t('pur.dpi.col.discountPercent') }}</th>
+                <th>{{ t('pur.dpi.col.taxPercent') }}</th>
+                <th>{{ t('pur.dpi.col.tax') }}</th>
+                <th>{{ t('pur.dpi.col.subtotal') }}</th>
+                <th>{{ t('pur.dpi.col.lineTotal') }}</th>
+              </tr>
+            </thead>
+            <tbody>
+              @if (lines().length === 0) {
+                <tr>
+                  <td [attr.colspan]="isInventoryNature() ? 10 : 9" class="muted">{{ t('pur.dpi.noLines') }}</td>
+                </tr>
+              }
+              @for (line of lines(); track $index; let i = $index) {
+                <tr [class.selected]="selectedLineIndex() === i" (click)="selectLine(i)">
+                  <td>
+                    @if (isDraft()) {
+                      <select
+                        class="cell-select"
+                        [ngModel]="line.inventoryItemId"
+                        (ngModelChange)="onItemChange(i, $event)"
+                      >
+                        <option value="">{{ t('pur.dpi.pickItem') }}</option>
+                        @for (item of items(); track item.id) {
+                          <option [value]="item.id">{{ item.nameAr }}</option>
+                        }
+                      </select>
+                    } @else {
+                      {{ line.itemNameAr || line.inventoryItemId }}
+                    }
+                  </td>
+                  <td>
+                    <input
+                      type="number"
+                      class="cell-input"
+                      [ngModel]="line.quantity"
+                      (ngModelChange)="updateLine(i, { quantity: +$event })"
+                      [disabled]="!isDraft()"
+                    />
+                  </td>
+                  <td>
+                    @if (isDraft()) {
+                      <select
+                        class="cell-select"
+                        [ngModel]="line.unitId"
+                        (ngModelChange)="updateLine(i, { unitId: $event })"
+                      >
+                        @for (u of units(); track u.id) {
+                          <option [value]="u.id">{{ u.nameAr }}</option>
+                        }
+                      </select>
+                    } @else {
+                      {{ line.unitNameAr || unitName(line.unitId) }}
+                    }
+                  </td>
+                  <td>
+                    <input
+                      type="number"
+                      class="cell-input"
+                      [ngModel]="line.unitPrice"
+                      (ngModelChange)="updateLine(i, { unitPrice: +$event })"
+                      [disabled]="!isDraft()"
+                    />
+                  </td>
+                  @if (isInventoryNature()) {
+                    <td>
+                      <select
+                        class="cell-select"
+                        [ngModel]="line.lineWarehouseId || warehouseId()"
+                        (ngModelChange)="updateLine(i, { lineWarehouseId: $event || null })"
+                        [disabled]="!isDraft()"
+                      >
+                        <option [ngValue]="null">{{ t('pur.dpi.pickWarehouse') }}</option>
+                        @for (w of warehouses(); track w.id) {
+                          <option [ngValue]="w.id">{{ w.nameAr }}</option>
+                        }
+                      </select>
+                    </td>
+                  }
+                  <td>
+                    <input
+                      type="number"
+                      class="cell-input"
+                      [ngModel]="line.discountPercent"
+                      (ngModelChange)="updateLine(i, { discountPercent: +$event, discountAmount: 0 })"
+                      [disabled]="!isDraft()"
+                    />
+                  </td>
+                  <td>
+                    <input
+                      type="number"
+                      class="cell-input"
+                      [ngModel]="line.taxPercent"
+                      (ngModelChange)="updateLine(i, { taxPercent: +$event, taxAmount: 0 })"
+                      [disabled]="!isDraft()"
+                    />
+                  </td>
+                  <td>{{ line.taxAmount | number: '1.2-2' }}</td>
+                  <td>{{ line.lineNet | number: '1.2-2' }}</td>
+                  <td>{{ line.lineTotal | number: '1.2-2' }}</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <aside class="card summary-card">
+        <h3>{{ t('pur.dpi.summaryTitle') }}</h3>
+        <dl class="summary-list">
+          <div>
+            <dt>{{ t('pur.dpi.summary.qtyTotal') }}</dt>
+            <dd>{{ qtyTotal() | number: '1.0-3' }}</dd>
+          </div>
+          <div>
+            <dt>{{ t('pur.dpi.summary.subtotal') }}</dt>
+            <dd>{{ subTotal() | number: '1.2-2' }}</dd>
+          </div>
+          <div>
+            <dt>{{ t('pur.dpi.summary.lineDiscounts') }}</dt>
+            <dd>{{ lineDiscountTotal() | number: '1.2-2' }}</dd>
+          </div>
+          <div>
+            <dt>{{ t('pur.dpi.summary.headerDiscount') }}</dt>
+            <dd>
+              @if (isDraft()) {
+                <input
+                  type="number"
+                  class="summary-input"
+                  [ngModel]="headerDiscountAmount()"
+                  (ngModelChange)="headerDiscountAmount.set(+$event)"
+                />
+              } @else {
+                {{ headerDiscountAmount() | number: '1.2-2' }}
+              }
+            </dd>
+          </div>
+          <div>
+            <dt>{{ t('pur.dpi.summary.tax') }}</dt>
+            <dd>{{ taxAmount() | number: '1.2-2' }}</dd>
+          </div>
+          <div class="summary-net">
+            <dt>{{ t('pur.dpi.summary.net') }}</dt>
+            <dd>{{ netTotal() | number: '1.2-2' }} {{ currency() }}</dd>
+          </div>
+          <div>
+            <dt>{{ t('pur.dpi.summary.paid') }}</dt>
+            <dd>{{ paidAmount() | number: '1.2-2' }}</dd>
+          </div>
+          <div>
+            <dt>{{ t('pur.dpi.summary.remaining') }}</dt>
+            <dd>{{ remainingAmount() | number: '1.2-2' }}</dd>
+          </div>
+        </dl>
+      </aside>
+    </div>
+  }
+</app-inventory-page-shell>

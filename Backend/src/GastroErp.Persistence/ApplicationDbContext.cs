@@ -62,6 +62,7 @@ public class ApplicationDbContext : DbContext, IApplicationDbContext
     public DbSet<AppUser> AppUsers => Set<AppUser>();
     public DbSet<Role> Roles => Set<Role>();
     public DbSet<UserRole> UserRoles => Set<UserRole>();
+    public DbSet<UserBranch> UserBranches => Set<UserBranch>();
     public DbSet<Permission> Permissions => Set<Permission>();
     public DbSet<PermissionCategory> PermissionCategories => Set<PermissionCategory>();
     public DbSet<PermissionGroup> PermissionGroups => Set<PermissionGroup>();
@@ -91,11 +92,18 @@ public class ApplicationDbContext : DbContext, IApplicationDbContext
     // ─── Inventory – Catalog ───────────────────────────────────────────────
     public DbSet<InventoryCategory> InventoryCategories => Set<InventoryCategory>();
     public DbSet<InventoryItem> InventoryItems => Set<InventoryItem>();
+    public DbSet<InventoryItemType> InventoryItemTypes => Set<InventoryItemType>();
+    public DbSet<InventoryValuationGroup> InventoryValuationGroups => Set<InventoryValuationGroup>();
     public DbSet<InventoryUnit> InventoryUnits => Set<InventoryUnit>();
     public DbSet<UnitConversion> UnitConversions => Set<UnitConversion>();
+    public DbSet<InventoryBrand> InventoryBrands => Set<InventoryBrand>();
+    public DbSet<InventoryManufacturer> InventoryManufacturers => Set<InventoryManufacturer>();
+    public DbSet<InventoryAttribute> InventoryAttributes => Set<InventoryAttribute>();
+    public DbSet<InventoryPriceList> InventoryPriceLists => Set<InventoryPriceList>();
 
     // ─── Inventory – Warehouse ────────────────────────────────────────────
     public DbSet<Warehouse> Warehouses => Set<Warehouse>();
+    public DbSet<WarehouseTypeDefinition> WarehouseTypeDefinitions => Set<WarehouseTypeDefinition>();
     public DbSet<StockTransfer> StockTransfers => Set<StockTransfer>();
 
     // ─── Inventory – Suppliers ────────────────────────────────────────────
@@ -105,6 +113,8 @@ public class ApplicationDbContext : DbContext, IApplicationDbContext
     public DbSet<PurchaseOrder> PurchaseOrders => Set<PurchaseOrder>();
     public DbSet<GoodsReceipt> GoodsReceipts => Set<GoodsReceipt>();
     public DbSet<PurchaseReturn> PurchaseReturns => Set<PurchaseReturn>();
+    public DbSet<PurchaseReturnReason> PurchaseReturnReasons => Set<PurchaseReturnReason>();
+    public DbSet<PurchaseInvoice> PurchaseInvoices => Set<PurchaseInvoice>();
 
     // ─── Inventory – Counting ─────────────────────────────────────────────
     public DbSet<StockAdjustment> StockAdjustments => Set<StockAdjustment>();
@@ -123,6 +133,10 @@ public class ApplicationDbContext : DbContext, IApplicationDbContext
     public DbSet<InventoryTransaction> InventoryTransactions => Set<InventoryTransaction>();
     public DbSet<StockMovement> StockMovements => Set<StockMovement>();
     public DbSet<InventoryBatch> InventoryBatches => Set<InventoryBatch>();
+    public DbSet<InventoryBalance> InventoryBalances => Set<InventoryBalance>();
+    public DbSet<GastroErp.Domain.Entities.Inventory.Issuing.GoodsIssue> GoodsIssues => Set<GastroErp.Domain.Entities.Inventory.Issuing.GoodsIssue>();
+    public DbSet<GastroErp.Domain.Entities.Inventory.Issuing.IssueDestination> IssueDestinations => Set<GastroErp.Domain.Entities.Inventory.Issuing.IssueDestination>();
+    public DbSet<GastroErp.Domain.Entities.Inventory.Opening.OpeningBalance> OpeningBalances => Set<GastroErp.Domain.Entities.Inventory.Opening.OpeningBalance>();
 
     // ─── Inventory – Reservation ──────────────────────────────────────────
     public DbSet<InventoryReservation> InventoryReservations => Set<InventoryReservation>();
@@ -142,6 +156,22 @@ public class ApplicationDbContext : DbContext, IApplicationDbContext
     public DbSet<KitchenTicket> KitchenTickets => Set<KitchenTicket>();
     public DbSet<FloorPlan> FloorPlans => Set<FloorPlan>();
     public DbSet<TableReservation> TableReservations => Set<TableReservation>();
+    public DbSet<GastroErp.Domain.Entities.Sales.Pricing.SalesPriceList> SalesPriceLists => Set<GastroErp.Domain.Entities.Sales.Pricing.SalesPriceList>();
+    public DbSet<GastroErp.Domain.Entities.Sales.Pricing.ProductPrice> ProductPrices => Set<GastroErp.Domain.Entities.Sales.Pricing.ProductPrice>();
+
+    // ─── Back Office Sales ────────────────────────────────────────────────────
+    public DbSet<GastroErp.Domain.Entities.Sales.BackOffice.BackOfficeSalesInvoice> BackOfficeSalesInvoices
+        => Set<GastroErp.Domain.Entities.Sales.BackOffice.BackOfficeSalesInvoice>();
+    public DbSet<GastroErp.Domain.Entities.Sales.BackOffice.BackOfficeSalesOrder> BackOfficeSalesOrders
+        => Set<GastroErp.Domain.Entities.Sales.BackOffice.BackOfficeSalesOrder>();
+    public DbSet<GastroErp.Domain.Entities.Sales.BackOffice.BackOfficeSalesQuotation> BackOfficeSalesQuotations
+        => Set<GastroErp.Domain.Entities.Sales.BackOffice.BackOfficeSalesQuotation>();
+    public DbSet<GastroErp.Domain.Entities.Sales.BackOffice.BackOfficeSalesDeliveryNote> BackOfficeSalesDeliveryNotes
+        => Set<GastroErp.Domain.Entities.Sales.BackOffice.BackOfficeSalesDeliveryNote>();
+    public DbSet<GastroErp.Domain.Entities.Sales.BackOffice.BackOfficeSalesReturn> BackOfficeSalesReturns
+        => Set<GastroErp.Domain.Entities.Sales.BackOffice.BackOfficeSalesReturn>();
+    public DbSet<GastroErp.Domain.Entities.Sales.BackOffice.BackOfficeSalesDebitNote> BackOfficeSalesDebitNotes
+        => Set<GastroErp.Domain.Entities.Sales.BackOffice.BackOfficeSalesDebitNote>();
 
     // ─── Invoicing ──────────────────────────────────────────────────────────
     public DbSet<Invoice> Invoices => Set<Invoice>();
@@ -166,10 +196,35 @@ public class ApplicationDbContext : DbContext, IApplicationDbContext
 
     // ─── Finance / Accounting ─────────────────────────────────────────────────
     public DbSet<ChartOfAccount> ChartOfAccounts => Set<ChartOfAccount>();
+    public DbSet<AccountMainClassification> AccountMainClassifications => Set<AccountMainClassification>();
+    public DbSet<AccountClassification> AccountClassifications => Set<AccountClassification>();
+    public DbSet<AccountingSettings> AccountingSettings => Set<AccountingSettings>();
     public DbSet<JournalEntry> JournalEntries => Set<JournalEntry>();
     public DbSet<JournalEntryLine> JournalEntryLines => Set<JournalEntryLine>();
     public DbSet<FiscalPeriod> FiscalPeriods => Set<FiscalPeriod>();
     public DbSet<CostCenter> CostCenters => Set<CostCenter>();
+    public DbSet<CostCenterAllowedAccount> CostCenterAllowedAccounts => Set<CostCenterAllowedAccount>();
+    public DbSet<Currency> Currencies => Set<Currency>();
+    public DbSet<CurrencyExchangeRate> CurrencyExchangeRates => Set<CurrencyExchangeRate>();
+    public DbSet<DocumentType> DocumentTypes => Set<DocumentType>();
+    public DbSet<DocumentTypeLifecycleStage> DocumentTypeLifecycleStages => Set<DocumentTypeLifecycleStage>();
+    public DbSet<Bank> Banks => Set<Bank>();
+    public DbSet<BankAccountDetail> BankAccountDetails => Set<BankAccountDetail>();
+    public DbSet<CashBox> CashBoxes => Set<CashBox>();
+    public DbSet<CashBoxUser> CashBoxUsers => Set<CashBoxUser>();
+    public DbSet<CashBoxDevice> CashBoxDevices => Set<CashBoxDevice>();
+    public DbSet<TaxRegistrationProfile> TaxRegistrationProfiles => Set<TaxRegistrationProfile>();
+    public DbSet<TaxRegistrationCertificate> TaxRegistrationCertificates => Set<TaxRegistrationCertificate>();
+    public DbSet<TaxCode> TaxCodes => Set<TaxCode>();
+    public DbSet<TaxCodeRate> TaxCodeRates => Set<TaxCodeRate>();
+    public DbSet<NotificationReason> NotificationReasons => Set<NotificationReason>();
+    public DbSet<FinancialOpeningBalance> FinancialOpeningBalances => Set<FinancialOpeningBalance>();
+    public DbSet<FinancialOpeningBalanceLine> FinancialOpeningBalanceLines => Set<FinancialOpeningBalanceLine>();
+    public DbSet<ReceiptVoucher> ReceiptVouchers => Set<ReceiptVoucher>();
+    public DbSet<ReceiptVoucherLine> ReceiptVoucherLines => Set<ReceiptVoucherLine>();
+    public DbSet<FinancialNote> FinancialNotes => Set<FinancialNote>();
+    public DbSet<FinancialNoteLine> FinancialNoteLines => Set<FinancialNoteLine>();
+    public DbSet<GeneralLedgerSetting> GeneralLedgerSettings => Set<GeneralLedgerSetting>();
     public DbSet<AccountingTransaction> AccountingTransactions => Set<AccountingTransaction>();
 
     // ─── Automation ───────────────────────────────────────────────────────────

@@ -1,0 +1,103 @@
+@import './inventory-master-data.shared.scss';
+
+.ops-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  margin-bottom: 1rem;
+}
+
+.ops-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  border: 1px solid var(--border-color);
+  background: var(--bg-surface);
+  color: var(--text-muted);
+  border-radius: 0.65rem;
+  padding: 0.45rem 0.75rem;
+  font-size: 0.72rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.ops-tab mat-icon {
+  font-size: 1rem;
+  width: 1rem;
+  height: 1rem;
+}
+
+.ops-tab.active {
+  color: var(--text-primary);
+  border-color: var(--text-primary);
+  background: var(--bg-canvas);
+}
+
+.neg {
+  color: #b91c1c;
+  font-weight: 700;
+}
+
+.btn-secondary.sm {
+  padding: 0.3rem 0.55rem;
+  font-size: 0.68rem;
+}
+
+.form-panel {
+  margin-top: 1rem;
+  border: 1px solid var(--border-color);
+  border-radius: 0.9rem;
+  background: var(--bg-surface);
+  padding: 1rem 1.1rem;
+}
+
+.form-panel header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.75rem;
+}
+
+.form-panel h2 {
+  margin: 0;
+  font-size: 1rem;
+}
+
+.form-error {
+  color: #b91c1c;
+  font-size: 0.75rem;
+  margin: 0 0 0.75rem;
+}
+
+.form-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 0.75rem;
+}
+
+.form-grid label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  font-size: 0.68rem;
+  font-weight: 700;
+  color: var(--text-muted);
+}
+
+.form-grid input,
+.form-grid select {
+  padding: 0.5rem 0.65rem;
+  border-radius: 0.55rem;
+  border: 1px solid var(--border-color);
+  background: var(--bg-canvas);
+  color: var(--text-primary);
+  font-size: 0.8rem;
+  font-weight: 500;
+}
+
+.form-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  margin-top: 1rem;
+}

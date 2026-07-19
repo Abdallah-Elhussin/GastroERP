@@ -59,6 +59,14 @@ public sealed class Branch : AuditableBaseEntity
         RaiseDomainEvent(new BranchCreatedEvent(Id, CompanyId, TenantId, NameAr));
     }
 
+    public void UpdateInfo(string nameAr, string? nameEn = null, string? code = null)
+    {
+        if (string.IsNullOrWhiteSpace(nameAr)) throw new BusinessException(ErrorCodes.NameArRequired);
+        NameAr = nameAr.Trim();
+        NameEn = string.IsNullOrWhiteSpace(nameEn) ? null : nameEn.Trim();
+        Code = string.IsNullOrWhiteSpace(code) ? Code : code.Trim();
+    }
+
     public void UpdateContactInfo(string? email, string? phone)
     {
         Email = email;

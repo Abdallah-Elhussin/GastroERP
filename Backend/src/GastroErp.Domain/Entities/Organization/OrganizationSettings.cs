@@ -31,6 +31,7 @@ public sealed class OrganizationSettings : AuditableBaseEntity
     private OrganizationSettings()
     {
         CompanyName = string.Empty;
+        CalendarSystem = "Gregorian";
     }
 
     public OrganizationSettings(Guid tenantId, string companyName, string? legalName = null, 

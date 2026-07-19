@@ -1,0 +1,95 @@
+@import './inventory-master-data.shared.scss';
+
+.tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  margin-bottom: 1rem;
+}
+.tab {
+  border: 1px solid var(--border-color);
+  background: var(--bg-canvas);
+  color: var(--text-muted);
+  border-radius: 999px;
+  padding: 0.4rem 0.85rem;
+  font-size: 0.72rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+.tab.on {
+  background: var(--primary-color);
+  color: var(--primary-contrast);
+  border-color: transparent;
+}
+
+.attr-list {
+  display: grid;
+  gap: 0.75rem;
+}
+.attr-card {
+  border: 1px solid var(--border-color);
+  border-radius: 0.9rem;
+  background: var(--bg-surface);
+  padding: 0.9rem 1rem;
+}
+.attr-card.inactive { opacity: 0.55; }
+.attr-card header {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.75rem;
+  align-items: flex-start;
+}
+.values {
+  margin-top: 0.75rem;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  align-items: center;
+}
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.2rem;
+  padding: 0.2rem 0.45rem;
+  border-radius: 999px;
+  background: var(--bg-canvas);
+  border: 1px solid var(--border-color);
+  font-size: 0.7rem;
+}
+.chip button {
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  display: inline-flex;
+  padding: 0;
+  color: var(--text-muted);
+}
+.chip mat-icon { font-size: 0.85rem; width: 0.85rem; height: 0.85rem; }
+.value-add {
+  display: inline-flex;
+  gap: 0.35rem;
+  align-items: center;
+}
+.value-add input {
+  padding: 0.35rem 0.55rem;
+  border-radius: 0.5rem;
+  border: 1px solid var(--border-color);
+  background: var(--bg-canvas);
+  color: var(--text-primary);
+  font-size: 0.75rem;
+}
+
+.drawer footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  margin-top: 1rem;
+}
+.banner.danger {
+  margin-top: 0.75rem;
+  padding: 0.55rem 0.75rem;
+  border-radius: 0.65rem;
+  background: #fef2f2;
+  color: #991b1b;
+  font-size: 0.75rem;
+}

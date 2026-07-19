@@ -6,7 +6,13 @@ namespace GastroErp.Application.Features.Organization.Queries;
 
 // Branch
 public record GetBranchByIdQuery(Guid Id) : IRequest<Result<BranchDto>>;
-public record GetBranchesQuery(Guid? TenantId = null, Guid? CompanyId = null, int PageNumber = 1, int PageSize = 10, string? SearchTerm = null) : IRequest<PagedResult<BranchDto>>;
+public record GetBranchesQuery(
+    Guid? TenantId = null,
+    Guid? CompanyId = null,
+    int PageNumber = 1,
+    int PageSize = 10,
+    string? SearchTerm = null,
+    bool? IsActive = null) : IRequest<PagedResult<BranchDto>>;
 
 // Company
 public record GetCompanyByIdQuery(Guid Id) : IRequest<Result<CompanyDto>>;

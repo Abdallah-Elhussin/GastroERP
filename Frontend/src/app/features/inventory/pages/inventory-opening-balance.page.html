@@ -1,0 +1,270 @@
+<app-inventory-page-shell
+  [breadcrumbs]="breadcrumbs"
+  titleKey="inv.nav.openingBalance"
+  subtitleKey="inv.ob.subtitle"
+>
+  <section class="toolbar" shellActions>
+    <button type="button" class="btn primary" [disabled]="!canManage()" (click)="newDocument()">
+      <mat-icon>add</mat-icon>
+      {{ t('inv.items.toolbar.new') }}
+    </button>
+    <button type="button" class="btn ghost" [disabled]="!canManage() || !isDraft() || saving()" (click)="save()">
+      <mat-icon>save</mat-icon>
+      {{ t('inv.ob.save') }}
+    </button>
+    <button type="button" class="btn ghost" [disabled]="!canManage() || !docId() || !isDraft() || saving()" (click)="approve()">
+      {{ t('inv.ob.approve') }}
+    </button>
+    <button type="button" class="btn ghost" [disabled]="!canManage() || !isApproved() || saving()" (click)="unapprove()">
+      {{ t('inv.ob.unapprove') }}
+    </button>
+    <button type="button" class="btn ghost" [disabled]="!canManage() || !isApproved() || saving()" (click)="post()">
+      <mat-icon>lock</mat-icon>
+      {{ t('inv.ob.post') }}
+    </button>
+    <button type="button" class="btn ghost" [disabled]="!isDraft()" (click)="autoGenerate()">
+      {{ t('inv.ob.autoGenerate') }}
+    </button>
+    <label class="btn ghost file-btn" [class.disabled]="!isDraft()">
+      <mat-icon>upload</mat-icon>
+      {{ t('inv.ob.importExcel') }}
+      <input type="file" accept=".csv,text/csv" hidden [disabled]="!isDraft()" (change)="importExcel($event)" />
+    </label>
+    <button type="button" class="btn ghost" (click)="downloadTemplate()">
+      <mat-icon>download</mat-icon>
+      {{ t('inv.ob.downloadTemplate') }}
+    </button>
+    <button type="button" class="btn ghost" (click)="refresh()">
+      <mat-icon>sync</mat-icon>
+      {{ t('inv.ob.refresh') }}
+    </button>
+    <button type="button" class="btn ghost" (click)="browse()">
+      {{ t('inv.ob.browse') }}
+    </button>
+  </section>
+
+  <p class="steps-hint">{{ t('inv.ob.steps') }}</p>
+
+  @if (error()) {
+    <div class="form-error">{{ error() }}</div>
+  }
+
+  <section class="card">
+    <h3>{{ t('inv.ob.headerTitle') }}</h3>
+
+    <div class="grid-4">
+      <label class="field">
+        <span>{{ t('inv.ob.docNumber') }}</span>
+        <input type="text" [ngModel]="documentNumber()" (ngModelChange)="documentNumber.set($event)" [disabled]="!isDraft()" />
+      </label>
+      <label class="field">
+        <span>{{ t('inv.ob.docDate') }}</span>
+        <input type="date" [ngModel]="documentDate()" (ngModelChange)="documentDate.set($event)" [disabled]="!isDraft()" />
+      </label>
+      <div class="field">
+        <span>{{ t('inv.ob.status') }}</span>
+        <span class="status-badge" [attr.data-status]="status()">{{ statusLabel() }}</span>
+      </div>
+      <label class="field">
+        <span>{{ t('inv.ob.approvalDate') }}</span>
+        <input type="text" [value]="approvalDate() || ''" disabled />
+      </label>
+    </div>
+
+    <div class="grid-4">
+      <label class="field">
+        <span>{{ t('inv.ob.entryMethod') }}</span>
+        <select [ngModel]="entryMethod()" (ngModelChange)="entryMethod.set(+$event)" [disabled]="!isDraft()">
+          <option [ngValue]="1">{{ t('inv.ob.entry.manual') }}</option>
+          <option [ngValue]="2">{{ t('inv.ob.entry.excel') }}</option>
+          <option [ngValue]="3">{{ t('inv.ob.entry.auto') }}</option>
+        </select>
+      </label>
+      <label class="field">
+        <span>{{ t('inv.ob.displayMethod') }}</span>
+        <select [ngModel]="displayMethod()" (ngModelChange)="displayMethod.set(+$event)" [disabled]="!isDraft()">
+          <option [ngValue]="1">{{ t('inv.ob.display.item') }}</option>
+          <option [ngValue]="2">{{ t('inv.ob.display.warehouse') }}</option>
+          <option [ngValue]="3">{{ t('inv.ob.display.category') }}</option>
+        </select>
+      </label>
+      <label class="field">
+        <span>{{ t('inv.ob.costingMethod') }}</span>
+        <select [ngModel]="costingMethod()" (ngModelChange)="costingMethod.set(+$event)" [disabled]="!isDraft()">
+          <option [ngValue]="2">{{ t('inv.ob.costing.avg') }}</option>
+          <option [ngValue]="1" disabled>{{ t('inv.ob.costing.fifo') }}</option>
+          <option [ngValue]="3" disabled>{{ t('inv.ob.costing.standard') }}</option>
+        </select>
+      </label>
+      <label class="field">
+        <span>{{ t('inv.ob.avgScope') }}</span>
+        <select [ngModel]="weightedAverageScope()" (ngModelChange)="weightedAverageScope.set(+$event)" [disabled]="!isDraft()">
+          <option [ngValue]="1">{{ t('inv.ob.scope.warehouse') }}</option>
+          <option [ngValue]="2">{{ t('inv.ob.scope.branch') }}</option>
+          <option [ngValue]="3">{{ t('inv.ob.scope.company') }}</option>
+        </select>
+      </label>
+    </div>
+
+    <div class="toggles">
+      <mat-slide-toggle
+        [checked]="useExpiryDate()"
+        (change)="useExpiryDate.set($event.checked)"
+        [disabled]="!isDraft()"
+      >{{ t('inv.ob.useExpiry') }}</mat-slide-toggle>
+      <mat-slide-toggle
+        [checked]="useBatchNumbers()"
+        (change)="useBatchNumbers.set($event.checked)"
+        [disabled]="!isDraft()"
+      >{{ t('inv.ob.useBatch') }}</mat-slide-toggle>
+      <mat-slide-toggle
+        [checked]="useSerialNumbers()"
+        (change)="useSerialNumbers.set($event.checked)"
+        [disabled]="!isDraft()"
+      >{{ t('inv.ob.useSerial') }}</mat-slide-toggle>
+    </div>
+
+    <div class="grid-2">
+      <label class="field">
+        <span>{{ t('inv.ob.contra') }} *</span>
+        <select [ngModel]="contraAccountId()" (ngModelChange)="contraAccountId.set($event)" [disabled]="!isDraft()">
+          <option [ngValue]="null">—</option>
+          @for (a of accounts(); track a.id) {
+            <option [ngValue]="a.id">{{ (a.accountNumber || a.code) ? (a.accountNumber || a.code) + ' — ' : '' }}{{ a.nameAr }}</option>
+          }
+        </select>
+      </label>
+      <label class="field">
+        <span>{{ t('inv.ob.costCenter') }}</span>
+        <select [ngModel]="costCenterId()" (ngModelChange)="costCenterId.set($event)" [disabled]="!isDraft()">
+          <option [ngValue]="null">—</option>
+          @for (c of costCenters(); track c.id) {
+            <option [ngValue]="c.id">{{ c.nameAr }}</option>
+          }
+        </select>
+      </label>
+    </div>
+
+    <label class="field">
+      <span>{{ t('inv.ob.notes') }}</span>
+      <textarea rows="2" [ngModel]="notes()" (ngModelChange)="notes.set($event)" [disabled]="!isDraft()"></textarea>
+    </label>
+  </section>
+
+  <section class="card">
+    <h3>{{ t('inv.ob.linesTitle') }}</h3>
+
+    @if (isDraft()) {
+      <div class="line-editor">
+        <label class="field">
+          <span>{{ t('inv.ob.col.item') }}</span>
+          <select [ngModel]="draftItemId()" (ngModelChange)="onItemPicked($event)">
+            <option [ngValue]="null">—</option>
+            @for (i of items(); track i.id) {
+              <option [ngValue]="i.id">{{ i.nameAr }}{{ i.sku ? ' (' + i.sku + ')' : '' }}</option>
+            }
+          </select>
+        </label>
+        <label class="field">
+          <span>{{ t('inv.ob.col.warehouse') }}</span>
+          <select [ngModel]="draftWarehouseId() || defaultWarehouseId()" (ngModelChange)="draftWarehouseId.set($event)">
+            <option [ngValue]="null">—</option>
+            @for (w of warehouses(); track w.id) {
+              <option [ngValue]="w.id">{{ w.nameAr }}</option>
+            }
+          </select>
+        </label>
+        <label class="field">
+          <span>{{ t('inv.ob.col.unit') }}</span>
+          <select [ngModel]="draftUnitId()" (ngModelChange)="draftUnitId.set($event)">
+            <option [ngValue]="null">—</option>
+            @for (u of units(); track u.id) {
+              <option [ngValue]="u.id">{{ u.nameAr || u.symbol }}</option>
+            }
+          </select>
+        </label>
+        <label class="field">
+          <span>{{ t('inv.ob.col.qty') }}</span>
+          <input type="number" min="0.0001" step="0.01" [ngModel]="draftQty()" (ngModelChange)="draftQty.set(+$event)" />
+        </label>
+        <label class="field">
+          <span>{{ t('inv.ob.col.cost') }}</span>
+          <input type="number" min="0" step="0.01" [ngModel]="draftCost()" (ngModelChange)="draftCost.set(+$event)" />
+        </label>
+        <button type="button" class="btn primary add-line" (click)="addLine()">
+          <mat-icon>add</mat-icon>
+          {{ t('inv.ob.addLine') }}
+        </button>
+      </div>
+    }
+
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>{{ t('inv.ob.col.item') }}</th>
+            <th>{{ t('inv.ob.col.warehouse') }}</th>
+            <th>{{ t('inv.ob.col.unit') }}</th>
+            <th>{{ t('inv.ob.col.qty') }}</th>
+            <th>{{ t('inv.ob.col.cost') }}</th>
+            @if (isDraft()) { <th></th> }
+          </tr>
+        </thead>
+        <tbody>
+          @if (lines().length === 0) {
+            <tr>
+              <td [attr.colspan]="isDraft() ? 6 : 5" class="empty">{{ t('inv.ob.noLines') }}</td>
+            </tr>
+          }
+          @for (line of lines(); track $index; let i = $index) {
+            <tr>
+              <td>
+                <strong>{{ line.itemNameAr || '—' }}</strong>
+                @if (line.itemSku) { <div class="muted">{{ line.itemSku }}</div> }
+              </td>
+              <td>{{ line.warehouseNameAr || '—' }}</td>
+              <td>{{ line.unitNameAr || '—' }}</td>
+              <td class="num">{{ line.quantity | number: '1.0-4' }}</td>
+              <td class="num">{{ line.unitCost | number: '1.2-4' }}</td>
+              @if (isDraft()) {
+                <td>
+                  <button type="button" class="btn icon-only" (click)="removeLine(i)" [matTooltip]="t('inv.items.toolbar.delete')">
+                    <mat-icon>delete</mat-icon>
+                  </button>
+                </td>
+              }
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <footer class="status-bar">
+    <span>{{ t('inv.ob.lineCount') }}: {{ lineCount() }}</span>
+    <span>{{ statusMessage() }}</span>
+  </footer>
+</app-inventory-page-shell>
+
+@if (showBrowse()) {
+  <div class="overlay" (click)="showBrowse.set(false)">
+    <div class="dialog" (click)="$event.stopPropagation()">
+      <header>
+        <h3>{{ t('inv.ob.browseTitle') }}</h3>
+        <button type="button" class="btn icon-only" (click)="showBrowse.set(false)"><mat-icon>close</mat-icon></button>
+      </header>
+      <div class="browse-list">
+        @for (row of browseRows(); track row.id) {
+          <button type="button" class="browse-row" (click)="openDoc(row)">
+            <strong>{{ row.documentNumber }}</strong>
+            <span>{{ row.status }}</span>
+            <span>{{ row.documentDate | date: 'mediumDate' }}</span>
+            <span>{{ row.lineCount }} {{ t('inv.ob.lines') }}</span>
+          </button>
+        } @empty {
+          <p class="muted">{{ t('inv.ob.browseEmpty') }}</p>
+        }
+      </div>
+    </div>
+  </div>
+}

@@ -1,0 +1,70 @@
+namespace GastroErp.Application.Features.Finance.DTOs;
+
+public record BankAccountDetailDto(
+    Guid? Id,
+    Guid CurrencyId,
+    string? CurrencyCode,
+    string AccountNumber,
+    string? Iban,
+    decimal? MinBalance,
+    decimal? MaxBalance,
+    decimal? MinTransaction,
+    decimal? MaxTransaction,
+    decimal? DailyTransferLimit,
+    bool AllowExceedLimits,
+    bool AllowWithdraw,
+    bool AllowDeposit,
+    bool AllowTransfer,
+    bool IsDefault,
+    bool IsActive,
+    int SortOrder);
+
+public record UpsertBankDto(
+    string NameAr,
+    Guid CompanyId,
+    Guid BranchId,
+    Guid ChartOfAccountId,
+    Guid BaseCurrencyId,
+    string? NameEn = null,
+    string? Code = null,
+    string? SwiftCode = null,
+    string? DefaultIban = null,
+    bool IsActive = true,
+    DateOnly? DeactivatedAt = null,
+    string? DeactivationReason = null,
+    int SortOrder = 0,
+    IReadOnlyList<BankAccountDetailDto>? Accounts = null);
+
+public record BankDto(
+    Guid Id,
+    int Number,
+    string NameAr,
+    string? NameEn,
+    string? Code,
+    string? SwiftCode,
+    string? DefaultIban,
+    Guid CompanyId,
+    string? CompanyNameAr,
+    Guid BranchId,
+    string? BranchNameAr,
+    Guid ChartOfAccountId,
+    string? AccountNumber,
+    string? AccountNameAr,
+    Guid BaseCurrencyId,
+    string? BaseCurrencyCode,
+    bool IsActive,
+    DateOnly? DeactivatedAt,
+    string? DeactivationReason,
+    bool IsSystem,
+    int SortOrder,
+    int AccountsCount,
+    IReadOnlyList<BankAccountDetailDto> Accounts);
+
+public record BankFilterDto(
+    Guid? CompanyId = null,
+    Guid? BranchId = null,
+    Guid? CurrencyId = null,
+    bool? IsActive = null,
+    string? Search = null,
+    int Page = 1,
+    int PageSize = 200);

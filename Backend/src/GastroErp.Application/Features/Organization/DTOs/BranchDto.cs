@@ -19,21 +19,29 @@ public record BranchDto(
     string? CityEn,
     bool AllowNegativeStock,
     bool AllowOfflineSales,
-    DateTime CreatedAt
-);
+    DateTime CreatedAt,
+    DateTimeOffset? UpdatedAt,
+    string? CompanyNameAr,
+    bool IsActive);
 
 public record CreateBranchDto(
-    Guid TenantId,
     Guid CompanyId,
     string NameAr,
-    string? NameEn,
-    BranchType BranchType,
-    string? Code = null
-);
+    Guid? TenantId = null,
+    string? NameEn = null,
+    BranchType BranchType = BranchType.Restaurant,
+    string? Code = null,
+    string? Location = null,
+    bool IsActive = true);
 
 public record UpdateBranchDto(
-    string? PhoneNumber,
-    string? Email,
-    bool AllowNegativeStock,
-    bool AllowOfflineSales
-);
+    Guid CompanyId,
+    string NameAr,
+    string? NameEn = null,
+    string? Code = null,
+    string? Location = null,
+    bool IsActive = true,
+    string? PhoneNumber = null,
+    string? Email = null,
+    bool AllowNegativeStock = false,
+    bool AllowOfflineSales = true);

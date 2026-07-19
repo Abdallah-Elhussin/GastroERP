@@ -28,6 +28,8 @@ public static class RolePermissionTemplates
         permission.StartsWith("Organization.", StringComparison.Ordinal)
         || permission.StartsWith("Branch.", StringComparison.Ordinal)
         || permission.StartsWith("Sales.", StringComparison.Ordinal)
+        || permission.StartsWith("BackOfficeSales.", StringComparison.Ordinal)
+        || permission.StartsWith("Crm.", StringComparison.Ordinal)
         || permission.StartsWith("Inventory.", StringComparison.Ordinal)
         || permission.StartsWith("Menu.", StringComparison.Ordinal)
         || permission.StartsWith("Reporting.", StringComparison.Ordinal)
@@ -37,7 +39,7 @@ public static class RolePermissionTemplates
         permission.StartsWith("Sales.", StringComparison.Ordinal)
         || permission.StartsWith("Menu.View", StringComparison.Ordinal)
         || permission.StartsWith("Product.View", StringComparison.Ordinal)
-        || permission.StartsWith("Customer.", StringComparison.Ordinal);
+        || permission.Equals("Crm.View", StringComparison.Ordinal);
 
     private static bool IsWaiterPermission(string permission) =>
         permission.StartsWith("Sales.", StringComparison.Ordinal)
@@ -56,6 +58,8 @@ public static class RolePermissionTemplates
     private static bool IsAccountantPermission(string permission) =>
         permission.StartsWith("Finance.", StringComparison.Ordinal)
         || permission.StartsWith("Invoicing.", StringComparison.Ordinal)
+        || permission.StartsWith("BackOfficeSales.", StringComparison.Ordinal)
+        || permission.StartsWith("Crm.", StringComparison.Ordinal)
         || permission.StartsWith("Reporting.", StringComparison.Ordinal);
 
     private static bool IsHrPermission(string permission) =>

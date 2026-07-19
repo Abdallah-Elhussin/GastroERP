@@ -1,0 +1,405 @@
+<app-inventory-page-shell
+  [breadcrumbs]="breadcrumbs"
+  titleKey="inv.nav.inquiry"
+  subtitleKey="inv.inquiry.subtitle"
+>
+  <div class="inquiry-layout">
+    <section class="list-panel">
+      <div class="search-card">
+        <div class="search-row">
+          <div class="search-group">
+            <mat-icon>search</mat-icon>
+            <input
+              type="search"
+              [ngModel]="search()"
+              (ngModelChange)="search.set($event)"
+              (keydown.enter)="load()"
+              [placeholder]="t('inv.inquiry.searchPlaceholder')"
+            />
+          </div>
+          <button type="button" class="btn ghost" (click)="load()">
+            <mat-icon>sync</mat-icon>
+            {{ t('inv.items.toolbar.refresh') }}
+          </button>
+          <button type="button" class="btn ghost" (click)="clearFilters()">
+            <mat-icon>delete_outline</mat-icon>
+            {{ t('inv.inquiry.clearFilters') }}
+          </button>
+          <button type="button" class="btn icon-only" (click)="showHelp.set(true)" [matTooltip]="t('common.help')">
+            <mat-icon>help_outline</mat-icon>
+          </button>
+        </div>
+        <div class="checks">
+          <label>
+            <input type="checkbox" [ngModel]="activeOnly()" (ngModelChange)="activeOnly.set($event); load()" />
+            {{ t('inv.inquiry.activeOnly') }}
+          </label>
+          <label>
+            <input type="checkbox" [ngModel]="inventoryOnly()" (ngModelChange)="inventoryOnly.set($event); load()" />
+            {{ t('inv.inquiry.inventoryOnly') }}
+          </label>
+        </div>
+      </div>
+
+      @if (loading()) {
+        <app-inventory-skeleton [count]="8" />
+      } @else if (error()) {
+        <app-inventory-error-state [message]="error()!" (retry)="load()" />
+      } @else if (rows().length === 0) {
+        <app-inventory-empty-state
+          icon="manage_search"
+          [title]="t('inv.empty.title')"
+          [message]="t('inv.inquiry.empty')"
+        />
+      } @else {
+        <div class="table-card">
+          <table mat-table [dataSource]="rows()" matSort (matSortChange)="onSort($event)" class="inquiry-table">
+            <ng-container matColumnDef="sku">
+              <th mat-header-cell *matHeaderCellDef mat-sort-header="sku">{{ t('inv.inquiry.col.code') }}</th>
+              <td mat-cell *matCellDef="let row"><code>{{ row.sku || '—' }}</code></td>
+            </ng-container>
+
+            <ng-container matColumnDef="nameAr">
+              <th mat-header-cell *matHeaderCellDef mat-sort-header="nameAr">{{ t('inv.inquiry.col.name') }}</th>
+              <td mat-cell *matCellDef="let row">
+                <strong>{{ row.nameAr }}</strong>
+                @if (row.nameEn) {
+                  <div class="muted">{{ row.nameEn }}</div>
+                }
+              </td>
+            </ng-container>
+
+            <ng-container matColumnDef="category">
+              <th mat-header-cell *matHeaderCellDef>{{ t('inv.inquiry.col.category') }}</th>
+              <td mat-cell *matCellDef="let row">{{ row.categoryNameAr || '—' }}</td>
+            </ng-container>
+
+            <ng-container matColumnDef="type">
+              <th mat-header-cell *matHeaderCellDef>{{ t('inv.inquiry.col.type') }}</th>
+              <td mat-cell *matCellDef="let row">{{ row.itemTypeNameAr || '—' }}</td>
+            </ng-container>
+
+            <ng-container matColumnDef="unit">
+              <th mat-header-cell *matHeaderCellDef>{{ t('inv.inquiry.col.unit') }}</th>
+              <td mat-cell *matCellDef="let row">{{ row.unitNameAr || '—' }}</td>
+            </ng-container>
+
+            <ng-container matColumnDef="sellingPrice">
+              <th mat-header-cell *matHeaderCellDef>{{ t('inv.inquiry.col.sellingPrice') }}</th>
+              <td mat-cell *matCellDef="let row" class="num">{{ formatMoney(row.sellingPrice) }}</td>
+            </ng-container>
+
+            <ng-container matColumnDef="lastPurchase">
+              <th mat-header-cell *matHeaderCellDef>{{ t('inv.inquiry.col.lastPurchase') }}</th>
+              <td mat-cell *matCellDef="let row" class="num">{{ formatMoney(row.lastPurchasePrice) }}</td>
+            </ng-container>
+
+            <ng-container matColumnDef="stock">
+              <th mat-header-cell *matHeaderCellDef>{{ t('inv.inquiry.col.stock') }}</th>
+              <td mat-cell *matCellDef="let row" class="num">{{ row.totalOnHand | number: '1.0-3' }}</td>
+            </ng-container>
+
+            <ng-container matColumnDef="status">
+              <th mat-header-cell *matHeaderCellDef mat-sort-header="isactive">{{ t('inv.inquiry.col.status') }}</th>
+              <td mat-cell *matCellDef="let row">
+                <span class="badge" [class.on]="row.isActive" [class.off]="!row.isActive">
+                  {{ row.isActive ? t('common.active') : t('common.inactive') }}
+                </span>
+              </td>
+            </ng-container>
+
+            <tr mat-header-row *matHeaderRowDef="displayedColumns; sticky: true"></tr>
+            <tr
+              mat-row
+              *matRowDef="let row; columns: displayedColumns"
+              [class.selected]="selectedId() === row.id"
+              (click)="selectRow(row)"
+            ></tr>
+          </table>
+        </div>
+      }
+    </section>
+
+    <aside class="detail-panel">
+      <header class="detail-header">
+        <mat-icon>description</mat-icon>
+        <h3>{{ t('inv.inquiry.detailsTitle') }}</h3>
+      </header>
+
+      @if (!selectedId()) {
+        <div class="detail-placeholder">{{ t('inv.inquiry.selectHint') }}</div>
+      } @else if (detailLoading()) {
+        <app-inventory-skeleton [count]="5" />
+      } @else if (detailError()) {
+        <app-inventory-error-state [message]="detailError()!" (retry)="loadDetail(selectedId()!)" />
+      } @else {
+        @if (detail(); as d) {
+        <div class="detail-body">
+          <section class="block">
+            <h4>{{ t('inv.inquiry.section.general') }}</h4>
+            <dl class="kv">
+              <div><dt>{{ t('inv.inquiry.col.code') }}</dt><dd>{{ d.general.sku || '—' }}</dd></div>
+              <div><dt>{{ t('inv.inquiry.col.name') }}</dt><dd>{{ d.general.nameAr }}</dd></div>
+              <div><dt>{{ t('inv.inquiry.col.nameEn') }}</dt><dd>{{ d.general.nameEn || '—' }}</dd></div>
+              <div><dt>{{ t('inv.inquiry.col.barcode') }}</dt><dd>{{ d.general.barcode || '—' }}</dd></div>
+              <div><dt>{{ t('inv.inquiry.col.category') }}</dt><dd>{{ d.general.categoryNameAr || '—' }}</dd></div>
+              <div><dt>{{ t('inv.inquiry.col.type') }}</dt><dd>{{ d.general.itemTypeNameAr || '—' }}</dd></div>
+              <div><dt>{{ t('inv.inquiry.col.unit') }}</dt><dd>{{ d.general.baseUnitNameAr || '—' }}</dd></div>
+              <div>
+                <dt>{{ t('inv.inquiry.col.status') }}</dt>
+                <dd>{{ d.general.isActive ? t('common.active') : t('common.inactive') }}</dd>
+              </div>
+            </dl>
+          </section>
+
+          <section class="block">
+            <h4>{{ t('inv.inquiry.section.analytics') }}</h4>
+            <div class="stats">
+              <div><span>{{ t('inv.inquiry.stat.onHand') }}</span><strong>{{ d.analytics.totalOnHand | number: '1.0-3' }}</strong></div>
+              <div><span>{{ t('inv.inquiry.stat.value') }}</span><strong>{{ formatMoney(d.analytics.inventoryValue) }}</strong></div>
+              <div><span>{{ t('inv.inquiry.stat.cover') }}</span><strong>{{ d.analytics.daysOfCover ?? '—' }}</strong></div>
+              <div><span>{{ t('inv.inquiry.stat.reorder') }}</span><strong>{{ d.analytics.reorderLevel | number: '1.0-3' }}</strong></div>
+              <div class="wide">
+                <span>{{ t('inv.inquiry.stat.status') }}</span>
+                <strong>{{ stockStatusLabel(d.analytics.stockStatus) }}</strong>
+              </div>
+            </div>
+          </section>
+
+          <section class="block">
+            <h4>{{ t('inv.inquiry.section.warehouses') }}</h4>
+            @if (d.warehouses.length === 0) {
+              <p class="muted">{{ t('inv.inquiry.none') }}</p>
+            } @else {
+              <table class="mini-table">
+                <thead>
+                  <tr>
+                    <th>{{ t('inv.inquiry.col.warehouse') }}</th>
+                    <th>{{ t('inv.inquiry.col.onHand') }}</th>
+                    <th>{{ t('inv.inquiry.col.reserved') }}</th>
+                    <th>{{ t('inv.inquiry.col.available') }}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (w of d.warehouses; track w.warehouseId) {
+                    <tr>
+                      <td>{{ w.warehouseNameAr }}</td>
+                      <td class="num">{{ w.onHand | number: '1.0-3' }}</td>
+                      <td class="num">{{ w.reserved | number: '1.0-3' }}</td>
+                      <td class="num">{{ w.available | number: '1.0-3' }}</td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            }
+          </section>
+
+          <section class="block">
+            <h4>{{ t('inv.inquiry.section.cost') }}</h4>
+            @if (!d.cost.canView) {
+              <p class="muted">{{ t('inv.inquiry.restricted') }}</p>
+            } @else {
+              <dl class="kv">
+                <div><dt>{{ t('inv.inquiry.cost.avg') }}</dt><dd>{{ formatMoney(d.cost.averageCost) }}</dd></div>
+                <div><dt>{{ t('inv.inquiry.cost.last') }}</dt><dd>{{ formatMoney(d.cost.lastPurchaseCost) }}</dd></div>
+                <div><dt>{{ t('inv.inquiry.cost.standard') }}</dt><dd>{{ formatMoney(d.cost.standardCost) }}</dd></div>
+                <div><dt>{{ t('inv.inquiry.cost.method') }}</dt><dd>{{ d.cost.costingMethod }}</dd></div>
+              </dl>
+            }
+          </section>
+
+          <section class="block">
+            <h4>{{ t('inv.inquiry.section.sales') }}</h4>
+            <dl class="kv">
+              <div><dt>{{ t('inv.inquiry.sales.lastPrice') }}</dt><dd>{{ formatMoney(d.sales.lastSalePrice) }}</dd></div>
+              <div><dt>{{ t('inv.inquiry.sales.default') }}</dt><dd>{{ formatMoney(d.sales.defaultPrice) }}</dd></div>
+              <div><dt>{{ t('inv.inquiry.sales.lastAt') }}</dt><dd>{{ formatDate(d.sales.lastSaleAt) }}</dd></div>
+              <div><dt>{{ t('inv.inquiry.sales.customer') }}</dt><dd>{{ d.sales.lastCustomerName || '—' }}</dd></div>
+              <div><dt>{{ t('inv.inquiry.sales.order') }}</dt><dd>{{ d.sales.lastOrderNumber || '—' }}</dd></div>
+            </dl>
+          </section>
+
+          <section class="block">
+            <h4>{{ t('inv.inquiry.section.purchase') }}</h4>
+            <dl class="kv">
+              <div><dt>{{ t('inv.inquiry.purchase.price') }}</dt><dd>{{ formatMoney(d.purchase.lastPurchasePrice) }}</dd></div>
+              <div><dt>{{ t('inv.inquiry.purchase.supplier') }}</dt><dd>{{ d.purchase.lastSupplierName || '—' }}</dd></div>
+              <div><dt>{{ t('inv.inquiry.purchase.doc') }}</dt><dd>{{ d.purchase.lastDocumentNumber || '—' }}</dd></div>
+              <div><dt>{{ t('inv.inquiry.purchase.at') }}</dt><dd>{{ formatDate(d.purchase.lastPurchaseAt) }}</dd></div>
+            </dl>
+          </section>
+
+          <section class="block">
+            <h4>{{ t('inv.inquiry.section.prices') }}</h4>
+            @if (d.prices.length === 0) {
+              <p class="muted">{{ t('inv.inquiry.none') }}</p>
+            } @else {
+              <table class="mini-table">
+                <thead>
+                  <tr>
+                    <th>{{ t('inv.inquiry.col.priceList') }}</th>
+                    <th>{{ t('inv.inquiry.col.unit') }}</th>
+                    <th>{{ t('inv.inquiry.col.sellingPrice') }}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (p of d.prices; track $index) {
+                    <tr>
+                      <td>{{ p.priceListNameAr }}</td>
+                      <td>{{ p.unitNameAr || '—' }}</td>
+                      <td class="num">{{ formatMoney(p.sellingPrice) }}</td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            }
+          </section>
+
+          <section class="block">
+            <h4>{{ t('inv.inquiry.section.reservations') }}</h4>
+            @if (d.reservations.length === 0) {
+              <p class="muted">{{ t('inv.inquiry.none') }}</p>
+            } @else {
+              <table class="mini-table">
+                <thead>
+                  <tr>
+                    <th>{{ t('inv.inquiry.col.warehouse') }}</th>
+                    <th>{{ t('inv.inquiry.col.reserved') }}</th>
+                    <th>{{ t('inv.inquiry.col.document') }}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (r of d.reservations; track r.id) {
+                    <tr>
+                      <td>{{ r.warehouseNameAr }}</td>
+                      <td class="num">{{ r.reservedQuantity | number: '1.0-3' }}</td>
+                      <td>{{ r.sourceDocument }}</td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            }
+          </section>
+
+          <section class="block">
+            <h4>{{ t('inv.inquiry.section.batches') }}</h4>
+            @if (d.batches.length === 0) {
+              <p class="muted">{{ t('inv.inquiry.none') }}</p>
+            } @else {
+              <table class="mini-table">
+                <thead>
+                  <tr>
+                    <th>{{ t('inv.inquiry.col.batch') }}</th>
+                    <th>{{ t('inv.inquiry.col.expiry') }}</th>
+                    <th>{{ t('inv.inquiry.col.onHand') }}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (b of d.batches; track b.id) {
+                    <tr>
+                      <td>{{ b.batchNumber }}</td>
+                      <td>{{ formatDate(b.expirationDate) }}</td>
+                      <td class="num">{{ b.quantity | number: '1.0-3' }}</td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            }
+          </section>
+
+          <section class="block">
+            <h4>{{ t('inv.inquiry.section.movements') }}</h4>
+            @if (d.recentMovements.length === 0) {
+              <p class="muted">{{ t('inv.inquiry.none') }}</p>
+            } @else {
+              <table class="mini-table">
+                <thead>
+                  <tr>
+                    <th>{{ t('inv.inquiry.col.date') }}</th>
+                    <th>{{ t('inv.inquiry.col.movement') }}</th>
+                    <th>{{ t('inv.inquiry.col.qty') }}</th>
+                    <th>{{ t('inv.inquiry.col.document') }}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (m of d.recentMovements; track m.movementId) {
+                    <tr>
+                      <td>{{ formatDate(m.occurredAt) }}</td>
+                      <td>{{ movementTypeLabel(m.transactionType) }}</td>
+                      <td class="num">{{ m.quantityChange | number: '1.0-3' }}</td>
+                      <td>{{ m.referenceDocumentNumber || '—' }}</td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            }
+          </section>
+
+          <section class="block">
+            <h4>{{ t('inv.inquiry.section.recipe') }}</h4>
+            @if (!d.recipe.hasRecipe) {
+              <p class="muted">{{ t('inv.inquiry.noRecipe') }}</p>
+            } @else {
+              <dl class="kv">
+                <div><dt>{{ t('inv.inquiry.recipe.name') }}</dt><dd>{{ d.recipe.recipeNameAr || '—' }}</dd></div>
+                <div><dt>{{ t('inv.inquiry.recipe.ingredients') }}</dt><dd>{{ d.recipe.ingredientCount }}</dd></div>
+                <div><dt>{{ t('inv.inquiry.recipe.cost') }}</dt><dd>{{ formatMoney(d.recipe.recipeCost) }}</dd></div>
+              </dl>
+            }
+          </section>
+
+          <section class="block">
+            <h4>{{ t('inv.inquiry.section.supplier') }}</h4>
+            @if (!d.supplier.canView) {
+              <p class="muted">{{ t('inv.inquiry.restricted') }}</p>
+            } @else {
+              <dl class="kv">
+                <div><dt>{{ t('inv.inquiry.supplier.primary') }}</dt><dd>{{ d.supplier.primarySupplierName || '—' }}</dd></div>
+                <div><dt>{{ t('inv.inquiry.supplier.last') }}</dt><dd>{{ d.supplier.lastSupplierName || '—' }}</dd></div>
+                <div><dt>{{ t('inv.inquiry.supplier.lead') }}</dt><dd>{{ d.supplier.leadTimeDays ?? '—' }}</dd></div>
+                <div><dt>{{ t('inv.inquiry.supplier.price') }}</dt><dd>{{ formatMoney(d.supplier.lastPrice) }}</dd></div>
+              </dl>
+            }
+          </section>
+
+          <section class="block">
+            <h4>{{ t('inv.inquiry.section.branches') }}</h4>
+            @if (d.branches.length === 0) {
+              <p class="muted">{{ t('inv.inquiry.none') }}</p>
+            } @else {
+              <table class="mini-table">
+                <thead>
+                  <tr>
+                    <th>{{ t('inv.inquiry.col.branch') }}</th>
+                    <th>{{ t('inv.inquiry.col.onHand') }}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (b of d.branches; track b.branchId) {
+                    <tr>
+                      <td>{{ b.branchNameAr }}</td>
+                      <td class="num">{{ b.quantity | number: '1.0-3' }}</td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            }
+          </section>
+        </div>
+        }
+      }
+    </aside>
+  </div>
+</app-inventory-page-shell>
+
+@if (showHelp()) {
+  <div class="overlay" (click)="showHelp.set(false)">
+    <div class="dialog" (click)="$event.stopPropagation()">
+      <header>
+        <h3>{{ t('inv.inquiry.helpTitle') }}</h3>
+        <button type="button" class="btn icon-only" (click)="showHelp.set(false)"><mat-icon>close</mat-icon></button>
+      </header>
+      <p>{{ t('inv.inquiry.helpBody') }}</p>
+    </div>
+  </div>
+}

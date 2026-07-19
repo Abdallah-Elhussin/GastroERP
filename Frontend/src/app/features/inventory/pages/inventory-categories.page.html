@@ -1,0 +1,160 @@
+<app-inventory-page-shell
+  [breadcrumbs]="breadcrumbs"
+  titleKey="inv.nav.categories"
+  subtitleKey="inv.categories.subtitle"
+>
+  <section class="toolbar" shellActions>
+    <div class="toolbar-row">
+      <div class="search-group">
+        <input
+          type="search"
+          [ngModel]="search()"
+          (ngModelChange)="search.set($event)"
+          [placeholder]="t('inv.categories.searchPlaceholder')"
+        />
+        <button type="button" class="btn primary" (click)="refresh()">
+          <mat-icon>search</mat-icon>
+        </button>
+      </div>
+
+      <button type="button" class="btn primary" [disabled]="!canManage()" (click)="openCreate()">
+        <mat-icon>add</mat-icon>
+        {{ t('inv.items.toolbar.new') }}
+      </button>
+      <button type="button" class="btn ghost" [disabled]="!canManage() || !selected()" (click)="openEdit()">
+        <mat-icon>edit</mat-icon>
+        {{ t('inv.items.toolbar.edit') }}
+      </button>
+      <button type="button" class="btn ghost" [disabled]="!canManage() || !selected()" (click)="deleteSelected()">
+        <mat-icon>delete</mat-icon>
+        {{ t('inv.items.toolbar.delete') }}
+      </button>
+      <button type="button" class="btn ghost" (click)="refresh()">
+        <mat-icon>refresh</mat-icon>
+        {{ t('inv.items.toolbar.refresh') }}
+      </button>
+      <button type="button" class="btn icon-only" (click)="showHelp.set(true)" [matTooltip]="t('common.help')">
+        <mat-icon>help_outline</mat-icon>
+      </button>
+    </div>
+  </section>
+
+  @if (inventory.loading()) {
+    <app-inventory-skeleton [count]="8" />
+  } @else if (inventory.error()) {
+    <app-inventory-error-state [message]="inventory.error()!" (retry)="refresh()" />
+  } @else if (filtered().length === 0) {
+    <app-inventory-empty-state
+      icon="category"
+      [title]="t('inv.empty.title')"
+      [message]="t('inv.categories.empty')"
+      actionLabelKey="inv.items.toolbar.new"
+      (action)="openCreate()"
+    />
+  } @else {
+    <div class="table-card">
+      <table mat-table [dataSource]="filtered()" matSort (matSortChange)="onSort($event)" class="categories-table">
+        <ng-container matColumnDef="number">
+          <th mat-header-cell *matHeaderCellDef mat-sort-header="number">{{ t('inv.categories.col.number') }}</th>
+          <td mat-cell *matCellDef="let row">{{ row.sortOrder || '—' }}</td>
+        </ng-container>
+
+        <ng-container matColumnDef="code">
+          <th mat-header-cell *matHeaderCellDef mat-sort-header="code">{{ t('inv.categories.col.code') }}</th>
+          <td mat-cell *matCellDef="let row"><code>{{ row.code }}</code></td>
+        </ng-container>
+
+        <ng-container matColumnDef="nameAr">
+          <th mat-header-cell *matHeaderCellDef mat-sort-header="nameAr">{{ t('inv.categories.col.name') }}</th>
+          <td mat-cell *matCellDef="let row">
+            <strong>{{ row.nameAr }}</strong>
+            @if (row.nameEn) {
+              <div class="muted">{{ row.nameEn }}</div>
+            }
+          </td>
+        </ng-container>
+
+        <ng-container matColumnDef="parent">
+          <th mat-header-cell *matHeaderCellDef mat-sort-header="parent">{{ t('inv.categories.col.parent') }}</th>
+          <td mat-cell *matCellDef="let row">{{ parentName(row.parentCategoryId) }}</td>
+        </ng-container>
+
+        <ng-container matColumnDef="description">
+          <th mat-header-cell *matHeaderCellDef mat-sort-header="description">{{ t('inv.field.description') }}</th>
+          <td mat-cell *matCellDef="let row">{{ row.descriptionAr || '—' }}</td>
+        </ng-container>
+
+        <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+        <tr
+          mat-row
+          *matRowDef="let row; columns: displayedColumns"
+          [class.selected]="selectedId() === row.id"
+          [class.inactive]="!row.isActive"
+          (click)="selectRow(row)"
+        ></tr>
+      </table>
+    </div>
+  }
+
+  @if (showForm()) {
+    <div class="drawer-backdrop" (click)="closeForm()"></div>
+    <aside class="drawer category-form" role="dialog">
+      <header class="form-top">
+        <div class="form-actions">
+          <button type="button" class="btn primary" [disabled]="saving()" (click)="save()">
+            {{ t('common.save') }}
+          </button>
+          <button type="button" class="btn ghost" (click)="closeForm()">{{ t('common.cancel') }}</button>
+        </div>
+        <h2>{{ editingId() ? t('inv.categories.editTitle') : t('inv.categories.createTitle') }}</h2>
+      </header>
+
+      <section class="card-block">
+        <h3>{{ t('inv.categories.section.data') }}</h3>
+        <label>
+          <span>{{ t('inv.categories.col.code') }}</span>
+          <input [(ngModel)]="form.code" />
+        </label>
+        <label>
+          <span>{{ t('inv.categories.col.name') }} *</span>
+          <input [(ngModel)]="form.nameAr" required />
+        </label>
+        <label>
+          <span>{{ t('inv.field.nameEn') }}</span>
+          <input [(ngModel)]="form.nameEn" />
+        </label>
+        <label>
+          <span>{{ t('inv.categories.col.parent') }}</span>
+          <select [(ngModel)]="form.parentCategoryId">
+            <option [ngValue]="null">{{ t('inv.categories.noParent') }}</option>
+            @for (p of parentOptions(); track p.id) {
+              <option [ngValue]="p.id">{{ p.nameAr }}</option>
+            }
+          </select>
+        </label>
+      </section>
+
+      <section class="card-block">
+        <h3>{{ t('inv.field.description') }}</h3>
+        <label class="full">
+          <textarea rows="5" [(ngModel)]="form.descriptionAr" [placeholder]="t('inv.field.description')"></textarea>
+        </label>
+      </section>
+
+      @if (formError()) {
+        <p class="form-error">{{ formError() }}</p>
+      }
+    </aside>
+  }
+
+  @if (showHelp()) {
+    <div class="drawer-backdrop" (click)="showHelp.set(false)"></div>
+    <aside class="drawer help-drawer" role="dialog">
+      <header>
+        <h2>{{ t('inv.categories.helpTitle') }}</h2>
+        <button type="button" class="icon-btn" (click)="showHelp.set(false)"><mat-icon>close</mat-icon></button>
+      </header>
+      <p>{{ t('inv.categories.helpBody') }}</p>
+    </aside>
+  }
+</app-inventory-page-shell>

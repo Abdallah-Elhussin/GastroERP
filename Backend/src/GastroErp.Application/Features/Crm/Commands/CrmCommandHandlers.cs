@@ -47,6 +47,13 @@ public class CrmCommandHandlers :
             request.Dto.Email);
             
         customer.UpdateInfo(request.Dto.FullName, request.Dto.Mobile, request.Dto.Email, request.Dto.DateOfBirth, request.Dto.Gender, request.Dto.PreferredLanguage, request.Dto.Notes);
+        customer.UpdateCommercialTerms(
+            request.Dto.TaxNumber,
+            request.Dto.ArAccountId,
+            request.Dto.Currency,
+            request.Dto.PaymentDueDays,
+            request.Dto.PaymentTerms,
+            request.Dto.CreditLimit);
 
         _context.Customers.Add(customer);
         
@@ -63,7 +70,14 @@ public class CrmCommandHandlers :
             ?? throw new KeyNotFoundException($"{nameof(Customer)} not found with ID {request.Id}");
 
         customer.UpdateInfo(request.Dto.FullName, request.Dto.Mobile, request.Dto.Email, request.Dto.DateOfBirth, request.Dto.Gender, request.Dto.PreferredLanguage, request.Dto.Notes);
-        
+        customer.UpdateCommercialTerms(
+            request.Dto.TaxNumber,
+            request.Dto.ArAccountId,
+            request.Dto.Currency,
+            request.Dto.PaymentDueDays,
+            request.Dto.PaymentTerms,
+            request.Dto.CreditLimit);
+
         await _context.SaveChangesAsync(cancellationToken);
         return Unit.Value;
     }

@@ -1,0 +1,170 @@
+<div class="cls-page">
+  <header class="page-header">
+    <div>
+      <h1>{{ t('fin.cls.title') }}</h1>
+      <p>{{ t('fin.cls.subtitle') }}</p>
+    </div>
+  </header>
+
+  <section class="toolbar">
+    <div class="search-box">
+      <mat-icon>search</mat-icon>
+      <input
+        type="search"
+        [ngModel]="search()"
+        (ngModelChange)="search.set($event)"
+        (keydown.enter)="load()"
+        [placeholder]="t('fin.cls.searchPlaceholder')"
+      />
+      <button type="button" class="btn primary" (click)="load()">{{ t('common.search') }}</button>
+    </div>
+    <button type="button" class="btn primary" [disabled]="!canCreate()" (click)="openCreate()">
+      <mat-icon>add</mat-icon>
+      {{ t('fin.cls.new') }}
+    </button>
+    <button type="button" class="btn ghost" [disabled]="!canEdit() || !selected()" (click)="openEdit()">
+      <mat-icon>edit</mat-icon>
+      {{ t('fin.cls.edit') }}
+    </button>
+    <button
+      type="button"
+      class="btn ghost"
+      [disabled]="!canDelete() || !selected() || selected()?.isDefault || selected()?.isSystem"
+      (click)="remove()"
+      [matTooltip]="selected()?.isDefault || selected()?.isSystem ? t('fin.cls.systemNoDelete') : ''"
+    >
+      <mat-icon>delete</mat-icon>
+      {{ t('common.delete') }}
+    </button>
+    <button type="button" class="btn ghost" (click)="load()" [matTooltip]="t('common.refresh')">
+      <mat-icon>sync</mat-icon>
+    </button>
+  </section>
+
+  @if (error() && !showModal()) {
+    <div class="form-error">{{ error() }}</div>
+  }
+
+  @if (loading()) {
+    <div class="muted">{{ t('common.loading') }}</div>
+  } @else {
+    <div class="table-card">
+      <table>
+        <thead>
+          <tr>
+            <th>{{ t('fin.cls.col.number') }}</th>
+            <th>{{ t('fin.cls.col.nameAr') }}</th>
+            <th>{{ t('fin.cls.col.nameEn') }}</th>
+            <th>{{ t('fin.cls.col.classification') }}</th>
+            <th>{{ t('fin.cls.col.main') }}</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (row of rows(); track row.id) {
+            <tr
+              [class.selected]="selectedId() === row.id"
+              (click)="select(row)"
+              (dblclick)="openEdit()"
+            >
+              <td>{{ row.number }}</td>
+              <td>{{ row.nameAr }}</td>
+              <td>{{ row.nameEn }}</td>
+              <td><code>{{ row.code }}</code></td>
+              <td>{{ row.mainClassificationNameAr }}</td>
+            </tr>
+          } @empty {
+            <tr>
+              <td colspan="5" class="empty">{{ t('fin.cls.empty') }}</td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  }
+</div>
+
+@if (showModal()) {
+  <div class="modal-backdrop" (click)="closeModal()">
+    <div class="modal" (click)="$event.stopPropagation()" role="dialog">
+      <header class="modal-header">
+        <h2>{{ isEditing() ? t('fin.cls.editTitle') : t('fin.cls.createTitle') }}</h2>
+        <div class="modal-actions">
+          <button type="button" class="btn primary" [disabled]="saving()" (click)="save()">
+            <mat-icon>save</mat-icon>
+            {{ t('common.save') }}
+          </button>
+          <button type="button" class="btn ghost" (click)="closeModal()">
+            <mat-icon>close</mat-icon>
+            {{ t('common.cancel') }}
+          </button>
+        </div>
+      </header>
+
+      @if (error()) {
+        <div class="form-error">{{ error() }}</div>
+      }
+
+      <form [formGroup]="form" class="modal-body" (ngSubmit)="save()">
+        <section class="card">
+          <h3>{{ t('fin.cls.section.basic') }}</h3>
+          <label>
+            <span>{{ t('fin.cls.nameAr') }} *</span>
+            <input formControlName="nameAr" />
+            @if (form.controls.nameAr.touched && form.controls.nameAr.invalid) {
+              <em>{{ t('fin.cls.required') }}</em>
+            }
+          </label>
+          <label>
+            <span>{{ t('fin.cls.nameEn') }} *</span>
+            <input formControlName="nameEn" />
+            @if (form.controls.nameEn.touched && form.controls.nameEn.invalid) {
+              <em>{{ t('fin.cls.required') }}</em>
+            }
+          </label>
+          <label>
+            <span>{{ t('fin.cls.main') }} *</span>
+            <select formControlName="mainClassificationId">
+              <option value="">—</option>
+              @for (m of mains(); track m.id) {
+                <option [value]="m.id">{{ m.nameAr }} / {{ m.nameEn }}</option>
+              }
+            </select>
+            @if (form.controls.mainClassificationId.touched && form.controls.mainClassificationId.invalid) {
+              <em>{{ t('fin.cls.required') }}</em>
+            }
+          </label>
+        </section>
+
+        <section class="card readonly">
+          <h3>{{ t('fin.cls.section.extra') }}</h3>
+          @if (isEditing() && audit(); as a) {
+            <div class="meta-grid">
+              <div>
+                <span>{{ t('fin.cls.id') }}</span>
+                <strong>{{ a.number }}</strong>
+              </div>
+              <div>
+                <span>{{ t('fin.cls.code') }}</span>
+                <strong><code>{{ a.code }}</code></strong>
+              </div>
+              <div>
+                <span>{{ t('fin.cls.createdAt') }}</span>
+                <strong>{{ formatDate(a.createdAt) }}</strong>
+              </div>
+              <div>
+                <span>{{ t('fin.cls.updatedAt') }}</span>
+                <strong>{{ formatDate(a.updatedAt) }}</strong>
+              </div>
+              <div>
+                <span>{{ t('fin.cls.createdBy') }}</span>
+                <strong>{{ a.createdBy || '—' }}</strong>
+              </div>
+            </div>
+          } @else {
+            <p class="muted">{{ t('fin.cls.extraHint') }}</p>
+          }
+        </section>
+      </form>
+    </div>
+  </div>
+}

@@ -1,0 +1,134 @@
+<app-inventory-page-shell
+  [breadcrumbs]="breadcrumbs"
+  titleKey="inv.nav.stockTransfer"
+  subtitleKey="inv.st.subtitle"
+>
+  <section class="toolbar" shellActions>
+    <div class="search-group">
+      <mat-icon>search</mat-icon>
+      <input
+        type="search"
+        [ngModel]="search()"
+        (ngModelChange)="search.set($event)"
+        (keydown.enter)="load()"
+        [placeholder]="t('inv.st.searchPlaceholder')"
+      />
+      <button type="button" class="btn ghost" (click)="load()">{{ t('common.search') }}</button>
+    </div>
+    <button type="button" class="btn primary" [disabled]="!canManage()" (click)="createNew()">
+      <mat-icon>add</mat-icon>
+      {{ t('inv.st.new') }}
+    </button>
+    <button type="button" class="btn ghost" [disabled]="!selected()" (click)="edit()">
+      <mat-icon>edit</mat-icon>
+      {{ t('inv.st.edit') }}
+    </button>
+    <button
+      type="button"
+      class="btn ghost"
+      [disabled]="!canManage() || !selected() || selected()?.status !== 'Draft' || acting()"
+      (click)="remove()"
+    >
+      <mat-icon>delete</mat-icon>
+      {{ t('common.delete') }}
+    </button>
+    <button type="button" class="btn ghost" (click)="load()">
+      <mat-icon>sync</mat-icon>
+      {{ t('inv.st.refresh') }}
+    </button>
+    <button
+      type="button"
+      class="btn info"
+      [disabled]="!canManage() || !selected() || (selected()?.status !== 'Draft' && selected()?.status !== 'Approved') || acting()"
+      (click)="post()"
+    >
+      {{ t('inv.st.post') }}
+    </button>
+    <button
+      type="button"
+      class="btn success"
+      [disabled]="!canManage() || !selected() || selected()?.status !== 'InTransit' || acting()"
+      (click)="receive()"
+    >
+      {{ t('inv.st.receive') }}
+    </button>
+    <button
+      type="button"
+      class="btn danger"
+      [disabled]="!canManage() || !selected() || selected()?.status === 'Completed' || selected()?.status === 'Cancelled' || acting()"
+      (click)="cancel()"
+    >
+      {{ t('inv.st.cancel') }}
+    </button>
+    <label class="deleted-toggle">
+      <input type="checkbox" [ngModel]="showDeleted()" (ngModelChange)="showDeleted.set($event)" />
+      {{ t('inv.st.showDeleted') }}
+    </label>
+  </section>
+
+  <div class="chips">
+    <button type="button" class="chip" [class.active]="statusFilter() === 'all'" (click)="setStatus('all')">{{ t('inv.st.filter.all') }}</button>
+    <button type="button" class="chip" [class.active]="statusFilter() === 'Draft'" (click)="setStatus('Draft')">{{ t('inv.st.status.draft') }}</button>
+    <button type="button" class="chip" [class.active]="statusFilter() === 'Posted'" (click)="setStatus('Posted')">{{ t('inv.st.status.posted') }}</button>
+    <button type="button" class="chip" [class.active]="statusFilter() === 'Approved'" (click)="setStatus('Approved')">{{ t('inv.st.status.approved') }}</button>
+    <button type="button" class="chip" [class.active]="statusFilter() === 'Cancelled'" (click)="setStatus('Cancelled')">{{ t('inv.st.status.cancelled') }}</button>
+    <button type="button" class="chip" (click)="load()">{{ t('inv.st.filter.apply') }}</button>
+    <button type="button" class="chip" (click)="resetFilters()">{{ t('inv.st.filter.reset') }}</button>
+    <span class="chip-sep"></span>
+    <button type="button" class="chip" [class.active]="dateFilter() === 'today'" (click)="setDate('today')">{{ t('inv.st.filter.today') }}</button>
+    <button type="button" class="chip" [class.active]="dateFilter() === '7d'" (click)="setDate('7d')">{{ t('inv.st.filter.7d') }}</button>
+    <button type="button" class="chip" [class.active]="dateFilter() === '30d'" (click)="setDate('30d')">{{ t('inv.st.filter.30d') }}</button>
+  </div>
+
+  @if (error()) {
+    <div class="form-error">{{ error() }}</div>
+  }
+
+  @if (loading()) {
+    <app-inventory-skeleton [count]="8" />
+  } @else if (error() && filteredRows().length === 0) {
+    <app-inventory-error-state [message]="error()!" (retry)="load()" />
+  } @else if (filteredRows().length === 0) {
+    <app-inventory-empty-state icon="swap_horiz" [title]="t('inv.empty.title')" [message]="t('inv.st.empty')" />
+  } @else {
+    <div class="table-card">
+      <table>
+        <thead>
+          <tr>
+            <th>{{ t('inv.st.col.docNumber') }}</th>
+            <th>{{ t('inv.st.col.date') }}</th>
+            <th>{{ t('inv.st.col.source') }}</th>
+            <th>{{ t('inv.st.col.destination') }}</th>
+            <th>{{ t('inv.st.col.status') }}</th>
+            <th>{{ t('inv.st.col.type') }}</th>
+            <th>{{ t('inv.st.col.notes') }}</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (row of filteredRows(); track row.id) {
+            <tr [class.selected]="selectedId() === row.id" (click)="select(row)" (dblclick)="edit()">
+              <td><a [routerLink]="['/inventory/stock-transfers', row.id]">{{ row.transferNumber }}</a></td>
+              <td>{{ row.transferDate | date: 'yyyy-MM-dd' }}</td>
+              <td>{{ row.sourceWarehouseNameAr || '—' }}</td>
+              <td>{{ row.destinationWarehouseNameAr || '—' }}</td>
+              <td><span class="status-badge" [attr.data-status]="row.status">{{ statusLabel(row.status) }}</span></td>
+              <td>{{ typeLabel(row.transferTypeCode) }}</td>
+              <td>{{ row.notes || '—' }}</td>
+            </tr>
+          }
+        </tbody>
+      </table>
+      <footer class="table-footer">
+        <span>{{ t('inv.st.totalRecords') }}: {{ filteredRows().length }}</span>
+        <label>
+          {{ t('inv.st.pageSize') }}
+          <select [ngModel]="pageSize()" (ngModelChange)="pageSize.set(+$event); load()">
+            <option [ngValue]="20">20</option>
+            <option [ngValue]="50">50</option>
+            <option [ngValue]="100">100</option>
+          </select>
+        </label>
+      </footer>
+    </div>
+  }
+</app-inventory-page-shell>

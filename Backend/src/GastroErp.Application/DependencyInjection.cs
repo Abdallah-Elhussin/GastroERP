@@ -32,6 +32,9 @@ public static class DependencyInjection
         services.AddScoped<IMenuPricingService, MenuPricingService>();
         services.AddScoped<IOrderNumberGenerator, OrderNumberGenerator>();
         services.AddScoped<IOrderInventoryService, OrderInventoryService>();
+        services.AddScoped<GastroErp.Application.Common.Interfaces.Inventory.IInventoryMovementPipeline, GastroErp.Application.Features.Inventory.Services.InventoryMovementPipeline>();
+        services.AddScoped<GastroErp.Application.Common.Interfaces.Inventory.IInventoryCostingService, GastroErp.Application.Features.Inventory.Services.WeightedAverageInventoryCostingService>();
+        services.AddScoped<GastroErp.Application.Features.Inventory.Services.IPurchaseAccountingService, GastroErp.Application.Features.Inventory.Services.PurchaseAccountingService>();
         services.AddScoped<IReceiptNumberGenerator, ReceiptNumberGenerator>();
         services.AddScoped<IShiftNumberGenerator, ShiftNumberGenerator>();
         services.AddScoped<IKitchenRoutingService, KitchenRoutingService>();
@@ -63,9 +66,18 @@ public static class DependencyInjection
         services.AddScoped<IAutoPostingService, AutoPostingService>();
         services.AddScoped<IAccountBalanceService, AccountBalanceService>();
         services.AddScoped<ITrialBalanceService, TrialBalanceService>();
+        services.AddScoped<IExchangeRateService, ExchangeRateService>();
 
         services.AddScoped<IDashboardService, DashboardService>();
         services.AddScoped<ISalesAnalyticsService, SalesAnalyticsService>();
+        services.AddScoped<GastroErp.Application.Features.Sales.Dashboard.ISalesDashboardService,
+            GastroErp.Application.Features.Sales.Dashboard.SalesDashboardService>();
+        services.AddScoped<GastroErp.Application.Features.Sales.BackOffice.Dashboard.IBackOfficeSalesDashboardService,
+            GastroErp.Application.Features.Sales.BackOffice.Dashboard.BackOfficeSalesDashboardService>();
+        services.AddScoped<GastroErp.Application.Features.Sales.BackOffice.Invoices.IBackOfficeSalesAccountingService,
+            GastroErp.Application.Features.Sales.BackOffice.Invoices.BackOfficeSalesAccountingService>();
+        services.AddScoped<GastroErp.Application.Features.Sales.BackOffice.Fulfillment.IBackOfficeSalesFulfillmentService,
+            GastroErp.Application.Features.Sales.BackOffice.Fulfillment.BackOfficeSalesFulfillmentService>();
         services.AddScoped<IKitchenAnalyticsService, KitchenAnalyticsService>();
         services.AddScoped<IDeliveryAnalyticsService, DeliveryAnalyticsService>();
         services.AddScoped<IInventoryAnalyticsService, InventoryAnalyticsService>();

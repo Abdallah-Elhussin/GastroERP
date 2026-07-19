@@ -19,7 +19,11 @@ public class TenantMappingProfile : Profile
             .ForMember(dest => dest.AddressStreetAr, opt => opt.MapFrom(src => src.Address.StreetAr))
             .ForMember(dest => dest.AddressStreetEn, opt => opt.MapFrom(src => src.Address.StreetEn))
             .ForMember(dest => dest.CityAr, opt => opt.MapFrom(src => src.Address.CityAr))
-            .ForMember(dest => dest.CityEn, opt => opt.MapFrom(src => src.Address.CityEn));
+            .ForMember(dest => dest.CityEn, opt => opt.MapFrom(src => src.Address.CityEn))
+            .ForMember(dest => dest.CreatedAt, opt => opt.MapFrom(src => src.CreatedAt.UtcDateTime))
+            .ForMember(dest => dest.UpdatedAt, opt => opt.MapFrom(src => src.UpdatedAt))
+            .ForMember(dest => dest.CompanyNameAr, opt => opt.Ignore())
+            .ForMember(dest => dest.IsActive, opt => opt.MapFrom(src => src.IsActive));
 
         // Company
         CreateMap<Company, CompanyDto>()

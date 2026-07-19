@@ -14,16 +14,20 @@ public sealed class AppUser : AuditableBaseEntity
     private const int LockoutMinutes = 30;
 
     public Guid TenantId { get; private set; }
+    public string UserName { get; private set; }
+    public string? Code { get; private set; }
     public string Email { get; private set; }
     public string PasswordHash { get; private set; }
     public string FirstName { get; private set; }
     public string LastName { get; private set; }
     public string? PhoneNumber { get; private set; }
+    public string? MobileNumber { get; private set; }
     public string? AvatarUrl { get; private set; }
     public string? PinCode { get; private set; }
     public string PreferredLanguage { get; private set; }
     public bool IsActive { get; private set; }
     public bool IsEmailVerified { get; private set; }
+    public bool IsPosUser { get; private set; }
     public DateTimeOffset? LastLoginAt { get; private set; }
     public int FailedLoginCount { get; private set; }
     public DateTimeOffset? LockedUntil { get; private set; }
@@ -37,6 +41,7 @@ public sealed class AppUser : AuditableBaseEntity
 
     private AppUser()
     {
+        UserName = string.Empty;
         Email = string.Empty;
         PasswordHash = string.Empty;
         FirstName = string.Empty;
@@ -44,26 +49,40 @@ public sealed class AppUser : AuditableBaseEntity
         PreferredLanguage = "ar";
     }
 
-    public AppUser(Guid tenantId, string email, string passwordHash,
-                   string firstName, string lastName,
-                   string? phoneNumber = null, string preferredLanguage = "ar")
+    public AppUser(
+        Guid tenantId,
+        string userName,
+        string email,
+        string passwordHash,
+        string firstName,
+        string? lastName = null,
+        string? phoneNumber = null,
+        string? mobileNumber = null,
+        string? code = null,
+        string preferredLanguage = "ar",
+        bool isPosUser = false,
+        bool mustChangePassword = true)
     {
         if (tenantId == Guid.Empty) throw new ArgumentException("TenantId cannot be empty.", nameof(tenantId));
+        if (string.IsNullOrWhiteSpace(userName)) throw new ArgumentException("UserName cannot be empty.", nameof(userName));
         if (string.IsNullOrWhiteSpace(email)) throw new ArgumentException("Email cannot be empty.", nameof(email));
         if (string.IsNullOrWhiteSpace(passwordHash)) throw new ArgumentException("Password hash cannot be empty.", nameof(passwordHash));
         if (string.IsNullOrWhiteSpace(firstName)) throw new ArgumentException("First name cannot be empty.", nameof(firstName));
-        if (string.IsNullOrWhiteSpace(lastName)) throw new ArgumentException("Last name cannot be empty.", nameof(lastName));
 
         TenantId = tenantId;
-        Email = email.ToLowerInvariant();
+        UserName = NormalizeUserName(userName);
+        Code = string.IsNullOrWhiteSpace(code) ? null : code.Trim();
+        Email = email.Trim().ToLowerInvariant();
         PasswordHash = passwordHash;
-        FirstName = firstName;
-        LastName = lastName;
-        PhoneNumber = phoneNumber;
-        PreferredLanguage = preferredLanguage;
+        FirstName = firstName.Trim();
+        LastName = string.IsNullOrWhiteSpace(lastName) ? string.Empty : lastName.Trim();
+        PhoneNumber = NormalizePhone(phoneNumber);
+        MobileNumber = NormalizePhone(mobileNumber);
+        PreferredLanguage = string.IsNullOrWhiteSpace(preferredLanguage) ? "ar" : preferredLanguage;
         IsActive = true;
         IsEmailVerified = false;
-        MustChangePassword = false;
+        IsPosUser = isPosUser;
+        MustChangePassword = mustChangePassword;
 
         RaiseDomainEvent(new UserCreatedEvent(Id, TenantId, Email));
     }
@@ -88,6 +107,18 @@ public sealed class AppUser : AuditableBaseEntity
 
     public bool IsLocked => LockedUntil.HasValue && LockedUntil > DateTimeOffset.UtcNow;
 
+    public void Lock(DateTimeOffset until)
+    {
+        LockedUntil = until;
+        RaiseDomainEvent(new UserLockedEvent(Id, TenantId, until));
+    }
+
+    public void Unlock()
+    {
+        FailedLoginCount = 0;
+        LockedUntil = null;
+    }
+
     public void Deactivate()
     {
         if (!IsActive) return;
@@ -108,25 +139,46 @@ public sealed class AppUser : AuditableBaseEntity
         RaiseDomainEvent(new UserPasswordChangedEvent(Id, TenantId));
     }
 
-    public void ForcePasswordChange()
-    {
-        MustChangePassword = true;
-    }
+    public void ForcePasswordChange() => MustChangePassword = true;
 
-    public void UpdateProfile(string firstName, string lastName, string? phone, string? avatarUrl)
+    public void SetMustChangePassword(bool value) => MustChangePassword = value;
+
+    public void SetPosUser(bool value) => IsPosUser = value;
+
+    public void UpdateProfile(
+        string firstName,
+        string? lastName,
+        string? phone,
+        string? mobile,
+        string? avatarUrl)
     {
         if (string.IsNullOrWhiteSpace(firstName)) throw new ArgumentException("First name cannot be empty.", nameof(firstName));
-        if (string.IsNullOrWhiteSpace(lastName)) throw new ArgumentException("Last name cannot be empty.", nameof(lastName));
-        FirstName = firstName;
-        LastName = lastName;
-        PhoneNumber = phone;
+        FirstName = firstName.Trim();
+        LastName = string.IsNullOrWhiteSpace(lastName) ? string.Empty : lastName.Trim();
+        PhoneNumber = NormalizePhone(phone);
+        MobileNumber = NormalizePhone(mobile);
         AvatarUrl = avatarUrl;
+    }
+
+    public void UpdateUserName(string userName)
+    {
+        UserName = NormalizeUserName(userName);
+    }
+
+    public void SetCode(string? code)
+    {
+        Code = string.IsNullOrWhiteSpace(code) ? null : code.Trim();
     }
 
     public void UpdateEmail(string email)
     {
         if (string.IsNullOrWhiteSpace(email)) throw new ArgumentException("Email cannot be empty.", nameof(email));
-        Email = email.ToLowerInvariant();
+        Email = email.Trim().ToLowerInvariant();
+    }
+
+    public void SetPreferredLanguage(string language)
+    {
+        PreferredLanguage = string.IsNullOrWhiteSpace(language) ? "ar" : language.Trim();
     }
 
     public void AssignRole(Guid roleId)
@@ -153,7 +205,19 @@ public sealed class AppUser : AuditableBaseEntity
         if (branch is not null) _branches.Remove(branch);
     }
 
-    public string FullName => $"{FirstName} {LastName}";
+    public string FullName => string.IsNullOrWhiteSpace(LastName)
+        ? FirstName
+        : $"{FirstName} {LastName}";
+
+    private static string NormalizeUserName(string userName)
+    {
+        if (string.IsNullOrWhiteSpace(userName))
+            throw new ArgumentException("UserName cannot be empty.", nameof(userName));
+        return userName.Trim();
+    }
+
+    private static string? NormalizePhone(string? value)
+        => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
 }
 
 /// <summary>UserRole — ربط المستخدم بالدور</summary>

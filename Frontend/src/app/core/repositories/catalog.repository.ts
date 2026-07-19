@@ -2,6 +2,7 @@ import { Observable } from 'rxjs';
 import {
   CatalogAuditEntry,
   CatalogImportRow,
+  CatalogPriceHistoryEntry,
   CreateCatalogDraftPayload,
   ProductCatalogDefinition,
   ProductCatalogTypeDefinition,
@@ -18,6 +19,7 @@ export abstract class CatalogRepository {
   abstract getTypes(): Observable<ProductCatalogTypeDefinition[]>;
   abstract getDefinitions(search?: string, page?: number, pageSize?: number): Observable<ProductCatalogDefinition[]>;
   abstract getDefinitionById(id: string): Observable<ProductCatalogDefinition>;
+  abstract getDefinitionByInventoryItemId(inventoryItemId: string): Observable<ProductCatalogDefinition>;
   abstract createDraft(payload: CreateCatalogDraftPayload): Observable<ProductCatalogDefinition>;
   abstract updateGeneralInfo(id: string, payload: UpdateCatalogGeneralInfoPayload): Observable<ProductCatalogDefinition>;
   abstract saveInventory(id: string, payload: SaveCatalogInventoryPayload): Observable<ProductCatalogDefinition>;
@@ -30,4 +32,5 @@ export abstract class CatalogRepository {
   abstract exportCsv(search?: string): Observable<Blob>;
   abstract importRows(rows: CatalogImportRow[]): Observable<number>;
   abstract getAuditTimeline(id: string): Observable<CatalogAuditEntry[]>;
+  abstract getPriceHistory(id: string): Observable<CatalogPriceHistoryEntry[]>;
 }

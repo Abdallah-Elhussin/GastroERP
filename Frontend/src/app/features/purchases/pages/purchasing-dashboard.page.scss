@@ -1,0 +1,137 @@
+.pur-dash {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 8px 4px 24px;
+}
+
+.page-header {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  align-items: flex-start;
+}
+
+.page-header h1 {
+  margin: 0;
+  font-size: 1.35rem;
+}
+
+.page-header p {
+  margin: 4px 0 0;
+  color: var(--text-secondary, #64748b);
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  border-radius: 8px;
+  border: 1px solid var(--border-color, #e2e8f0);
+  background: #fff;
+  padding: 7px 12px;
+  font: inherit;
+  text-decoration: none;
+  color: inherit;
+  cursor: pointer;
+}
+
+.btn.primary {
+  background: #2563eb;
+  border-color: #2563eb;
+  color: #fff;
+}
+
+.kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(160px, 1fr));
+  gap: 12px;
+}
+
+.kpi-card {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 14px;
+  border: 1px solid var(--border-color, #e2e8f0);
+  border-radius: 12px;
+  background: #fff;
+  text-decoration: none;
+  color: inherit;
+}
+
+.kpi-top {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--text-secondary, #64748b);
+  font-size: 0.85rem;
+}
+
+.kpi-card strong {
+  font-size: 1.6rem;
+}
+
+.kpi-meta {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 0.78rem;
+  color: var(--text-secondary, #64748b);
+}
+
+.split {
+  display: grid;
+  grid-template-columns: 1fr 2fr;
+  gap: 12px;
+}
+
+.panel {
+  border: 1px solid var(--border-color, #e2e8f0);
+  border-radius: 12px;
+  background: #fff;
+  padding: 14px;
+  min-height: 180px;
+}
+
+.panel h2 {
+  margin: 0 0 10px;
+  font-size: 1rem;
+}
+
+.empty {
+  color: var(--text-secondary, #64748b);
+  margin: 24px 0;
+  text-align: center;
+}
+
+.cycle-note {
+  border: 1px dashed #93c5fd;
+  background: #eff6ff;
+  border-radius: 12px;
+  padding: 12px 16px;
+}
+
+.cycle-note h3 {
+  margin: 0 0 8px;
+  font-size: 0.95rem;
+}
+
+.cycle-note ol {
+  margin: 0;
+  padding-inline-start: 1.2rem;
+}
+
+@media (max-width: 900px) {
+  .kpi-grid,
+  .split {
+    grid-template-columns: 1fr;
+  }
+}

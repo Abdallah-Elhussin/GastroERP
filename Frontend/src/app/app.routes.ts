@@ -51,6 +51,18 @@ export const routes: Routes = [
         loadComponent: () => import('./features/catalog/catalog-list.component').then(m => m.CatalogListComponent)
       },
       {
+        path: 'catalog/master',
+        loadComponent: () => import('./features/catalog/product-master.page').then(m => m.ProductMasterPage),
+        canActivate: [permissionGuard],
+        data: { requiredPermission: 'Inventory.Manage' }
+      },
+      {
+        path: 'catalog/master/:id',
+        loadComponent: () => import('./features/catalog/product-master.page').then(m => m.ProductMasterPage),
+        canActivate: [permissionGuard],
+        data: { requiredPermission: 'Inventory.View' }
+      },
+      {
         path: 'catalog/wizard',
         loadComponent: () => import('./features/catalog/catalog-wizard.component').then(m => m.CatalogWizardComponent)
       },
@@ -60,15 +72,21 @@ export const routes: Routes = [
       },
       {
         path: 'inventory',
-        loadComponent: () => import('./features/inventory/inventory.component').then(m => m.InventoryComponent)
+        canActivate: [permissionGuard],
+        data: { requiredPermission: 'Inventory.View' },
+        loadChildren: () => import('./features/inventory/inventory.routes').then(m => m.INVENTORY_ROUTES)
       },
       {
-        path: 'inventory/items/new',
-        loadComponent: () => import('./features/inventory/inventory-item-form.component').then(m => m.InventoryItemFormComponent)
+        path: 'purchases',
+        canActivate: [permissionGuard],
+        data: { requiredPermission: 'Inventory.View' },
+        loadChildren: () => import('./features/purchases/purchases.routes').then(m => m.PURCHASES_ROUTES)
       },
       {
-        path: 'inventory/items/:id',
-        loadComponent: () => import('./features/inventory/inventory-item-form.component').then(m => m.InventoryItemFormComponent)
+        path: 'sales',
+        canActivate: [permissionGuard],
+        data: { requiredPermission: 'Sales.View' },
+        loadChildren: () => import('./features/sales/sales.routes').then(m => m.SALES_ROUTES)
       },
       {
         path: 'menu',
@@ -94,9 +112,12 @@ export const routes: Routes = [
       },
       {
         path: 'finance',
-        loadComponent: () => import('./features/finance/finance.component').then(m => m.FinanceComponent),
-        canActivate: [permissionGuard],
-        data: { requiredPermission: 'VIEW_FINANCE' }
+        loadChildren: () => import('./features/finance/finance.routes').then(m => m.FINANCE_ROUTES)
+      },
+      {
+        path: 'finance-ops',
+        loadChildren: () =>
+          import('./features/finance-ops/finance-ops.routes').then(m => m.FINANCE_OPS_ROUTES)
       },
       {
         path: 'crm',

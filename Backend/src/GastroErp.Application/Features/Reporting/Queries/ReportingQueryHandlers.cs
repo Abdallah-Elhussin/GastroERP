@@ -371,12 +371,12 @@ public class GetTrialBalanceReportQueryHandler : IRequestHandler<GetTrialBalance
         => await _mediator.Send(new GetTrialBalanceQuery(request.TenantId, request.Filter), ct);
 }
 
-public class GetGeneralLedgerReportQueryHandler : IRequestHandler<GetGeneralLedgerReportQuery, Result<IReadOnlyList<GeneralLedgerLineDto>>>
+public class GetGeneralLedgerReportQueryHandler : IRequestHandler<GetGeneralLedgerReportQuery, Result<GeneralLedgerResultDto>>
 {
     private readonly IMediator _mediator;
     public GetGeneralLedgerReportQueryHandler(IMediator mediator) => _mediator = mediator;
-    public async Task<Result<IReadOnlyList<GeneralLedgerLineDto>>> Handle(GetGeneralLedgerReportQuery request, CancellationToken ct)
-        => await _mediator.Send(new GetGeneralLedgerQuery(request.Filter), ct);
+    public async Task<Result<GeneralLedgerResultDto>> Handle(GetGeneralLedgerReportQuery request, CancellationToken ct)
+        => await _mediator.Send(new GetGeneralLedgerQuery(request.TenantId, request.Filter), ct);
 }
 
 public class GetJournalRegisterReportQueryHandler : IRequestHandler<GetJournalRegisterReportQuery, PagedResult<JournalDto>>

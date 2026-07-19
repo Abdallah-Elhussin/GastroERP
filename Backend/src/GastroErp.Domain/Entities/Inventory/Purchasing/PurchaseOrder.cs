@@ -20,6 +20,18 @@ public sealed class PurchaseOrder : AuditableBaseEntity
     public decimal TotalAmount { get; private set; }
     public string Currency { get; private set; }
     public string? Notes { get; private set; }
+    public DateTimeOffset? LastReceiptDate { get; private set; }
+
+    public decimal CompletionPercent
+    {
+        get
+        {
+            var ordered = _lines.Sum(l => l.Quantity);
+            if (ordered <= 0) return 0;
+            var received = _lines.Sum(l => Math.Min(l.ReceivedQuantity, l.Quantity));
+            return Math.Round(received / ordered * 100m, 2);
+        }
+    }
 
     private readonly List<PurchaseOrderLine> _lines = [];
     public IReadOnlyCollection<PurchaseOrderLine> Lines => _lines.AsReadOnly();
@@ -96,7 +108,19 @@ public sealed class PurchaseOrder : AuditableBaseEntity
     }
 
     public void MarkAsPartiallyReceived() => Status = PurchaseOrderStatus.PartiallyReceived;
-    public void MarkAsFullyReceived() => Status = PurchaseOrderStatus.FullyReceived;
+
+    public void MarkAsFullyReceived()
+    {
+        Status = PurchaseOrderStatus.FullyReceived;
+        Close();
+    }
+
+    public void RecordReceiptDate(DateTimeOffset receiptDate)
+    {
+        if (!LastReceiptDate.HasValue || receiptDate > LastReceiptDate.Value)
+            LastReceiptDate = receiptDate;
+    }
+
     public void Cancel() => Status = PurchaseOrderStatus.Cancelled;
     public void Reject()
     {
@@ -143,7 +167,9 @@ public sealed class PurchaseOrderLine : AuditableBaseEntity
 
     public void AddReceivedQuantity(decimal qty)
     {
-        if (qty < 0) throw new ArgumentException("Cannot receive negative quantity.");
-        ReceivedQuantity += qty;
+        var next = ReceivedQuantity + qty;
+        if (next < 0)
+            throw new ArgumentException("Received quantity cannot go below zero.");
+        ReceivedQuantity = next;
     }
 }

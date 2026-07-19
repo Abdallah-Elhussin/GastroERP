@@ -1,0 +1,134 @@
+<app-inventory-page-shell
+  [breadcrumbs]="breadcrumbs"
+>
+  <app-inventory-error-state
+    *ngIf="error()"
+    [message]="error()!"
+    (retry)="load()"
+  />
+
+  <app-inventory-skeleton *ngIf="loading()" variant="cards" [count]="6" />
+
+  <ng-container *ngIf="!loading() && !error()">
+    <section class="hero-card">
+      <div class="hero-main">
+        <div class="hero-icon" aria-hidden="true">
+          <mat-icon>warehouse</mat-icon>
+        </div>
+        <div class="hero-text">
+          <h1>{{ t('inv.dashboard.title') }}</h1>
+          <p>{{ t('inv.dashboard.subtitle') }}</p>
+        </div>
+      </div>
+      <button type="button" class="btn-refresh" (click)="load()">
+        <mat-icon>sync</mat-icon>
+        {{ t('inv.dashboard.refresh') }}
+      </button>
+    </section>
+
+    <section class="kpi-row">
+      <a
+        *ngFor="let kpi of kpis()"
+        [routerLink]="kpi.path"
+        class="kpi-card"
+        [attr.data-tone]="kpi.tone"
+      >
+        <div class="kpi-icon">
+          <mat-icon>{{ kpi.icon }}</mat-icon>
+        </div>
+        <div class="kpi-body">
+          <span class="kpi-label">{{ t(kpi.key) }}</span>
+          <strong class="kpi-value">{{ kpi.value }}</strong>
+          <span class="kpi-hint">{{ t(kpi.hintKey) }}</span>
+        </div>
+      </a>
+    </section>
+
+    <section class="alerts" *ngIf="alerts().length">
+      <a
+        *ngFor="let alert of alerts()"
+        class="alert"
+        [attr.data-severity]="alert.severity"
+        [routerLink]="alert.path || '/inventory/dashboard'"
+      >
+        <mat-icon>{{ alert.severity === 'warning' ? 'warning' : 'info' }}</mat-icon>
+        <span>{{ alertMessage(alert) }}</span>
+      </a>
+    </section>
+
+    <section class="analytics-row">
+      <article class="panel chart-panel">
+        <header class="panel-head">
+          <div>
+            <h2>{{ t('inv.dashboard.topMovers') }}</h2>
+            <p>{{ t('inv.dashboard.topMoversHint') }}</p>
+          </div>
+        </header>
+
+        <div *ngIf="!topMovers().length" class="empty-block">
+          <mat-icon>show_chart</mat-icon>
+          <span>{{ t('inv.dashboard.noMovers') }}</span>
+        </div>
+
+        <div *ngIf="topMovers().length" class="mover-chart">
+          <div class="legend">
+            <span class="leg in">{{ t('inv.dashboard.legend.in') }}</span>
+            <span class="leg out">{{ t('inv.dashboard.legend.out') }}</span>
+          </div>
+          <div *ngFor="let m of topMovers()" class="mover-row">
+            <div class="mover-name" [title]="itemName(m)">{{ itemName(m) }}</div>
+            <div class="bars">
+              <div class="bar-track">
+                <div
+                  class="bar in"
+                  [style.width.%]="barPct(m.inQuantity, maxMoverQty())"
+                  [title]="m.inQuantity"
+                ></div>
+              </div>
+              <div class="bar-track">
+                <div
+                  class="bar out"
+                  [style.width.%]="barPct(m.outQuantity, maxMoverQty())"
+                  [title]="m.outQuantity"
+                ></div>
+              </div>
+            </div>
+            <div class="mover-nums">
+              <span class="in">{{ m.inQuantity | number:'1.0-2' }}</span>
+              <span class="out">{{ m.outQuantity | number:'1.0-2' }}</span>
+            </div>
+          </div>
+        </div>
+      </article>
+
+      <article class="panel category-panel">
+        <header class="panel-head">
+          <div>
+            <h2>{{ t('inv.dashboard.categoryDist') }}</h2>
+            <p>{{ t('inv.dashboard.categoryDistHint') }}</p>
+          </div>
+        </header>
+
+        <div *ngIf="!categories().length" class="empty-block">
+          <mat-icon>category</mat-icon>
+          <span>{{ t('inv.dashboard.noCategories') }}</span>
+        </div>
+
+        <ul *ngIf="categories().length" class="cat-list">
+          <li *ngFor="let c of categories()">
+            <div class="cat-meta">
+              <strong>{{ categoryName(c) }}</strong>
+              <span>{{ c.itemCount }}</span>
+            </div>
+            <div class="cat-track">
+              <div
+                class="cat-fill"
+                [style.width.%]="barPct(c.itemCount, maxCategoryCount())"
+              ></div>
+            </div>
+          </li>
+        </ul>
+      </article>
+    </section>
+  </ng-container>
+</app-inventory-page-shell>

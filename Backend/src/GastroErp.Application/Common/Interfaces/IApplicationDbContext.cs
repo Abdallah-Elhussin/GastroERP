@@ -49,6 +49,7 @@ public interface IApplicationDbContext
     DbSet<AppUser> AppUsers { get; }
     DbSet<Role> Roles { get; }
     DbSet<UserRole> UserRoles { get; }
+    DbSet<UserBranch> UserBranches { get; }
     DbSet<Permission> Permissions { get; }
     DbSet<PermissionCategory> PermissionCategories { get; }
     DbSet<PermissionGroup> PermissionGroups { get; }
@@ -78,11 +79,18 @@ public interface IApplicationDbContext
     // ─── Inventory – Catalog ──────────────────────────────────────────────────
     DbSet<InventoryCategory> InventoryCategories { get; }
     DbSet<InventoryItem> InventoryItems { get; }
+    DbSet<InventoryItemType> InventoryItemTypes { get; }
+    DbSet<InventoryValuationGroup> InventoryValuationGroups { get; }
     DbSet<InventoryUnit> InventoryUnits { get; }
     DbSet<UnitConversion> UnitConversions { get; }
+    DbSet<InventoryBrand> InventoryBrands { get; }
+    DbSet<InventoryManufacturer> InventoryManufacturers { get; }
+    DbSet<InventoryAttribute> InventoryAttributes { get; }
+    DbSet<InventoryPriceList> InventoryPriceLists { get; }
 
     // ─── Inventory – Warehouse ────────────────────────────────────────────────
     DbSet<Warehouse> Warehouses { get; }
+    DbSet<WarehouseTypeDefinition> WarehouseTypeDefinitions { get; }
     DbSet<StockTransfer> StockTransfers { get; }
 
     // ─── Inventory – Suppliers ────────────────────────────────────────────────
@@ -92,6 +100,8 @@ public interface IApplicationDbContext
     DbSet<PurchaseOrder> PurchaseOrders { get; }
     DbSet<GoodsReceipt> GoodsReceipts { get; }
     DbSet<PurchaseReturn> PurchaseReturns { get; }
+    DbSet<PurchaseReturnReason> PurchaseReturnReasons { get; }
+    DbSet<PurchaseInvoice> PurchaseInvoices { get; }
 
     // ─── Inventory – Counting ─────────────────────────────────────────────────
     DbSet<StockAdjustment> StockAdjustments { get; }
@@ -110,6 +120,10 @@ public interface IApplicationDbContext
     DbSet<InventoryTransaction> InventoryTransactions { get; }
     DbSet<StockMovement> StockMovements { get; }
     DbSet<InventoryBatch> InventoryBatches { get; }
+    DbSet<InventoryBalance> InventoryBalances { get; }
+    DbSet<GastroErp.Domain.Entities.Inventory.Issuing.GoodsIssue> GoodsIssues { get; }
+    DbSet<GastroErp.Domain.Entities.Inventory.Issuing.IssueDestination> IssueDestinations { get; }
+    DbSet<GastroErp.Domain.Entities.Inventory.Opening.OpeningBalance> OpeningBalances { get; }
 
     // ─── Inventory – Reservation ──────────────────────────────────────────────
     DbSet<InventoryReservation> InventoryReservations { get; }
@@ -129,6 +143,16 @@ public interface IApplicationDbContext
     DbSet<KitchenTicket> KitchenTickets { get; }
     DbSet<FloorPlan> FloorPlans { get; }
     DbSet<TableReservation> TableReservations { get; }
+    DbSet<GastroErp.Domain.Entities.Sales.Pricing.SalesPriceList> SalesPriceLists { get; }
+    DbSet<GastroErp.Domain.Entities.Sales.Pricing.ProductPrice> ProductPrices { get; }
+
+    // ─── Back Office Sales ────────────────────────────────────────────────────
+    DbSet<GastroErp.Domain.Entities.Sales.BackOffice.BackOfficeSalesInvoice> BackOfficeSalesInvoices { get; }
+    DbSet<GastroErp.Domain.Entities.Sales.BackOffice.BackOfficeSalesOrder> BackOfficeSalesOrders { get; }
+    DbSet<GastroErp.Domain.Entities.Sales.BackOffice.BackOfficeSalesQuotation> BackOfficeSalesQuotations { get; }
+    DbSet<GastroErp.Domain.Entities.Sales.BackOffice.BackOfficeSalesDeliveryNote> BackOfficeSalesDeliveryNotes { get; }
+    DbSet<GastroErp.Domain.Entities.Sales.BackOffice.BackOfficeSalesReturn> BackOfficeSalesReturns { get; }
+    DbSet<GastroErp.Domain.Entities.Sales.BackOffice.BackOfficeSalesDebitNote> BackOfficeSalesDebitNotes { get; }
 
     // ─── Invoicing ────────────────────────────────────────────────────────────
     DbSet<Invoice> Invoices { get; }
@@ -153,10 +177,35 @@ public interface IApplicationDbContext
 
     // ─── Finance / Accounting ───────────────────────────────────────────────────
     DbSet<ChartOfAccount> ChartOfAccounts { get; }
+    DbSet<AccountMainClassification> AccountMainClassifications { get; }
+    DbSet<AccountClassification> AccountClassifications { get; }
+    DbSet<AccountingSettings> AccountingSettings { get; }
     DbSet<JournalEntry> JournalEntries { get; }
     DbSet<JournalEntryLine> JournalEntryLines { get; }
     DbSet<FiscalPeriod> FiscalPeriods { get; }
     DbSet<CostCenter> CostCenters { get; }
+    DbSet<CostCenterAllowedAccount> CostCenterAllowedAccounts { get; }
+    DbSet<Currency> Currencies { get; }
+    DbSet<CurrencyExchangeRate> CurrencyExchangeRates { get; }
+    DbSet<DocumentType> DocumentTypes { get; }
+    DbSet<DocumentTypeLifecycleStage> DocumentTypeLifecycleStages { get; }
+    DbSet<Bank> Banks { get; }
+    DbSet<BankAccountDetail> BankAccountDetails { get; }
+    DbSet<CashBox> CashBoxes { get; }
+    DbSet<CashBoxUser> CashBoxUsers { get; }
+    DbSet<CashBoxDevice> CashBoxDevices { get; }
+    DbSet<TaxRegistrationProfile> TaxRegistrationProfiles { get; }
+    DbSet<TaxRegistrationCertificate> TaxRegistrationCertificates { get; }
+    DbSet<TaxCode> TaxCodes { get; }
+    DbSet<TaxCodeRate> TaxCodeRates { get; }
+    DbSet<NotificationReason> NotificationReasons { get; }
+    DbSet<FinancialOpeningBalance> FinancialOpeningBalances { get; }
+    DbSet<FinancialOpeningBalanceLine> FinancialOpeningBalanceLines { get; }
+    DbSet<ReceiptVoucher> ReceiptVouchers { get; }
+    DbSet<ReceiptVoucherLine> ReceiptVoucherLines { get; }
+    DbSet<FinancialNote> FinancialNotes { get; }
+    DbSet<FinancialNoteLine> FinancialNoteLines { get; }
+    DbSet<GeneralLedgerSetting> GeneralLedgerSettings { get; }
     DbSet<AccountingTransaction> AccountingTransactions { get; }
 
     // ─── Automation (Jobs, Notifications, Integrations) ───────────────────────

@@ -14,6 +14,9 @@ public sealed class InventoryItem : AuditableBaseEntity
 {
     public Guid TenantId { get; private set; }
     public Guid CategoryId { get; private set; }
+
+    /// <summary>نوع الصنف التشغيلي (مواد خام، منتج تام، عنصر قائمة…).</summary>
+    public Guid? ItemTypeId { get; private set; }
     public string NameAr { get; private set; }
     public string? NameEn { get; private set; }
     public string? DescriptionAr { get; private set; }
@@ -94,6 +97,8 @@ public sealed class InventoryItem : AuditableBaseEntity
         if (categoryId == Guid.Empty) throw new ArgumentException("CategoryId cannot be empty.", nameof(categoryId));
         CategoryId = categoryId;
     }
+
+    public void SetItemType(Guid? itemTypeId) => ItemTypeId = itemTypeId;
 
     public void SetBaseUnit(Guid baseUnitId)
     {
