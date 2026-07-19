@@ -70,4 +70,26 @@ public class ItemController : BaseApiController
     {
         return HandleResult(await Mediator.Send(new UpdateInventoryItemCommand(id, dto)));
     }
+
+    [HttpPost($"{ApiRoutes.Inventory.Items}/{{id:guid}}/deactivate")]
+    [HasPermission(Permissions.Inventory.Manage)]
+    public async Task<IActionResult> DeactivateItem(Guid id)
+    {
+        return HandleResult(await Mediator.Send(new DeactivateInventoryItemCommand(id)));
+    }
+
+    [HttpPost($"{ApiRoutes.Inventory.Items}/{{id:guid}}/activate")]
+    [HasPermission(Permissions.Inventory.Manage)]
+    public async Task<IActionResult> ActivateItem(Guid id)
+    {
+        return HandleResult(await Mediator.Send(new ActivateInventoryItemCommand(id)));
+    }
+
+    [HttpDelete($"{ApiRoutes.Inventory.Items}/{{id:guid}}")]
+    [HasPermission(Permissions.Inventory.Manage)]
+    public async Task<IActionResult> DeleteItem(Guid id)
+    {
+        // Soft-delete equivalent: deactivate so "Show deleted" can still surface the item.
+        return HandleResult(await Mediator.Send(new DeactivateInventoryItemCommand(id)));
+    }
 }

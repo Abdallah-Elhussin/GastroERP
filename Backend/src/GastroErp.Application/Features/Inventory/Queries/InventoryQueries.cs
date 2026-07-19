@@ -69,8 +69,21 @@ public record GetSupplierByIdQuery(Guid Id, bool IncludeStats = true) : IRequest
 public record GetSupplierPurchasingDefaultsQuery(Guid Id) : IRequest<Result<SupplierPurchasingDefaultsDto>>;
 
 // ─── PurchaseOrder ────────────────────────────────────────────────────────────
-public record GetPurchaseOrdersQuery(Guid TenantId, Guid? SupplierId = null, PurchaseOrderStatus? Status = null, int PageNumber = 1, int PageSize = 20) : IRequest<PagedResult<PurchaseOrderDto>>;
+// ─── PurchaseOrder Queries ────────────────────────────────────────────────────
+public record GetPurchaseOrdersQuery(
+    Guid TenantId,
+    Guid? SupplierId = null,
+    PurchaseOrderStatus? Status = null,
+    Guid? WarehouseId = null,
+    string? Search = null,
+    DateTimeOffset? From = null,
+    DateTimeOffset? To = null,
+    int PageNumber = 1,
+    int PageSize = 50) : IRequest<PagedResult<PurchaseOrderDto>>;
+
 public record GetPurchaseOrderByIdQuery(Guid Id) : IRequest<Result<PurchaseOrderDto>>;
+
+public record GetPurchaseOrderDashboardQuery(Guid TenantId) : IRequest<Result<PurchaseOrderDashboardDto>>;
 
 // ─── GoodsReceipt ─────────────────────────────────────────────────────────────
 public record GetGoodsReceiptsQuery(

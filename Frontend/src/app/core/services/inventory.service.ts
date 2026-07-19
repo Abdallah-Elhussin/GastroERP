@@ -38,13 +38,22 @@ export class InventoryService {
   error = signal<string | null>(null);
 
   loadMasterData(): void {
+    this.error.set(null);
     this.repo.getCategories().pipe(
-      catchError(() => of([] as InventoryCategory[])),
+      catchError(err => {
+        this.error.set(err?.error?.message ?? err?.error?.error ?? 'Failed to load categories.');
+        return of([] as InventoryCategory[]);
+      }),
       tap(c => this.categories.set(c))
     ).subscribe();
 
     this.repo.getUnits().pipe(
-      catchError(() => of([] as InventoryUnit[])),
+      catchError(err => {
+        if (!this.error()) {
+          this.error.set(err?.error?.message ?? err?.error?.error ?? 'Failed to load units.');
+        }
+        return of([] as InventoryUnit[]);
+      }),
       tap(u => this.units.set(u))
     ).subscribe();
   }
@@ -119,6 +128,14 @@ export class InventoryService {
 
   updateItem(id: string, payload: UpdateInventoryItemPayload) {
     return this.repo.updateItem(id, payload);
+  }
+
+  deleteItem(id: string) {
+    return this.repo.deleteItem(id);
+  }
+
+  activateItem(id: string) {
+    return this.repo.activateItem(id);
   }
 
   createCategory(payload: CreateInventoryCategoryPayload) {

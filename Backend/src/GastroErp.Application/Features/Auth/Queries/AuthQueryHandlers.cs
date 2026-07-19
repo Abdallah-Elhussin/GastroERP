@@ -1,4 +1,5 @@
 using GastroErp.Application.Common.Interfaces;
+using GastroErp.Application.Common.Interfaces.Authorization;
 using GastroErp.Application.Common.Responses;
 using GastroErp.Application.Features.Auth.DTOs;
 using MediatR;
@@ -10,11 +11,16 @@ public class AuthQueryHandlers : IRequestHandler<GetCurrentUserQuery, Result<Cur
 {
     private readonly IApplicationDbContext _context;
     private readonly ICurrentUser _currentUser;
+    private readonly IEffectivePermissionService _effectivePermissions;
 
-    public AuthQueryHandlers(IApplicationDbContext context, ICurrentUser currentUser)
+    public AuthQueryHandlers(
+        IApplicationDbContext context,
+        ICurrentUser currentUser,
+        IEffectivePermissionService effectivePermissions)
     {
         _context = context;
         _currentUser = currentUser;
+        _effectivePermissions = effectivePermissions;
     }
 
     public async Task<Result<CurrentUserDto>> Handle(GetCurrentUserQuery request, CancellationToken cancellationToken)
@@ -39,12 +45,14 @@ public class AuthQueryHandlers : IRequestHandler<GetCurrentUserQuery, Result<Cur
             select role.Name
         ).ToArrayAsync(cancellationToken);
 
+        var permissions = (await _effectivePermissions.GetPermissionNamesAsync(user.Id, cancellationToken)).ToArray();
+
         return Result<CurrentUserDto>.Success(new CurrentUserDto(
             user.Id.ToString(),
             user.Email,
             user.FullName,
             user.TenantId,
             roles,
-            Array.Empty<string>()));
+            permissions));
     }
 }

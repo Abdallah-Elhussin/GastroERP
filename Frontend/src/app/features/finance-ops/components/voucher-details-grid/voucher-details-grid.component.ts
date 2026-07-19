@@ -21,14 +21,14 @@ import {
 } from '@angular/forms';
 import { MatIconModule } from '@angular/material/icon';
 import { Subscription, startWith } from 'rxjs';
-import { LanguageService } from '../../../core/services/language.service';
+import { LanguageService } from '../../../../core/services/language.service';
 import {
   FinanceVoucherAccountOption,
   FinanceVoucherCostCenterOption,
   FinanceVoucherCurrencyOption,
   FinanceVoucherDetailsTotals,
   FinanceVoucherLineFormValue
-} from '../../../core/models/finance-voucher-details.models';
+} from '../../../../core/models/finance-voucher-details.models';
 
 /**
  * Unified voucher details grid for Financial Operations documents.

@@ -21,20 +21,31 @@ public sealed class RecurringJobHostedService : BackgroundService, IRecurringJob
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        await Task.Delay(TimeSpan.FromMinutes(1), stoppingToken);
-
-        while (!stoppingToken.IsCancellationRequested)
+        try
         {
-            try
-            {
-                await RunDailyJobsAsync(stoppingToken);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Recurring job cycle failed");
-            }
+            await Task.Delay(TimeSpan.FromMinutes(1), stoppingToken);
 
-            await Task.Delay(_interval, stoppingToken);
+            while (!stoppingToken.IsCancellationRequested)
+            {
+                try
+                {
+                    await RunDailyJobsAsync(stoppingToken);
+                }
+                catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
+                {
+                    break;
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Recurring job cycle failed");
+                }
+
+                await Task.Delay(_interval, stoppingToken);
+            }
+        }
+        catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
+        {
+            // Host is shutting down (e.g. failed bind / Ctrl+C) — exit without crashing the process.
         }
     }
 

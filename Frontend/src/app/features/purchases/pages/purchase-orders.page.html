@@ -1,0 +1,177 @@
+<app-inventory-page-shell
+  [breadcrumbs]="breadcrumbs"
+  titleKey="pur.nav.purchaseOrders"
+  subtitleKey="pur.po.subtitle"
+>
+  <section class="toolbar" shellActions>
+    <div class="search-group">
+      <mat-icon>search</mat-icon>
+      <input
+        type="search"
+        [ngModel]="search()"
+        (ngModelChange)="search.set($event)"
+        (keydown.enter)="load()"
+        [placeholder]="t('pur.po.searchPlaceholder')"
+      />
+      <button type="button" class="btn ghost" (click)="load()">{{ t('common.search') }}</button>
+    </div>
+    <button type="button" class="btn primary" [disabled]="!canCreate()" (click)="createNew()">
+      <mat-icon>add</mat-icon>
+      {{ t('pur.po.new') }}
+    </button>
+    <button type="button" class="btn ghost" [disabled]="!selected()" (click)="edit()">
+      {{ t('pur.po.edit') }}
+    </button>
+    <button type="button" class="btn ghost" (click)="load()" [matTooltip]="t('pur.po.refresh')">
+      <mat-icon>refresh</mat-icon>
+    </button>
+    <button
+      type="button"
+      class="btn success"
+      [disabled]="!canApprove() || !selected() || !canApproveDoc(selected()!) || acting()"
+      (click)="approve()"
+    >
+      {{ t('pur.po.approve') }}
+    </button>
+    <button
+      type="button"
+      class="btn info"
+      [disabled]="!canApprove() || !selected() || !canSendDoc(selected()!) || acting()"
+      (click)="send()"
+    >
+      {{ t('pur.po.send') }}
+    </button>
+    <button
+      type="button"
+      class="btn primary"
+      [disabled]="!selected() || !canCreateGrn(selected()!)"
+      (click)="createGrn()"
+    >
+      {{ t('pur.po.createGrn') }}
+    </button>
+    <button
+      type="button"
+      class="btn ghost"
+      [disabled]="!canApprove() || !selected() || !canCloseDoc(selected()!) || acting()"
+      (click)="close()"
+    >
+      {{ t('pur.po.close') }}
+    </button>
+    <button type="button" class="btn ghost" [disabled]="!canCreate() || !selected() || acting()" (click)="copy()">
+      {{ t('pur.po.copy') }}
+    </button>
+    <button
+      type="button"
+      class="btn danger"
+      [disabled]="!canCancel() || !selected() || !canCancelDoc(selected()!) || acting()"
+      (click)="cancel()"
+    >
+      {{ t('pur.po.cancel') }}
+    </button>
+    <button
+      type="button"
+      class="btn danger"
+      [disabled]="!canCancel() || !selected() || statusName(selected()!) !== 'Draft' || acting()"
+      (click)="deleteDoc()"
+    >
+      {{ t('pur.po.delete') }}
+    </button>
+    <label class="deleted-toggle">
+      <input type="checkbox" [ngModel]="showCancelled()" (ngModelChange)="showCancelled.set($event)" />
+      {{ t('pur.po.showCancelled') }}
+    </label>
+  </section>
+
+  <section class="kpi-row">
+    @for (kpi of kpiCards(); track kpi.key) {
+      <div class="kpi-card" [attr.data-tone]="kpi.tone">
+        <div class="kpi-icon">
+          <mat-icon>{{ kpi.icon }}</mat-icon>
+        </div>
+        <div class="kpi-body">
+          <span class="kpi-label">{{ t(kpi.key) }}</span>
+          <strong class="kpi-value">{{ kpi.value | number: (kpi.isCurrency ? '1.2-2' : '1.0-0') }}</strong>
+        </div>
+      </div>
+    }
+  </section>
+
+  <div class="chips">
+    <button type="button" class="chip" [class.active]="statusFilter() === 'all'" (click)="setStatus('all')">{{ t('pur.po.filter.all') }}</button>
+    <button type="button" class="chip" [class.active]="statusFilter() === 'Draft'" (click)="setStatus('Draft')">{{ t('pur.po.status.draft') }}</button>
+    <button type="button" class="chip" [class.active]="statusFilter() === 'Approved'" (click)="setStatus('Approved')">{{ t('pur.po.status.approved') }}</button>
+    <button type="button" class="chip" [class.active]="statusFilter() === 'PartiallyReceived'" (click)="setStatus('PartiallyReceived')">{{ t('pur.po.status.partiallyReceived') }}</button>
+    <button type="button" class="chip" [class.active]="statusFilter() === 'Closed'" (click)="setStatus('Closed')">{{ t('pur.po.status.closed') }}</button>
+    <button type="button" class="chip" [class.active]="statusFilter() === 'Cancelled'" (click)="setStatus('Cancelled')">{{ t('pur.po.status.cancelled') }}</button>
+    <span class="chip-sep"></span>
+    <button type="button" class="chip" [class.active]="dateFilter() === 'today'" (click)="setDate('today')">{{ t('pur.po.filter.today') }}</button>
+    <button type="button" class="chip" [class.active]="dateFilter() === '7d'" (click)="setDate('7d')">{{ t('pur.po.filter.7d') }}</button>
+    <button type="button" class="chip" [class.active]="dateFilter() === '30d'" (click)="setDate('30d')">{{ t('pur.po.filter.30d') }}</button>
+    <button type="button" class="chip" [class.active]="dateFilter() === 'all'" (click)="setDate('all')">{{ t('pur.po.filter.anyDate') }}</button>
+  </div>
+
+  @if (error()) {
+    <div class="form-error">{{ error() }}</div>
+  }
+
+  @if (loading()) {
+    <app-inventory-skeleton [count]="8" />
+  } @else if (error() && filteredRows().length === 0) {
+    <app-inventory-error-state [message]="error()!" (retry)="load()" />
+  } @else if (filteredRows().length === 0) {
+    <app-inventory-empty-state
+      icon="shopping_cart"
+      [title]="t('pur.po.emptyTitle')"
+      [message]="t('pur.po.empty')"
+    />
+  } @else {
+    <div class="table-card">
+      <table>
+        <thead>
+          <tr>
+            <th>{{ t('pur.po.col.docNumber') }}</th>
+            <th>{{ t('pur.po.col.date') }}</th>
+            <th>{{ t('pur.po.col.supplier') }}</th>
+            <th>{{ t('pur.po.col.warehouse') }}</th>
+            <th>{{ t('pur.po.col.lines') }}</th>
+            <th>{{ t('pur.po.col.total') }}</th>
+            <th>{{ t('pur.po.col.status') }}</th>
+            <th>{{ t('pur.po.col.completion') }}</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (row of filteredRows(); track row.id) {
+            <tr [class.selected]="selectedId() === row.id" (click)="select(row)" (dblclick)="edit()">
+              <td><a [routerLink]="['/purchases/purchase-orders', row.id]">{{ row.poNumber }}</a></td>
+              <td>{{ row.orderDate | date: 'yyyy-MM-dd' }}</td>
+              <td>{{ row.supplierNameAr || '—' }}</td>
+              <td>{{ row.warehouseNameAr || '—' }}</td>
+              <td>{{ row.lineCount }}</td>
+              <td>{{ row.totalAmount | number: '1.2-2' }} {{ row.currency }}</td>
+              <td><span class="status-badge" [attr.data-status]="statusName(row)">{{ statusLabel(row) }}</span></td>
+              <td>
+                <div class="progress-cell">
+                  <div class="progress-track">
+                    <div class="progress-fill" [style.width.%]="row.completionPercent"></div>
+                  </div>
+                  <span>{{ row.completionPercent | number: '1.0-0' }}%</span>
+                </div>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+      <footer class="table-footer">
+        <span>{{ t('pur.po.totalRecords') }}: {{ totalCount() }}</span>
+        <label>
+          {{ t('pur.po.pageSize') }}
+          <select [ngModel]="pageSize()" (ngModelChange)="pageSize.set(+$event); load()">
+            <option [ngValue]="20">20</option>
+            <option [ngValue]="50">50</option>
+            <option [ngValue]="100">100</option>
+          </select>
+        </label>
+      </footer>
+    </div>
+  }
+</app-inventory-page-shell>

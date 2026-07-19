@@ -37,6 +37,80 @@ interface SidebarNavItem {
       display: block;
       height: 100%;
     }
+
+    nav::-webkit-scrollbar {
+      width: 4px;
+    }
+    nav::-webkit-scrollbar-track {
+      background: transparent;
+    }
+    nav::-webkit-scrollbar-thumb {
+      background: var(--border-color);
+      border-radius: 999px;
+    }
+
+    .active-nav-item {
+      background: #f1f5f9 !important;
+      color: #0f172a !important;
+      border-l-color: #f97316 !important;
+    }
+
+    :host-context(.dark) .active-nav-item {
+      background: rgba(255, 255, 255, 0.08) !important;
+      color: #ffffff !important;
+      border-l-color: #f97316 !important;
+    }
+
+    .active-nav-group {
+      color: #0f172a !important;
+      font-weight: 750 !important;
+    }
+
+    :host-context(.dark) .active-nav-group {
+      color: #ffffff !important;
+      font-weight: 750 !important;
+    }
+
+    .active-sub-item {
+      background: #f1f5f9 !important;
+      color: #0f172a !important;
+      font-weight: 850 !important;
+    }
+
+    :host-context(.dark) .active-sub-item {
+      background: rgba(255, 255, 255, 0.08) !important;
+      color: #ffffff !important;
+      font-weight: 850 !important;
+    }
+
+    .submenu-container {
+      margin-inline-end: 32px;
+      padding-inline-end: 8px;
+      border-inline-end: 1.5px solid #e2e8f0;
+    }
+
+    :host-context(.dark) .submenu-container {
+      border-inline-end-color: #334155;
+    }
+
+    .nav-section-label {
+      padding: 0.5rem 1rem 0.25rem;
+      font-size: 0.65rem;
+      font-weight: 800;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      color: #94a3b8;
+    }
+
+    .collapsed-active-item {
+      background: #f1f5f9 !important;
+      color: #f97316 !important;
+    }
+
+    :host-context(.dark) .collapsed-active-item {
+      background: rgba(255, 255, 255, 0.08) !important;
+      color: #f97316 !important;
+    }
   `],
   changeDetection: ChangeDetectionStrategy.OnPush
 })
@@ -47,21 +121,16 @@ export class AppSidebarComponent {
   private router = inject(Router);
 
   isCollapsed = signal<boolean>(false);
-  expandedGroups = signal<Record<string, boolean>>({
-    'nav.inventory': true,
-    'nav.purchases': true,
-    'nav.sales': true,
-    'nav.finance': true,
-    'nav.financialOps': true
-  });
+  /** Groups start collapsed; open only after the user clicks. */
+  expandedGroups = signal<Record<string, boolean>>({});
 
   /**
-   * Inventory sidebar — matches ERP warehouse menu structure.
-   * Empty routes are scaffolded; detail screens filled per page specs later.
+   * Main ERP navigation — order and labels follow the main-nav reorganization plan.
+   * Child screens/routes are preserved; branding/media/users/roles live under Settings.
    */
   navItems: SidebarNavItem[] = [
-    { path: '/dashboard', icon: 'dashboard', labelKey: 'nav.dashboard' },
-    { path: '/pos', icon: 'grid_view', labelKey: 'nav.pos' },
+    { path: '/dashboard', icon: 'space_dashboard', labelKey: 'nav.dashboard' },
+    { path: '/pos', icon: 'point_of_sale', labelKey: 'nav.pos' },
     {
       icon: 'storefront',
       labelKey: 'nav.sales',
@@ -77,8 +146,6 @@ export class AppSidebarComponent {
         { path: '/crm', icon: 'people', labelKey: 'sal.nav.customers' }
       ]
     },
-    { path: '/kds', icon: 'flat_ware', labelKey: 'nav.kitchen' },
-    { path: '/kitchen-display', icon: 'tv', labelKey: 'nav.kitchenDisplay' },
     {
       icon: 'local_shipping',
       labelKey: 'nav.purchases',
@@ -115,18 +182,24 @@ export class AppSidebarComponent {
         { path: '/inventory/transactions', icon: 'receipt_long', labelKey: 'inv.nav.transactions' }
       ]
     },
-    { path: '/menu', icon: 'restaurant_menu', labelKey: 'nav.menu' },
-    { path: '/hr', icon: 'badge', labelKey: 'nav.hr' },
-    { path: '/workflow', icon: 'view_week', labelKey: 'nav.workflow' },
-    { path: '/reporting', icon: 'bar_chart', labelKey: 'nav.reporting' },
     {
-      icon: 'receipt_long',
-      labelKey: 'nav.financialOps',
+      icon: 'settings_suggest',
+      labelKey: 'nav.operations',
+      children: [
+        { path: '/workflow', icon: 'view_week', labelKey: 'nav.workflow' },
+        { path: '/kds', icon: 'soup_kitchen', labelKey: 'nav.kitchen' },
+        { path: '/kitchen-display', icon: 'tv', labelKey: 'nav.kitchenDisplay' }
+      ]
+    },
+    {
+      icon: 'account_balance',
+      labelKey: 'nav.finance',
       children: [
         {
           path: '/finance-ops/opening-balances',
           icon: 'account_balance_wallet',
-          labelKey: 'fin.ops.nav.openingBalances'
+          labelKey: 'fin.ops.nav.openingBalances',
+          sectionKey: 'nav.finance.section.operations'
         },
         {
           path: '/finance-ops/journal-vouchers',
@@ -182,14 +255,13 @@ export class AppSidebarComponent {
           path: '/finance-ops/reports',
           icon: 'assessment',
           labelKey: 'fin.ops.nav.reports'
-        }
-      ]
-    },
-    {
-      icon: 'account_balance',
-      labelKey: 'nav.finance',
-      children: [
-        { path: '/finance', icon: 'dashboard', labelKey: 'fin.nav.dashboard' },
+        },
+        {
+          path: '/finance',
+          icon: 'dashboard',
+          labelKey: 'fin.nav.dashboard',
+          sectionKey: 'nav.finance.section.coding'
+        },
         { path: '/finance/chart-of-accounts', icon: 'account_tree', labelKey: 'fin.nav.coa' },
         { path: '/finance/account-classifications', icon: 'category', labelKey: 'fin.nav.classifications' },
         { path: '/finance/cost-centers', icon: 'hub', labelKey: 'fin.nav.costCenters' },
@@ -207,15 +279,33 @@ export class AppSidebarComponent {
         },
         { path: '/finance/general-ledger-settings', icon: 'settings_applications', labelKey: 'fin.nav.glSettings' },
         { path: '/finance/branches', icon: 'store', labelKey: 'fin.nav.branches' },
-        { path: '/finance/users', icon: 'manage_accounts', labelKey: 'fin.nav.users' },
         { path: '/finance/fiscal-periods', icon: 'calendar_month', labelKey: 'fin.nav.fiscalPeriods' },
         { path: '/finance/settings', icon: 'tune', labelKey: 'fin.nav.settings' }
       ]
     },
-    { path: '/crm', icon: 'people', labelKey: 'nav.crm' },
-    { path: '/branding', icon: 'palette', labelKey: 'nav.branding' },
-    { path: '/media', icon: 'photo_library', labelKey: 'nav.media' },
-    { path: '/settings', icon: 'settings', labelKey: 'nav.settings' }
+    { path: '/hr', icon: 'groups', labelKey: 'nav.hr' },
+    { path: '/reporting', icon: 'assessment', labelKey: 'nav.reporting' },
+    { path: '/crm', icon: 'handshake', labelKey: 'nav.crm' },
+    { path: '/branding', icon: 'campaign', labelKey: 'nav.marketing' },
+    { path: '/menu', icon: 'restaurant_menu', labelKey: 'nav.menu' },
+    {
+      icon: 'settings',
+      labelKey: 'nav.settings',
+      children: [
+        { path: '/settings', icon: 'tune', labelKey: 'nav.settings.system' },
+        { path: '/branding', icon: 'palette', labelKey: 'nav.branding' },
+        { path: '/media', icon: 'photo_library', labelKey: 'nav.media' },
+        { path: '/settings', icon: 'print', labelKey: 'nav.settings.printing' },
+        { path: '/settings', icon: 'smart_toy', labelKey: 'nav.settings.ai' },
+        { path: '/settings', icon: 'verified', labelKey: 'nav.settings.zatca' },
+        { path: '/finance/roles', icon: 'admin_panel_settings', labelKey: 'nav.settings.permissions' },
+        { path: '/finance/user-permissions', icon: 'verified_user', labelKey: 'auth.tab.userPermissions' },
+        { path: '/finance/users', icon: 'manage_accounts', labelKey: 'nav.settings.users' },
+        { path: '/settings', icon: 'workspace_premium', labelKey: 'nav.settings.licenses' },
+        { path: '/settings', icon: 'devices', labelKey: 'nav.settings.devices' },
+        { path: '/settings', icon: 'settings_applications', labelKey: 'nav.settings.general' }
+      ]
+    }
   ];
 
   favoriteLinks = computed(() => this.favoritesService.favorites());
@@ -229,7 +319,7 @@ export class AppSidebarComponent {
   }
 
   isGroupExpanded(key: string): boolean {
-    return this.expandedGroups()[key] !== false;
+    return this.expandedGroups()[key] === true;
   }
 
   isGroupActive(item: SidebarNavItem): boolean {

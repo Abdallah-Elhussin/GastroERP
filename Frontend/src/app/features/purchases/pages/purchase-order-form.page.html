@@ -1,0 +1,216 @@
+<app-inventory-page-shell [breadcrumbs]="breadcrumbs" [title]="pageTitle()">
+  <section class="toolbar" shellActions>
+    <span class="status-badge">{{ statusLabel() }}</span>
+    <button type="button" class="btn help" [title]="t('pur.po.tip.recalc')" (click)="recalculate()">?</button>
+    <button
+      type="button"
+      class="btn outline"
+      [disabled]="!canCancel() || !docId() || !canCancelDoc() || acting() || saving()"
+      (click)="cancelDoc()"
+    >
+      {{ t('pur.po.cancel') }}
+    </button>
+    <button type="button" class="btn outline" [disabled]="!docId() || !canCreateGrnDoc()" (click)="createGrn()">
+      {{ t('pur.po.createGrn') }}
+    </button>
+    <button
+      type="button"
+      class="btn outline"
+      [disabled]="!canApprove() || !docId() || !canApproveDoc() || acting() || saving()"
+      (click)="approve()"
+    >
+      {{ t('pur.po.approve') }}
+    </button>
+    <button type="button" class="btn primary" [disabled]="!canCreate() || !canEdit() || saving()" (click)="save()">
+      {{ t('pur.po.save') }}
+    </button>
+  </section>
+
+  @if (error()) {
+    <div class="form-error">{{ error() }}</div>
+  }
+
+  @if (loading()) {
+    <p class="muted">{{ t('common.loading') }}</p>
+  } @else {
+    <section class="card">
+      <h3>{{ t('pur.po.headerTitleSimple') }}</h3>
+      <div class="header-grid">
+        <label class="field">
+          <span>{{ t('pur.po.col.docNumber') }}</span>
+          <input type="text" [ngModel]="poNumber()" disabled [placeholder]="t('pur.po.autoNumber')" />
+        </label>
+        <label class="field">
+          <span>{{ t('pur.po.col.date') }}</span>
+          <input type="date" [ngModel]="orderDate()" (ngModelChange)="orderDate.set($event)" [disabled]="!canEdit()" />
+        </label>
+        <label class="field">
+          <span>{{ t('pur.po.col.supplier') }}</span>
+          <div class="lookup">
+            <select [ngModel]="supplierId()" (ngModelChange)="supplierId.set($event || null)" [disabled]="!canEdit()">
+              <option [ngValue]="null">{{ t('pur.po.pickSupplier') }}</option>
+              @for (s of suppliers(); track s.id) {
+                <option [ngValue]="s.id">{{ s.nameAr }}</option>
+              }
+            </select>
+            <mat-icon>search</mat-icon>
+          </div>
+        </label>
+        <label class="field">
+          <span>{{ t('pur.po.col.expectedDate') }}</span>
+          <input
+            type="date"
+            [ngModel]="expectedDeliveryDate()"
+            (ngModelChange)="expectedDeliveryDate.set($event || null)"
+            [disabled]="!canEdit()"
+          />
+        </label>
+      </div>
+
+      <div class="status-track" aria-label="status">
+        @for (step of statusSteps; track step.code) {
+          <div class="step" [class.active]="isStepActive(step.code)" [class.current]="statusCode() === step.code">
+            <span class="step-num">{{ step.display }}</span>
+            <span class="step-label">{{ t(step.labelKey) }}</span>
+          </div>
+        }
+      </div>
+
+      <label class="field notes-field">
+        <span>{{ t('pur.po.col.notes') }}</span>
+        <textarea rows="2" [ngModel]="notes()" (ngModelChange)="notes.set($event)" [disabled]="!canEdit()"></textarea>
+      </label>
+    </section>
+
+    <section class="card lines-card">
+      <div class="card-head">
+        <h3>{{ t('pur.po.linesTitleSimple') }}</h3>
+        <div class="row-actions">
+          <button type="button" class="btn primary" [disabled]="!canEdit()" (click)="addLine()">
+            {{ t('pur.po.addLine') }}
+          </button>
+          <button
+            type="button"
+            class="btn outline"
+            [disabled]="!canEdit() || selectedLineIndex() == null"
+            (click)="removeSelectedLine()"
+          >
+            {{ t('pur.po.deleteLine') }}
+          </button>
+          <button type="button" class="btn outline" [disabled]="!canEdit()" (click)="recalculate()">
+            {{ t('pur.po.recalculate') }}
+          </button>
+        </div>
+      </div>
+
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>{{ t('pur.po.col.item') }}</th>
+              <th>{{ t('pur.po.col.quantity') }}</th>
+              <th>{{ t('pur.po.col.unit') }}</th>
+              <th>{{ t('pur.po.col.taxStatus') }}</th>
+              <th>{{ t('pur.po.col.unitPrice') }}</th>
+              <th>{{ t('pur.po.col.taxPercent') }}</th>
+              <th>{{ t('pur.po.col.taxAmount') }}</th>
+            </tr>
+          </thead>
+          <tbody>
+            @if (lines().length === 0) {
+              <tr>
+                <td colspan="7" class="muted">{{ t('pur.po.noLines') }}</td>
+              </tr>
+            }
+            @for (line of lines(); track $index; let i = $index) {
+              <tr [class.selected]="selectedLineIndex() === i" (click)="selectLine(i)">
+                <td>
+                  @if (canEdit()) {
+                    <select class="cell-select wide" [ngModel]="line.inventoryItemId" (ngModelChange)="onItemChange(i, $event)">
+                      <option value="">{{ t('pur.po.pickItem') }}</option>
+                      @for (item of items(); track item.id) {
+                        <option [value]="item.id">{{ item.nameAr }}</option>
+                      }
+                    </select>
+                  } @else {
+                    {{ line.itemNameAr || '—' }}
+                  }
+                </td>
+                <td>
+                  <input
+                    type="number"
+                    class="cell-input"
+                    [ngModel]="line.quantity"
+                    (ngModelChange)="updateLine(i, { quantity: +$event })"
+                    [disabled]="!canEdit()"
+                  />
+                </td>
+                <td>
+                  @if (canEdit()) {
+                    <select class="cell-select" [ngModel]="line.unitId" (ngModelChange)="updateLine(i, { unitId: $event })">
+                      @for (u of units(); track u.id) {
+                        <option [value]="u.id">{{ u.nameAr }}</option>
+                      }
+                    </select>
+                  } @else {
+                    {{ line.unitNameAr || '—' }}
+                  }
+                </td>
+                <td>
+                  <select
+                    class="cell-select"
+                    [ngModel]="line.taxStatus ?? 1"
+                    (ngModelChange)="updateLine(i, { taxStatus: +$event === 0 ? 0 : 1 })"
+                    [disabled]="!canEdit()"
+                  >
+                    <option [ngValue]="1">{{ t('pur.po.taxable') }}</option>
+                    <option [ngValue]="0">{{ t('pur.po.taxExempt') }}</option>
+                  </select>
+                </td>
+                <td>
+                  <input
+                    type="number"
+                    class="cell-input"
+                    [ngModel]="line.unitPrice"
+                    (ngModelChange)="updateLine(i, { unitPrice: +$event })"
+                    [disabled]="!canEdit()"
+                  />
+                </td>
+                <td>
+                  <input
+                    type="number"
+                    class="cell-input"
+                    [ngModel]="line.taxPercent ?? 0"
+                    (ngModelChange)="updateLine(i, { taxPercent: +$event })"
+                    [disabled]="!canEdit() || (line.taxStatus ?? 1) === 0"
+                  />
+                </td>
+                <td class="num">{{ line.taxAmount | number: '1.2-2' }}</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+
+      <div class="totals-bar">
+        <div>
+          <span>{{ t('pur.po.summary.net') }}</span>
+          <strong>{{ netTotal() | number: '1.2-2' }}</strong>
+        </div>
+        <div>
+          <span>{{ t('pur.po.summary.tax') }}</span>
+          <strong>{{ taxTotal() | number: '1.2-2' }}</strong>
+        </div>
+        <div class="grand">
+          <span>{{ t('pur.po.summary.grand') }}</span>
+          <strong>{{ grandTotal() | number: '1.2-2' }}</strong>
+        </div>
+      </div>
+    </section>
+
+    <p class="tip">
+      <mat-icon>lightbulb</mat-icon>
+      {{ t('pur.po.tip.recalc') }}
+    </p>
+  }
+</app-inventory-page-shell>

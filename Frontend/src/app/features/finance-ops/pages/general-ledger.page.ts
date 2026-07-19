@@ -276,6 +276,10 @@ export class GeneralLedgerPage implements OnInit {
     window.print();
   }
 
+  onSourceModuleChange(value: string): void {
+    this.sourceModule.set(value === '' ? '' : (Number(value) as GlPostingSource));
+  }
+
   private load(): void {
     if (!this.canView()) return;
     this.loading.set(true);
@@ -292,7 +296,10 @@ export class GeneralLedgerPage implements OnInit {
         toDate: this.toDate() || undefined,
         costCenterId: this.costCenterId() || undefined,
         currency: this.currency() || undefined,
-        sourceModule: this.sourceModule() === '' ? undefined : this.sourceModule(),
+        sourceModule: (() => {
+          const src = this.sourceModule();
+          return src === '' ? undefined : src;
+        })(),
         documentNumber: this.documentNumber() || undefined,
         search: this.search() || undefined,
         includeOpeningBalance: !!this.accountId() && !!this.fromDate(),

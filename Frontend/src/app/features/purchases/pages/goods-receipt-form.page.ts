@@ -142,6 +142,13 @@ export class GoodsReceiptFormPage implements OnInit {
     if (id && id !== 'new') {
       this.docId.set(id);
       this.loadDoc(id);
+      return;
+    }
+
+    const poId = this.route.snapshot.queryParamMap.get('poId');
+    if (poId) {
+      this.purchaseOrderId.set(poId);
+      this.loadFromPo();
     }
   }
 

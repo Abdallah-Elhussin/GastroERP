@@ -37,7 +37,12 @@
           <mat-icon>edit</mat-icon>
           {{ t('inv.items.toolbar.edit') }}
         </button>
-        <button type="button" class="btn ghost" disabled>
+        <button
+          type="button"
+          class="btn ghost"
+          [disabled]="!canDelete()"
+          (click)="deleteSelected()"
+        >
           <mat-icon>delete</mat-icon>
           {{ t('inv.items.toolbar.delete') }}
         </button>

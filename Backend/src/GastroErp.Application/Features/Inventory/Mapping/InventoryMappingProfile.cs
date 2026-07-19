@@ -16,9 +16,13 @@ public class InventoryMappingProfile : Profile
 {
     public InventoryMappingProfile()
     {
+        // Record CTOR mapping uses type converters; ForMember alone does not cover ctor params.
+        CreateMap<DateTimeOffset, DateTime>().ConvertUsing(src => src.UtcDateTime);
+        CreateMap<DateTimeOffset?, DateTime?>().ConvertUsing(src =>
+            src.HasValue ? src.Value.UtcDateTime : null);
+
         // InventoryCategory
-        CreateMap<InventoryCategory, InventoryCategoryDto>()
-            .ForMember(d => d.CreatedAt, opt => opt.MapFrom(src => src.CreatedAt.UtcDateTime));
+        CreateMap<InventoryCategory, InventoryCategoryDto>();
 
         // InventoryUnit
         CreateMap<InventoryUnit, InventoryUnitDto>();
@@ -37,7 +41,6 @@ public class InventoryMappingProfile : Profile
         // Warehouse
         CreateMap<Warehouse, WarehouseDto>()
             .ForMember(d => d.ZoneCount, opt => opt.MapFrom(src => src.Zones.Count))
-            .ForMember(d => d.CreatedAt, opt => opt.MapFrom(src => src.CreatedAt.UtcDateTime))
             .ForMember(d => d.WarehouseTypeNameAr, opt => opt.Ignore())
             .ForMember(d => d.ParentWarehouseNameAr, opt => opt.Ignore())
             .ForMember(d => d.BranchNameAr, opt => opt.Ignore());
@@ -46,7 +49,6 @@ public class InventoryMappingProfile : Profile
 
         CreateMap<Warehouse, WarehouseDetailDto>()
             .ForMember(d => d.ZoneCount, opt => opt.MapFrom(src => src.Zones.Count))
-            .ForMember(d => d.CreatedAt, opt => opt.MapFrom(src => src.CreatedAt.UtcDateTime))
             .ForMember(d => d.Zones, opt => opt.MapFrom(src => src.Zones));
 
         // WarehouseZone
@@ -83,16 +85,7 @@ public class InventoryMappingProfile : Profile
         CreateMap<SupplierPaymentMethod, SupplierPaymentMethodDto>();
         CreateMap<SupplierAttachment, SupplierAttachmentDto>();
 
-        // PurchaseOrder
-        CreateMap<PurchaseOrder, PurchaseOrderDto>()
-            .ForMember(d => d.SupplierNameAr, opt => opt.Ignore())
-            .ForMember(d => d.WarehouseNameAr, opt => opt.Ignore())
-            .ForMember(d => d.LineCount, opt => opt.MapFrom(src => src.Lines.Count));
-
-        // PurchaseOrderLine
-        CreateMap<PurchaseOrderLine, PurchaseOrderLineDto>()
-            .ForMember(d => d.ItemNameAr, opt => opt.Ignore())
-            .ForMember(d => d.UnitNameAr, opt => opt.Ignore());
+        // PurchaseOrder — mapped via PurchaseOrderMapper
 
 // GoodsReceipt — mapped manually via GoodsReceiptMapper
 
@@ -104,8 +97,7 @@ public class InventoryMappingProfile : Profile
             .ForMember(d => d.StatusCode, opt => opt.MapFrom(src => (byte)src.Status))
             .ForMember(d => d.Lines, opt => opt.Ignore())
             .ForMember(d => d.TotalAmount, opt => opt.MapFrom(src => src.TotalAmount))
-            .ForMember(d => d.LineCount, opt => opt.MapFrom(src => src.Lines.Count))
-            .ForMember(d => d.CreatedAt, opt => opt.MapFrom(src => src.CreatedAt.UtcDateTime));
+            .ForMember(d => d.LineCount, opt => opt.MapFrom(src => src.Lines.Count));
 
         // OpeningBalance — mapped manually via OpeningBalanceMapper
         CreateMap<GastroErp.Domain.Entities.Inventory.Opening.OpeningBalance, OpeningBalanceDto>()
@@ -119,8 +111,7 @@ public class InventoryMappingProfile : Profile
             .ForMember(d => d.DisplayMethod, opt => opt.MapFrom(src => src.DisplayMethod.ToString()))
             .ForMember(d => d.CostingMethod, opt => opt.MapFrom(src => src.CostingMethod.ToString()))
             .ForMember(d => d.WeightedAverageScope, opt => opt.MapFrom(src => src.WeightedAverageScope.ToString()))
-            .ForMember(d => d.LineCount, opt => opt.MapFrom(src => src.Lines.Count))
-            .ForMember(d => d.CreatedAt, opt => opt.MapFrom(src => src.CreatedAt.UtcDateTime));
+            .ForMember(d => d.LineCount, opt => opt.MapFrom(src => src.Lines.Count));
 
         // StockTransfer — mapped manually via StockTransferMapper
         CreateMap<StockTransfer, StockTransferDto>()
@@ -132,8 +123,7 @@ public class InventoryMappingProfile : Profile
             .ForMember(d => d.StatusCode, opt => opt.MapFrom(src => (byte)src.Status))
             .ForMember(d => d.Lines, opt => opt.Ignore())
             .ForMember(d => d.LineCount, opt => opt.MapFrom(src => src.Lines.Count))
-            .ForMember(d => d.TotalAmount, opt => opt.MapFrom(src => src.TotalAmount))
-            .ForMember(d => d.CreatedAt, opt => opt.MapFrom(src => src.CreatedAt.UtcDateTime));
+            .ForMember(d => d.TotalAmount, opt => opt.MapFrom(src => src.TotalAmount));
 
         // StockAdjustment
         CreateMap<StockAdjustment, StockAdjustmentDto>()

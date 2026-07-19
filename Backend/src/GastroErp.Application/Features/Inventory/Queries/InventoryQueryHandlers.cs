@@ -3,6 +3,8 @@ using GastroErp.Application.Common.Interfaces;
 using GastroErp.Application.Common.Responses;
 using GastroErp.Application.Features.Inventory.Commands;
 using GastroErp.Application.Features.Inventory.DTOs;
+using GastroErp.Application.Features.Inventory.Mapping;
+using GastroErp.Domain.Enums;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 
@@ -265,40 +267,94 @@ public class GetWarehouseByIdQueryHandler : IRequestHandler<GetWarehouseByIdQuer
 
 // ─── PurchaseOrder Handlers ───────────────────────────────────────────────────
 
-public class GetPurchaseOrdersQueryHandler : IRequestHandler<GetPurchaseOrdersQuery, PagedResult<PurchaseOrderDto>>
+public class GetPurchaseOrdersQueryHandler(IApplicationDbContext context)
+    : IRequestHandler<GetPurchaseOrdersQuery, PagedResult<PurchaseOrderDto>>
 {
-    private readonly IApplicationDbContext _context;
-    private readonly IMapper _mapper;
-
-    public GetPurchaseOrdersQueryHandler(IApplicationDbContext context, IMapper mapper)
-        => (_context, _mapper) = (context, mapper);
-
     public async Task<PagedResult<PurchaseOrderDto>> Handle(GetPurchaseOrdersQuery request, CancellationToken cancellationToken)
     {
-        var query = _context.PurchaseOrders.AsNoTracking().Include(p => p.Lines).Where(p => p.TenantId == request.TenantId);
-        if (request.SupplierId.HasValue) query = query.Where(p => p.SupplierId == request.SupplierId.Value);
-        if (request.Status.HasValue) query = query.Where(p => p.Status == request.Status.Value);
+        var query = context.PurchaseOrders.AsNoTracking()
+            .Include(p => p.Lines)
+            .Where(p => p.TenantId == request.TenantId);
+
+        if (request.SupplierId.HasValue)
+            query = query.Where(p => p.SupplierId == request.SupplierId.Value);
+        if (request.Status.HasValue)
+            query = query.Where(p => p.Status == request.Status.Value);
+        if (request.WarehouseId.HasValue)
+            query = query.Where(p => p.DestinationWarehouseId == request.WarehouseId.Value);
+        if (request.From.HasValue)
+            query = query.Where(p => p.OrderDate >= request.From.Value);
+        if (request.To.HasValue)
+            query = query.Where(p => p.OrderDate <= request.To.Value);
+        if (!string.IsNullOrWhiteSpace(request.Search))
+        {
+            var term = request.Search.Trim();
+            query = query.Where(p =>
+                p.PoNumber.Contains(term) ||
+                (p.ExternalReference != null && p.ExternalReference.Contains(term)) ||
+                (p.Notes != null && p.Notes.Contains(term)));
+        }
 
         var total = await query.CountAsync(cancellationToken);
-        var items = await query.OrderByDescending(p => p.OrderDate).Skip((request.PageNumber - 1) * request.PageSize).Take(request.PageSize).ToListAsync(cancellationToken);
+        var items = await query
+            .OrderByDescending(p => p.OrderDate)
+            .Skip((request.PageNumber - 1) * request.PageSize)
+            .Take(request.PageSize)
+            .ToListAsync(cancellationToken);
 
-        return PagedResult<PurchaseOrderDto>.Success(_mapper.Map<List<PurchaseOrderDto>>(items), total, request.PageNumber, request.PageSize);
+        var dtos = new List<PurchaseOrderDto>(items.Count);
+        foreach (var po in items)
+            dtos.Add(await PurchaseOrderMapper.ToDtoAsync(context, po, cancellationToken));
+
+        return PagedResult<PurchaseOrderDto>.Success(dtos, total, request.PageNumber, request.PageSize);
     }
 }
 
-public class GetPurchaseOrderByIdQueryHandler : IRequestHandler<GetPurchaseOrderByIdQuery, Result<PurchaseOrderDto>>
+public class GetPurchaseOrderByIdQueryHandler(IApplicationDbContext context)
+    : IRequestHandler<GetPurchaseOrderByIdQuery, Result<PurchaseOrderDto>>
 {
-    private readonly IApplicationDbContext _context;
-    private readonly IMapper _mapper;
-
-    public GetPurchaseOrderByIdQueryHandler(IApplicationDbContext context, IMapper mapper)
-        => (_context, _mapper) = (context, mapper);
-
     public async Task<Result<PurchaseOrderDto>> Handle(GetPurchaseOrderByIdQuery request, CancellationToken cancellationToken)
     {
-        var po = await _context.PurchaseOrders.AsNoTracking().Include(p => p.Lines).FirstOrDefaultAsync(p => p.Id == request.Id, cancellationToken);
-        if (po == null) return Result<PurchaseOrderDto>.Failure("PurchaseOrderNotFound", "Purchase order not found.");
-        return Result<PurchaseOrderDto>.Success(_mapper.Map<PurchaseOrderDto>(po));
+        var po = await context.PurchaseOrders.AsNoTracking().Include(p => p.Lines)
+            .FirstOrDefaultAsync(p => p.Id == request.Id, cancellationToken);
+        if (po is null)
+            return Result<PurchaseOrderDto>.Failure("PurchaseOrderNotFound", "Purchase order not found.");
+        return Result<PurchaseOrderDto>.Success(await PurchaseOrderMapper.ToDtoAsync(context, po, cancellationToken));
+    }
+}
+
+public class GetPurchaseOrderDashboardQueryHandler(IApplicationDbContext context)
+    : IRequestHandler<GetPurchaseOrderDashboardQuery, Result<PurchaseOrderDashboardDto>>
+{
+    public async Task<Result<PurchaseOrderDashboardDto>> Handle(
+        GetPurchaseOrderDashboardQuery request, CancellationToken cancellationToken)
+    {
+        var today = DateTimeOffset.UtcNow.Date;
+        var tomorrow = today.AddDays(1);
+        var now = DateTimeOffset.UtcNow;
+
+        var rows = await context.PurchaseOrders.AsNoTracking()
+            .Include(p => p.Lines)
+            .Where(p => p.TenantId == request.TenantId)
+            .ToListAsync(cancellationToken);
+
+        var dto = new PurchaseOrderDashboardDto(
+            OrdersToday: rows.Count(p => p.OrderDate >= today && p.OrderDate < tomorrow),
+            ApprovedCount: rows.Count(p => p.Status is PurchaseOrderStatus.Approved or PurchaseOrderStatus.SentToSupplier),
+            AwaitingReceiptCount: rows.Count(p =>
+                (p.Status is PurchaseOrderStatus.Approved or PurchaseOrderStatus.SentToSupplier or PurchaseOrderStatus.PartiallyReceived)
+                && p.RemainingQuantity > 0),
+            ClosedCount: rows.Count(p => p.Status is PurchaseOrderStatus.Closed or PurchaseOrderStatus.FullyReceived),
+            OverdueCount: rows.Count(p =>
+                p.ExpectedDeliveryDate.HasValue
+                && p.ExpectedDeliveryDate.Value < now
+                && p.Status is not (PurchaseOrderStatus.Closed or PurchaseOrderStatus.Cancelled
+                    or PurchaseOrderStatus.FullyReceived or PurchaseOrderStatus.Rejected)),
+            TotalValue: rows
+                .Where(p => p.Status is not (PurchaseOrderStatus.Cancelled or PurchaseOrderStatus.Rejected))
+                .Sum(p => p.TotalAmount));
+
+        return Result<PurchaseOrderDashboardDto>.Success(dto);
     }
 }
 

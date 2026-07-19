@@ -1,0 +1,122 @@
+<section class="auth-page">
+  <nav class="tabs">
+    <a class="tab" routerLink="/finance/roles">{{ t('auth.tab.roles') }}</a>
+    <a class="tab active" routerLink="/finance/user-permissions">{{ t('auth.tab.userPermissions') }}</a>
+    <a class="tab" routerLink="/finance/users">{{ t('auth.tab.users') }}</a>
+  </nav>
+
+  @if (error()) {
+    <div class="banner err">{{ error() }}</div>
+  }
+  @if (success()) {
+    <div class="banner ok">{{ success() }}</div>
+  }
+
+  <section class="filter-bar">
+    <label>
+      <span>{{ t('auth.filter.user') }} *</span>
+      <select [ngModel]="selectedUserId() ?? ''" (ngModelChange)="onUserChange($event)">
+        <option value="" disabled>{{ t('auth.filter.selectUser') }}</option>
+        @for (u of filteredUsers(); track u.id) {
+          <option [value]="u.id">{{ userLabel(u) }}</option>
+        }
+      </select>
+    </label>
+    <label>
+      <span>{{ t('auth.filter.branch') }}</span>
+      <select [ngModel]="filterBranchId()" (ngModelChange)="onBranchChange($event)">
+        <option value="">{{ t('auth.filter.allBranches') }}</option>
+        @for (b of branches(); track b.id) {
+          <option [value]="b.id">{{ b.nameAr }}</option>
+        }
+      </select>
+    </label>
+    <label class="role-display">
+      <span>{{ t('auth.filter.role') }}</span>
+      <span class="role-value">{{ roleNamesLabel() }}</span>
+    </label>
+  </section>
+
+  <section class="matrix-panel single">
+    <header>
+      <div>
+        <h2>
+          {{ t('auth.userPermissionsHeader') }}
+          @if (selectedUser(); as user) {
+            <span class="role-name">{{ userLabel(user) }}</span>
+          }
+        </h2>
+        <p class="muted">{{ t('auth.selectedCount') }}: {{ selectedCount() }} · {{ dirty() ? t('auth.unsaved') : t('auth.savedState') }}</p>
+      </div>
+      <div class="search-box compact">
+        <mat-icon>filter_list</mat-icon>
+        <input
+          type="search"
+          [ngModel]="matrixSearch()"
+          (ngModelChange)="matrixSearch.set($event)"
+          [placeholder]="t('auth.searchModules')"
+        />
+      </div>
+    </header>
+
+    @if (loading()) {
+      <p class="muted pad">{{ t('common.loading') }}</p>
+    } @else if (!selectedUser()) {
+      <p class="muted pad">{{ t('auth.pickUser') }}</p>
+    } @else {
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>{{ t('auth.col.menu') }}</th>
+              @for (a of actions; track a.key) {
+                <th>{{ t(a.labelKey) }}</th>
+              }
+            </tr>
+          </thead>
+          <tbody>
+            @for (row of matrixRows(); track row.module) {
+              <tr>
+                <td class="menu-cell">{{ row.label }}</td>
+                @for (cell of row.cells; track cell.action) {
+                  <td class="check-cell" [class.inherited]="isInherited(cell.permissionId)">
+                    @if (cell.permissionId) {
+                      <input
+                        type="checkbox"
+                        [checked]="isChecked(cell.permissionId)"
+                        [disabled]="!canManagePermissions()"
+                        [title]="isInherited(cell.permissionId) ? t('auth.inheritedTitle') : ''"
+                        (change)="toggleCell(cell.permissionId)"
+                      />
+                    } @else {
+                      <span class="na">—</span>
+                    }
+                  </td>
+                }
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    }
+
+    <footer class="matrix-actions">
+      <button type="button" class="btn success" [disabled]="!dirty() || !canManagePermissions() || saving() || !selectedUser()" (click)="savePermissions()">
+        <mat-icon>save</mat-icon>
+        {{ t('auth.savePermissions') }}
+      </button>
+      <button type="button" class="btn warning" [disabled]="!canManagePermissions() || saving() || !selectedUser()" (click)="initFromRole()">
+        <mat-icon>restart_alt</mat-icon>
+        {{ t('auth.initFromRole') }}
+      </button>
+      <button type="button" class="btn info" [disabled]="!canManagePermissions() || !selectedUser()" (click)="fullPermissions()">
+        <mat-icon>done_all</mat-icon>
+        {{ t('auth.fullPermissions') }}
+      </button>
+      <button type="button" class="btn danger" [disabled]="!canManagePermissions() || !selectedUser()" (click)="clearAll()">
+        <mat-icon>clear</mat-icon>
+        {{ t('auth.clearAll') }}
+      </button>
+    </footer>
+  </section>
+</section>

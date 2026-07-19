@@ -46,6 +46,16 @@ public class RoleController : BaseApiController
     public async Task<IActionResult> GetPermissions()
         => HandleResult(await Mediator.Send(new GetPermissionsQuery()));
 
+    [HttpGet($"{ApiRoutes.Identity.Roles}/{{id:guid}}/permissions")]
+    [HasPermission(Permissions.Identity.PermissionsView)]
+    public async Task<IActionResult> GetRolePermissions(Guid id)
+        => HandleResult(await Mediator.Send(new GetRolePermissionsQuery(id)));
+
+    [HttpPut($"{ApiRoutes.Identity.Roles}/{{id:guid}}/permissions")]
+    [HasPermission(Permissions.Identity.PermissionsManage)]
+    public async Task<IActionResult> ReplacePermissions(Guid id, [FromBody] List<Guid> permissionIds)
+        => HandleResult(await Mediator.Send(new ReplaceRolePermissionsCommand(id, permissionIds)));
+
     [HttpPost($"{ApiRoutes.Identity.Roles}/{{id:guid}}/permissions/assign")]
     [HasPermission(Permissions.Identity.PermissionsManage)]
     public async Task<IActionResult> AssignPermissions(Guid id, [FromBody] List<Guid> permissionIds)
@@ -55,6 +65,11 @@ public class RoleController : BaseApiController
     [HasPermission(Permissions.Identity.PermissionsManage)]
     public async Task<IActionResult> RemovePermissions(Guid id, [FromBody] List<Guid> permissionIds)
         => HandleResult(await Mediator.Send(new RemovePermissionsCommand(id, permissionIds)));
+
+    [HttpPost($"{ApiRoutes.Identity.Roles}/{{id:guid}}/copy")]
+    [HasPermission(Permissions.Identity.RolesManage)]
+    public async Task<IActionResult> CopyRole(Guid id, [FromBody] CopyRoleRequest? body = null)
+        => HandleResult(await Mediator.Send(new CopyRoleCommand(id, body?.Name, body?.NameAr)));
 
     [HttpPost($"{ApiRoutes.Identity.Users}/{{userId:guid}}/roles/assign/{{roleId:guid}}")]
     [HasPermission(Permissions.Identity.UsersManage)]
@@ -66,3 +81,5 @@ public class RoleController : BaseApiController
     public async Task<IActionResult> RemoveRoleFromUser(Guid userId, Guid roleId)
         => HandleResult(await Mediator.Send(new RemoveRoleFromUserCommand(userId, roleId)));
 }
+
+public record CopyRoleRequest(string? Name = null, string? NameAr = null);

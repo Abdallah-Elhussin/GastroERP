@@ -236,6 +236,14 @@ export class RestInventoryRepository extends InventoryRepository {
     return this.http.put<void>(`${this.base}/items/${id}`, mapToUpdatePayload(payload));
   }
 
+  deleteItem(id: string): Observable<void> {
+    return this.http.post<void>(`${this.base}/items/${id}/deactivate`, {});
+  }
+
+  activateItem(id: string): Observable<void> {
+    return this.http.post<void>(`${this.base}/items/${id}/activate`, {});
+  }
+
   getCategories(): Observable<InventoryCategory[]> {
     const params = new HttpParams().set('page', 1).set('pageSize', 200);
     return this.http.get<ApiCategory[]>(`${this.base}/categories`, { params }).pipe(
@@ -879,7 +887,7 @@ function mapCategory(c: ApiCategory): InventoryCategory {
     imageUrl: c.imageUrl,
     color: c.color,
     sortOrder: c.sortOrder ?? 0,
-    isActive: c.isActive,
+    isActive: c.isActive !== false,
     createdAt: c.createdAt
   };
 }

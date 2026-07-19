@@ -18,14 +18,23 @@ export const PURCHASES_ROUTES: Routes = [
   {
     path: 'purchase-orders',
     loadComponent: () =>
-      import('./pages/purchasing-module-placeholder.page').then(m => m.PurchasingModulePlaceholderPage),
+      import('./pages/purchase-orders.page').then(m => m.PurchaseOrdersPage),
     canActivate: [permissionGuard],
-    data: {
-      requiredPermission: 'Inventory.View',
-      moduleKey: 'pur.nav.purchaseOrders',
-      moduleCode: 'PurchaseOrders',
-      noteKey: 'pur.note.po'
-    }
+    data: { requiredPermission: 'Inventory.View' }
+  },
+  {
+    path: 'purchase-orders/new',
+    loadComponent: () =>
+      import('./pages/purchase-order-form.page').then(m => m.PurchaseOrderFormPage),
+    canActivate: [permissionGuard],
+    data: { requiredPermission: 'Inventory.Manage' }
+  },
+  {
+    path: 'purchase-orders/:id',
+    loadComponent: () =>
+      import('./pages/purchase-order-form.page').then(m => m.PurchaseOrderFormPage),
+    canActivate: [permissionGuard],
+    data: { requiredPermission: 'Inventory.View' }
   },
   {
     path: 'goods-receipts',

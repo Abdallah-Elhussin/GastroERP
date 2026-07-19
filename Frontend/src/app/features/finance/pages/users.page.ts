@@ -12,6 +12,7 @@ import {
 import { CommonModule } from '@angular/common';
 import { AbstractControl, FormBuilder, ReactiveFormsModule, ValidationErrors, Validators } from '@angular/forms';
 import { FormsModule } from '@angular/forms';
+import { RouterLink } from '@angular/router';
 import { MatIconModule } from '@angular/material/icon';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { LanguageService } from '../../../core/services/language.service';
@@ -38,7 +39,7 @@ function matchPasswords(group: AbstractControl): ValidationErrors | null {
 @Component({
   selector: 'app-users-page',
   standalone: true,
-  imports: [CommonModule, FormsModule, ReactiveFormsModule, MatIconModule, MatTooltipModule],
+  imports: [CommonModule, FormsModule, ReactiveFormsModule, RouterLink, MatIconModule, MatTooltipModule],
   templateUrl: './users.page.html',
   styleUrl: './users.page.scss',
   changeDetection: ChangeDetectionStrategy.OnPush

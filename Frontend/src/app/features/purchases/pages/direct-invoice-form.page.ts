@@ -59,7 +59,8 @@ export class DirectInvoiceFormPage implements OnInit {
   dueDate = signal<string | null>(null);
   status = signal('Draft');
   nature = signal<number>(NATURE_INVENTORY);
-  paymentMode = signal<number>(1);
+  paymentMode = signal<number>(0);
+  settlementMethod = signal('');
   supplierId = signal<string | null>(null);
   warehouseId = signal<string | null>(null);
   currency = signal('SAR');
@@ -92,11 +93,7 @@ export class DirectInvoiceFormPage implements OnInit {
   isPosted = computed(() => this.status() === 'Posted');
   isNew = computed(() => !this.docId());
   isInventoryNature = computed(() => this.nature() === NATURE_INVENTORY);
-  pageTitle = computed(() =>
-    this.isNew()
-      ? this.t('pur.dpi.createTitle')
-      : `${this.t('pur.dpi.docTitle')} — ${this.invoiceNumber()}`
-  );
+  pageTitle = computed(() => this.t('pur.dpi.docTitle'));
   statusLabel = computed(() => {
     switch (this.status()) {
       case 'Approved':
@@ -145,9 +142,14 @@ export class DirectInvoiceFormPage implements OnInit {
       .subscribe(s => this.suppliers.set(s));
 
     const pull = () => {
-      this.warehouses.set([...this.inventory.warehouses()]);
+      const wh = [...this.inventory.warehouses()];
+      this.warehouses.set(wh);
       this.items.set([...this.inventory.items()]);
       this.units.set([...this.inventory.units()]);
+      if (!this.warehouseId() && wh.length > 0) {
+        const preferred = wh.find(w => w.isDefault && w.isActive) ?? wh.find(w => w.isActive) ?? wh[0];
+        this.warehouseId.set(preferred.id);
+      }
     };
     pull();
     setTimeout(pull, 400);
@@ -171,6 +173,18 @@ export class DirectInvoiceFormPage implements OnInit {
     }
   }
 
+  onPaymentModeChange(value: number): void {
+    if (!this.isDraft()) return;
+    this.paymentMode.set(Number(value));
+    if (Number(value) === 2) {
+      this.settlementMethod.set('cash');
+    } else if (Number(value) === 1) {
+      this.settlementMethod.set('credit');
+    } else {
+      this.settlementMethod.set('');
+    }
+  }
+
   addLine(): void {
     if (!this.isDraft()) return;
     const draft: DirectInvoiceLineDraft = {
@@ -180,12 +194,13 @@ export class DirectInvoiceFormPage implements OnInit {
       unitPrice: 0,
       discountPercent: 0,
       discountAmount: 0,
-      taxPercent: 0,
+      taxPercent: 15,
       taxAmount: 0,
       lineNet: 0,
       lineTotal: 0,
       returnedQuantity: 0,
-      remainingToReturn: 0
+      remainingToReturn: 0,
+      lineWarehouseId: this.warehouseId()
     };
     this.lines.set([...this.lines(), draft]);
     this.selectedLineIndex.set(this.lines().length - 1);
@@ -236,7 +251,11 @@ export class DirectInvoiceFormPage implements OnInit {
       this.error.set(this.t('pur.dpi.validation.supplier'));
       return;
     }
-    if (this.isInventoryNature() && !this.warehouseId() && this.lines().some(l => !l.lineWarehouseId)) {
+    if (this.paymentMode() !== 1 && this.paymentMode() !== 2) {
+      this.error.set(this.t('pur.dpi.validation.invoiceType'));
+      return;
+    }
+    if (!this.warehouseId() && this.lines().some(l => !l.lineWarehouseId)) {
       this.error.set(this.t('pur.dpi.validation.warehouse'));
       return;
     }
@@ -248,6 +267,7 @@ export class DirectInvoiceFormPage implements OnInit {
 
     this.saving.set(true);
     this.error.set(null);
+    this.nature.set(NATURE_INVENTORY);
     const linePayload = this.buildLinePayload(activeLines);
 
     if (this.docId()) {
@@ -258,7 +278,7 @@ export class DirectInvoiceFormPage implements OnInit {
         supplierInvoiceNumber: this.supplierInvoiceNumber() || null,
         notes: this.notes() || null,
         warehouseId: this.warehouseId(),
-        nature: this.nature(),
+        nature: NATURE_INVENTORY,
         exchangeRate: this.exchangeRate(),
         externalReference: this.externalReference() || null,
         discountAmount: this.headerDiscountAmount(),
@@ -287,7 +307,7 @@ export class DirectInvoiceFormPage implements OnInit {
       dueDate: this.dueDate() ? this.toDateOnly(this.dueDate()!) : null,
       supplierInvoiceNumber: this.supplierInvoiceNumber() || null,
       notes: this.notes() || null,
-      nature: this.nature(),
+      nature: NATURE_INVENTORY,
       exchangeRate: this.exchangeRate(),
       externalReference: this.externalReference() || null,
       discountAmount: this.headerDiscountAmount(),
@@ -368,7 +388,9 @@ export class DirectInvoiceFormPage implements OnInit {
     this.dueDate.set(doc.dueDate ? this.toDateInput(doc.dueDate) : null);
     this.status.set(this.mapStatus(doc.status));
     this.nature.set(Number(doc.nature) || NATURE_INVENTORY);
-    this.paymentMode.set(Number(doc.paymentMode) || 1);
+    const mode = Number(doc.paymentMode) || 1;
+    this.paymentMode.set(mode);
+    this.settlementMethod.set(mode === 2 ? 'cash' : 'credit');
     this.supplierId.set(doc.supplierId);
     this.warehouseId.set(doc.warehouseId ?? null);
     this.currency.set(doc.currency || 'SAR');

@@ -67,6 +67,20 @@ public sealed class RolePermissionConfiguration : IEntityTypeConfiguration<RoleP
     }
 }
 
+public sealed class UserPermissionConfiguration : IEntityTypeConfiguration<UserPermission>
+{
+    public void Configure(EntityTypeBuilder<UserPermission> builder)
+    {
+        builder.ToTable("UserPermissions");
+        builder.HasKey(x => x.Id);
+        builder.Property(x => x.Effect).HasConversion<byte>();
+        builder.HasQueryFilter(x => !x.IsDeleted);
+        builder.HasIndex(x => new { x.UserId, x.PermissionId }).IsUnique().HasFilter("[IsDeleted] = 0");
+        builder.HasIndex(x => x.TenantId).HasFilter("[IsDeleted] = 0");
+        builder.Property<byte[]>("RowVersion").IsRowVersion();
+    }
+}
+
 public sealed class PermissionConfiguration : IEntityTypeConfiguration<Permission>
 {
     public void Configure(EntityTypeBuilder<Permission> builder)

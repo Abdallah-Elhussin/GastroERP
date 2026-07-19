@@ -4,7 +4,7 @@ import { ActivatedRoute, RouterModule } from '@angular/router';
 import { MatIconModule } from '@angular/material/icon';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { map } from 'rxjs';
-import { LanguageService } from '../../core/services/language.service';
+import { LanguageService } from '../../../core/services/language.service';
 
 @Component({
   selector: 'app-finance-ops-module-placeholder-page',

@@ -67,6 +67,7 @@ public class ApplicationDbContext : DbContext, IApplicationDbContext
     public DbSet<PermissionCategory> PermissionCategories => Set<PermissionCategory>();
     public DbSet<PermissionGroup> PermissionGroups => Set<PermissionGroup>();
     public DbSet<RolePermission> RolePermissions => Set<RolePermission>();
+    public DbSet<UserPermission> UserPermissions => Set<UserPermission>();
     public DbSet<UserSession> UserSessions => Set<UserSession>();
     public DbSet<RefreshTokenEntity> RefreshTokens => Set<RefreshTokenEntity>();
 

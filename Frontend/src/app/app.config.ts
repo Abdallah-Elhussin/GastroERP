@@ -7,7 +7,7 @@ import { provideAnimationsAsync } from '@angular/platform-browser/animations/asy
 import { MediaRepository } from './core/repositories/media.repository';
 import { RestMediaRepository } from './core/repositories/rest-media.repository';
 import { BrandingRepository } from './core/repositories/branding.repository';
-import { RestBrandingRepository } from './core/repositories/rest-branding.repository';
+import { MockBrandingRepository } from './core/repositories/mock-branding.repository';
 import { PosRepository } from './core/repositories/pos.repository';
 import { RestPosRepository } from './core/repositories/rest-pos.repository';
 import { KitchenRepository } from './core/repositories/kitchen.repository';
@@ -41,7 +41,7 @@ export const appConfig: ApplicationConfig = {
     provideAnimationsAsync(),
     provideHttpClient(withInterceptors([authInterceptor])),
     { provide: MediaRepository, useClass: RestMediaRepository },
-    { provide: BrandingRepository, useClass: RestBrandingRepository },
+    { provide: BrandingRepository, useClass: MockBrandingRepository },
     { provide: PosRepository, useClass: RestPosRepository },
     { provide: KitchenRepository, useClass: RestKitchenRepository },
     { provide: SettingsRepository, useClass: RestSettingsRepository },

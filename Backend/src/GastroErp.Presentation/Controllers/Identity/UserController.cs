@@ -80,4 +80,19 @@ public class UserController : BaseApiController
     [HasPermission(Permissions.Identity.UsersResetPassword)]
     public async Task<IActionResult> ResetPassword(Guid id, [FromBody] ResetUserPasswordDto request)
         => HandleResult(await Mediator.Send(new AdminResetUserPasswordCommand(id, request.NewPassword)));
+
+    [HttpGet($"{ApiRoutes.Identity.Users}/{{id:guid}}/permissions")]
+    [HasPermission(Permissions.Identity.PermissionsView)]
+    public async Task<IActionResult> GetUserPermissions(Guid id)
+        => HandleResult(await Mediator.Send(new GetUserPermissionsStateQuery(id)));
+
+    [HttpPut($"{ApiRoutes.Identity.Users}/{{id:guid}}/permissions")]
+    [HasPermission(Permissions.Identity.PermissionsManage)]
+    public async Task<IActionResult> ReplaceUserPermissions(Guid id, [FromBody] List<Guid> permissionIds)
+        => HandleResult(await Mediator.Send(new ReplaceUserEffectivePermissionsCommand(id, permissionIds)));
+
+    [HttpDelete($"{ApiRoutes.Identity.Users}/{{id:guid}}/permissions/overrides")]
+    [HasPermission(Permissions.Identity.PermissionsManage)]
+    public async Task<IActionResult> ClearUserPermissionOverrides(Guid id)
+        => HandleResult(await Mediator.Send(new ClearUserPermissionOverridesCommand(id)));
 }

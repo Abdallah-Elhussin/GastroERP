@@ -9,3 +9,4 @@ public record GetRoleByIdQuery(Guid Id) : IRequest<Result<RoleDto>>;
 
 public record PermissionDto(Guid Id, string Module, string Name, string DisplayName);
 public record GetPermissionsQuery() : IRequest<Result<IReadOnlyList<PermissionDto>>>;
+public record GetRolePermissionsQuery(Guid RoleId) : IRequest<Result<IReadOnlyList<Guid>>>;

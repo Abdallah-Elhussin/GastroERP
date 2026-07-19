@@ -12,6 +12,7 @@ import { FormsModule } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 import { MatIconModule } from '@angular/material/icon';
 import { LanguageService } from '../../core/services/language.service';
+import { AuthService } from '../../core/services/auth.service';
 import { InventoryService } from '../../core/services/inventory.service';
 import { InventoryItemDefinition } from '../../core/models/inventory.models';
 
@@ -35,6 +36,7 @@ interface InventoryListRow {
 })
 export class InventoryComponent implements OnInit {
   langService = inject(LanguageService);
+  auth = inject(AuthService);
   inventoryService = inject(InventoryService);
   private router = inject(Router);
 
@@ -43,6 +45,12 @@ export class InventoryComponent implements OnInit {
   showDeleted = signal(false);
   pageSize = signal(50);
   selectedId = signal<string | null>(null);
+
+  canManage = computed(() => this.auth.hasPermission('Inventory.Manage'));
+  canDelete = computed(() => this.canManage() && !!this.selectedId());
+  selected = computed(() =>
+    this.filteredItems().find(r => r.id === this.selectedId()) ?? null
+  );
 
   tableRows = computed(() => {
     this.langService.language();
@@ -99,6 +107,29 @@ export class InventoryComponent implements OnInit {
     const id = this.selectedId();
     if (!id) return;
     void this.router.navigate(['/inventory/items', id]);
+  }
+
+  deleteSelected(): void {
+    const id = this.selectedId();
+    if (!id || !this.canDelete()) return;
+    if (!confirm(this.t('inv.items.confirmDelete'))) return;
+
+    this.inventoryService.error.set(null);
+    this.inventoryService.deleteItem(id).subscribe({
+      next: () => {
+        this.selectedId.set(null);
+        this.refresh();
+      },
+      error: (err: { status?: number; error?: { error?: string; message?: string } }) => {
+        const detail =
+          err?.error?.error ??
+          err?.error?.message ??
+          (err?.status === 404 || err?.status === 405
+            ? this.t('inv.items.deleteApiMissing')
+            : this.t('inv.items.deleteFailed'));
+        this.inventoryService.error.set(detail);
+      }
+    });
   }
 
   refresh(): void {

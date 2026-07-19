@@ -1,0 +1,176 @@
+<section class="auth-page">
+  <nav class="tabs">
+    <a class="tab active" routerLink="/finance/roles">{{ t('auth.tab.roles') }}</a>
+    <a class="tab" routerLink="/finance/user-permissions">{{ t('auth.tab.userPermissions') }}</a>
+    <a class="tab" routerLink="/finance/users">{{ t('auth.tab.users') }}</a>
+  </nav>
+
+  @if (error()) {
+    <div class="banner err">{{ error() }}</div>
+  }
+  @if (success()) {
+    <div class="banner ok">{{ success() }}</div>
+  }
+
+  <div class="layout">
+    <aside class="roles-panel">
+      <header>
+        <h2>{{ t('auth.rolesTitle') }}</h2>
+        <div class="search-box">
+          <mat-icon>search</mat-icon>
+          <input
+            type="search"
+            [ngModel]="roleSearch()"
+            (ngModelChange)="roleSearch.set($event)"
+            [placeholder]="t('auth.searchRoles')"
+          />
+        </div>
+      </header>
+
+      <ul class="role-list">
+        @for (role of filteredRoles(); track role.id) {
+          <li
+            [class.active]="selectedRoleId() === role.id"
+            (click)="selectRole(role)"
+          >
+            <mat-icon>{{ role.isSystem ? 'admin_panel_settings' : 'badge' }}</mat-icon>
+            <div>
+              <strong>{{ roleLabel(role) }}</strong>
+              @if (role.isSystem) {
+                <span class="chip">{{ t('auth.system') }}</span>
+              }
+            </div>
+          </li>
+        } @empty {
+          <li class="empty">{{ t('auth.noRoles') }}</li>
+        }
+      </ul>
+
+      <footer class="role-actions">
+        <button type="button" class="btn success" [disabled]="!canManageRoles()" (click)="openCreate()">
+          <mat-icon>add</mat-icon>
+          {{ t('auth.add') }}
+        </button>
+        <button type="button" class="btn info" [disabled]="!selectedRole() || !canManageRoles()" (click)="openEdit()">
+          <mat-icon>edit</mat-icon>
+          {{ t('auth.edit') }}
+        </button>
+        <button type="button" class="btn" [disabled]="!selectedRole() || !canManageRoles()" (click)="copySelected()">
+          <mat-icon>content_copy</mat-icon>
+          {{ t('auth.copy') }}
+        </button>
+      </footer>
+    </aside>
+
+    <section class="matrix-panel">
+      <header>
+        <div>
+          <h2>
+            {{ t('auth.rolePermissions') }}
+            @if (selectedRole(); as role) {
+              <span class="role-name">{{ roleLabel(role) }}</span>
+            }
+          </h2>
+          <p class="muted">{{ t('auth.selectedCount') }}: {{ selectedCount() }} · {{ dirty() ? t('auth.unsaved') : t('auth.savedState') }}</p>
+        </div>
+        <div class="search-box compact">
+          <mat-icon>filter_list</mat-icon>
+          <input
+            type="search"
+            [ngModel]="matrixSearch()"
+            (ngModelChange)="matrixSearch.set($event)"
+            [placeholder]="t('auth.searchModules')"
+          />
+        </div>
+      </header>
+
+      @if (loading()) {
+        <p class="muted pad">{{ t('common.loading') }}</p>
+      } @else if (!selectedRole()) {
+        <p class="muted pad">{{ t('auth.pickRole') }}</p>
+      } @else {
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>{{ t('auth.col.menu') }}</th>
+                @for (a of actions; track a.key) {
+                  <th>{{ t(a.labelKey) }}</th>
+                }
+              </tr>
+            </thead>
+            <tbody>
+              @for (row of matrixRows(); track row.module) {
+                <tr>
+                  <td class="menu-cell">{{ row.label }}</td>
+                  @for (cell of row.cells; track cell.action) {
+                    <td class="check-cell">
+                      @if (cell.permissionId) {
+                        <input
+                          type="checkbox"
+                          [checked]="isChecked(cell.permissionId)"
+                          [disabled]="!canManagePermissions()"
+                          (change)="toggleCell(cell.permissionId)"
+                        />
+                      } @else {
+                        <span class="na">—</span>
+                      }
+                    </td>
+                  }
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      }
+
+      <footer class="matrix-actions">
+        <button type="button" class="btn success" [disabled]="!dirty() || !canManagePermissions() || saving()" (click)="savePermissions()">
+          <mat-icon>save</mat-icon>
+          {{ t('auth.savePermissions') }}
+        </button>
+        <button type="button" class="btn info" [disabled]="!canManagePermissions()" (click)="grantAll()">
+          <mat-icon>done_all</mat-icon>
+          {{ t('auth.fullPermissions') }}
+        </button>
+        <button type="button" class="btn dark" [disabled]="!canManagePermissions()" (click)="grantViewOnly()">
+          <mat-icon>visibility</mat-icon>
+          {{ t('auth.viewOnly') }}
+        </button>
+        <button type="button" class="btn danger" [disabled]="!canManagePermissions()" (click)="clearAll()">
+          <mat-icon>clear</mat-icon>
+          {{ t('auth.clearAll') }}
+        </button>
+      </footer>
+    </section>
+  </div>
+</section>
+
+@if (showRoleModal()) {
+  <div class="modal-backdrop" (click)="closeModal()">
+    <div class="modal" (click)="$event.stopPropagation()">
+      <header>
+        <h3>{{ editingRoleId() ? t('auth.editRole') : t('auth.addRole') }}</h3>
+        <button type="button" class="icon-btn" (click)="closeModal()"><mat-icon>close</mat-icon></button>
+      </header>
+      <div class="modal-body">
+        <label>
+          <span>{{ t('auth.field.name') }} *</span>
+          <input type="text" [ngModel]="formName()" (ngModelChange)="formName.set($event)" [disabled]="!!selectedRole()?.isSystem && !!editingRoleId()" />
+        </label>
+        <label>
+          <span>{{ t('auth.field.nameAr') }}</span>
+          <input type="text" [ngModel]="formNameAr()" (ngModelChange)="formNameAr.set($event)" [disabled]="!!selectedRole()?.isSystem && !!editingRoleId()" />
+        </label>
+        <label class="full">
+          <span>{{ t('auth.field.description') }}</span>
+          <textarea rows="3" [ngModel]="formDescription()" (ngModelChange)="formDescription.set($event)"></textarea>
+        </label>
+      </div>
+      <footer>
+        <button type="button" class="btn" (click)="closeModal()">{{ t('common.cancel') }}</button>
+        <button type="button" class="btn success" [disabled]="saving()" (click)="saveRole()">{{ t('auth.save') }}</button>
+      </footer>
+    </div>
+  </div>
+}

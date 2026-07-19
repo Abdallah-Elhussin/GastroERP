@@ -28,6 +28,7 @@ public class AuthCommandHandlers :
     private readonly IRefreshTokenService _refreshTokenService;
     private readonly IAuthSessionService _authSessionService;
     private readonly ICurrentUser _currentUser;
+    private readonly GastroErp.Application.Common.Interfaces.Authorization.IEffectivePermissionService _effectivePermissions;
     private readonly AuthJwtSettings _jwtSettings;
 
     public AuthCommandHandlers(
@@ -38,6 +39,7 @@ public class AuthCommandHandlers :
         IRefreshTokenService refreshTokenService,
         IAuthSessionService authSessionService,
         ICurrentUser currentUser,
+        GastroErp.Application.Common.Interfaces.Authorization.IEffectivePermissionService effectivePermissions,
         IOptions<AuthJwtSettings> jwtSettings)
     {
         _context = context;
@@ -47,6 +49,7 @@ public class AuthCommandHandlers :
         _refreshTokenService = refreshTokenService;
         _authSessionService = authSessionService;
         _currentUser = currentUser;
+        _effectivePermissions = effectivePermissions;
         _jwtSettings = jwtSettings.Value;
     }
 
@@ -184,7 +187,8 @@ public class AuthCommandHandlers :
             select role.Name
         ).ToListAsync(cancellationToken);
 
-        var claims = _claimsFactory.CreateClaims(user, roleNames);
+        var permissionNames = await _effectivePermissions.GetPermissionNamesAsync(user.Id, cancellationToken);
+        var claims = _claimsFactory.CreateClaims(user, roleNames, permissionNames);
         var accessToken = _jwtTokenGenerator.GenerateToken(claims);
         var refreshToken = existingRefreshToken ?? _refreshTokenService.GenerateRefreshToken();
 

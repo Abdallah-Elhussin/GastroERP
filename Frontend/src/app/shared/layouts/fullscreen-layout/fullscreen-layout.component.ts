@@ -6,7 +6,7 @@ import { CommonModule } from '@angular/common';
   standalone: true,
   imports: [CommonModule],
   template: `
-    <div class="min-h-screen w-screen bg-[var(--bg-canvas)] flex flex-col justify-between overflow-y-auto p-4 sm:p-8 text-left">
+    <div class="h-screen w-screen bg-[var(--bg-canvas)] flex flex-col justify-between overflow-y-auto p-4 sm:p-8 text-left">
       <!-- Fullscreen banner logo -->
       <header class="max-w-4xl mx-auto w-full flex items-center justify-between py-4 select-none">
         <div class="flex items-center gap-3">
@@ -33,6 +33,7 @@ import { CommonModule } from '@angular/common';
       display: block;
       width: 100vw;
       height: 100vh;
+      overflow: hidden;
     }
   `],
   changeDetection: ChangeDetectionStrategy.OnPush

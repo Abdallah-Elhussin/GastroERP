@@ -2,56 +2,7 @@ using GastroErp.Domain.Enums;
 
 namespace GastroErp.Application.Features.Inventory.DTOs;
 
-// ─── PurchaseOrder DTOs ───────────────────────────────────────────────────────
-
-public record PurchaseOrderDto(
-    Guid Id,
-    Guid TenantId,
-    Guid SupplierId,
-    string SupplierNameAr,
-    Guid DestinationWarehouseId,
-    string WarehouseNameAr,
-    string PoNumber,
-    DateTimeOffset OrderDate,
-    DateTimeOffset? ExpectedDeliveryDate,
-    PurchaseOrderStatus Status,
-    decimal TotalAmount,
-    string Currency,
-    string? Notes,
-    int LineCount,
-    DateTime CreatedAt
-);
-
-public record CreatePurchaseOrderDto(
-    Guid TenantId,
-    Guid SupplierId,
-    Guid DestinationWarehouseId,
-    string PoNumber,
-    DateTimeOffset ExpectedDeliveryDate,
-    string Currency = "SAR",
-    string? Notes = null
-);
-
-public record AddPurchaseOrderLineDto(
-    Guid InventoryItemId,
-    Guid UnitId,
-    decimal Quantity,
-    decimal UnitPrice,
-    decimal TaxAmount = 0
-);
-
-public record PurchaseOrderLineDto(
-    Guid Id,
-    Guid InventoryItemId,
-    string ItemNameAr,
-    Guid UnitId,
-    string UnitNameAr,
-    decimal Quantity,
-    decimal UnitPrice,
-    decimal TaxAmount,
-    decimal ReceivedQuantity,
-    decimal LineTotal
-);
+// Purchase Order DTOs live in PurchaseOrderDtos.cs
 
 // ─── GoodsReceipt DTOs ────────────────────────────────────────────────────────
 

@@ -38,7 +38,14 @@
           <mat-icon>search</mat-icon>
           <ul *ngIf="lookupOpen()" class="lookup-list">
             <li *ngFor="let c of categoryOptions()" (mousedown)="pickCategory(c)">{{ catLabel(c) }}</li>
-            <li *ngIf="!categoryOptions().length" class="muted">{{ t('inv.quick.noResults') }}</li>
+            <li *ngIf="!categoryOptions().length" class="muted">
+              @if (inventoryService.error()) {
+                {{ inventoryService.error() }}
+              } @else {
+                {{ t('inv.quick.noResults') }}
+                — <a routerLink="/inventory/categories">{{ t('inv.nav.categories') }}</a>
+              }
+            </li>
           </ul>
         </div>
         <small *ngIf="selectedCategoryLabel()">{{ selectedCategoryLabel() }}</small>

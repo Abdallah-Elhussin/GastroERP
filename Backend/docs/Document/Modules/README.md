@@ -14,6 +14,7 @@
 | Menu & Catalog | [08-MENU_CATALOG_MODULE.md](../08-MENU_CATALOG_MODULE.md) | `/api/v1/menu` |
 | Inventory Management | [09-Inventory-Analysis.md](../09-Inventory-Analysis.md) | `/api/v1/inventory` |
 | **Back Office Sales** | [BackOffice-Sales-Module-Plan.md](./BackOffice-Sales-Module-Plan.md) | `/api/v1/back-office-sales` *(مخطط)* |
+| **Authorization & Permissions** | [Authorization-Permissions-Module-Plan.md](./Authorization-Permissions-Module-Plan.md) | `/api/v1/identity` + `/finance/roles` |
 | POS & Sales (تشغيل نقاط البيع) | [16 - POS & Sales Domain Design.md](../16%20-%20POS%20&%20Sales%20Domain%20Design.md) | `/api/v1/sales` |
 | Finance & Accounting | [22-Finance & Accounting Integration.md](../22-Finance%20&%20Accounting%20Integration.md) | `/api/v1/finance` |
 | CRM & Loyalty | [21 -CRM & Loyalty Management.md](../21%20-CRM%20&%20Loyalty%20Management.md) | `/api/v1/sales` (CRM) |

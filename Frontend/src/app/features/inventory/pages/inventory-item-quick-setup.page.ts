@@ -74,7 +74,7 @@ export class InventoryItemQuickSetupPage implements OnInit {
   );
 
   classificationOptions = computed(() => {
-    const all = this.inventoryService.categories().filter(c => c.isActive);
+    const all = this.inventoryService.categories().filter(c => c.isActive !== false);
     const roots = all.filter(c => !c.parentCategoryId);
     return this.filterCats(roots.length ? roots : all, this.classificationQuery());
   });
@@ -196,14 +196,14 @@ export class InventoryItemQuickSetupPage implements OnInit {
   }
 
   private filterCats(rows: InventoryCategory[], q: string): InventoryCategory[] {
-    const active = rows.filter(c => c.isActive);
+    const active = rows.filter(c => c.isActive !== false);
     const query = q.trim().toLowerCase();
     if (!query) return active.slice(0, 14);
     return active.filter(c => this.catLabel(c).toLowerCase().includes(query)).slice(0, 14);
   }
 
   private filterUnits(rows: InventoryUnit[], q: string): InventoryUnit[] {
-    const active = rows.filter(u => u.isActive);
+    const active = rows.filter(u => u.isActive !== false);
     const query = q.trim().toLowerCase();
     if (!query) return active.slice(0, 14);
     return active.filter(u => this.unitLabel(u).toLowerCase().includes(query)).slice(0, 14);

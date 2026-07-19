@@ -89,12 +89,17 @@ public record RemoveSupplierAttachmentCommand(Guid SupplierId, Guid AttachmentId
 
 // ─── PurchaseOrder Commands ───────────────────────────────────────────────────
 public record CreatePurchaseOrderCommand(CreatePurchaseOrderDto Dto) : IRequest<Result<PurchaseOrderDto>>;
+public record UpdatePurchaseOrderCommand(Guid Id, UpdatePurchaseOrderDto Dto) : IRequest<Result<PurchaseOrderDto>>;
+public record DeletePurchaseOrderCommand(Guid Id) : IRequest<Result>;
+public record CopyPurchaseOrderCommand(Guid Id) : IRequest<Result<PurchaseOrderDto>>;
 public record AddPurchaseOrderLineCommand(Guid PurchaseOrderId, AddPurchaseOrderLineDto Dto) : IRequest<Result>;
 public record RemovePurchaseOrderLineCommand(Guid PurchaseOrderId, Guid LineId) : IRequest<Result>;
 public record ApprovePurchaseOrderCommand(Guid Id) : IRequest<Result>;
 public record SubmitPurchaseOrderForApprovalCommand(Guid Id) : IRequest<Result>;
 public record SendPurchaseOrderToSupplierCommand(Guid Id) : IRequest<Result>;
 public record CancelPurchaseOrderCommand(Guid Id) : IRequest<Result>;
+public record RejectPurchaseOrderCommand(Guid Id) : IRequest<Result>;
+public record ClosePurchaseOrderCommand(Guid Id) : IRequest<Result>;
 
 // ─── GoodsReceipt Commands ────────────────────────────────────────────────────
 public record CreateGoodsReceiptCommand(CreateGoodsReceiptDto Dto) : IRequest<Result<GoodsReceiptDto>>;
@@ -186,7 +191,3 @@ public record SeedPurchaseReturnReasonsCommand(Guid TenantId) : IRequest<Result<
 public record ReserveStockCommand(Guid TenantId, ReserveStockDto Dto) : IRequest<Result<InventoryReservationDto>>;
 public record ReleaseStockCommand(Guid Id) : IRequest<Result>;
 public record ExpireStockReservationCommand(Guid Id) : IRequest<Result>;
-
-// ─── Additional PurchaseOrder Commands ─────────────────────────────────────────
-public record RejectPurchaseOrderCommand(Guid Id) : IRequest<Result>;
-public record ClosePurchaseOrderCommand(Guid Id) : IRequest<Result>;

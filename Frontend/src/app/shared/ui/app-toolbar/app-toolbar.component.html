@@ -1,122 +1,260 @@
-<header class="h-16 bg-[var(--bg-surface)] border-b border-[var(--border-color)] px-6 flex items-center justify-between select-none">
-  
-  <!-- Left Side: Command Search Button -->
-  <div class="flex items-center gap-4">
-    <button 
-      (click)="openPaletteCommand()" 
-      class="flex items-center gap-2 bg-[var(--bg-canvas)] border border-[var(--border-color)] px-3 py-1.5 rounded-xl text-xs text-[var(--text-muted)] font-semibold hover:bg-[var(--bg-surface-hover)] shadow-inner select-none cursor-pointer transition-colors"
-      title="{{ t('toolbar.searchHint') }}"
-    >
-      <mat-icon class="text-sm">search</mat-icon>
-      <span>{{ t('toolbar.search') }}</span>
-      <span class="text-[9px] bg-[var(--bg-surface)] border border-[var(--border-color)] px-1 rounded font-mono font-bold uppercase">Ctrl+K</span>
-    </button>
-  </div>
-
-  <!-- Right Side: Config actions dropdown -->
-  <div class="flex items-center gap-3 sm:gap-4">
+<div class="flex flex-col w-full select-none">
+  <!-- Top 64px Header -->
+  <header class="premium-header h-16 px-6 flex items-center justify-between transition-all duration-300">
     
-    <!-- Star current route button -->
-    <button 
-      mat-icon-button 
-      (click)="toggleBookmark()" 
-      [class.text-amber-500]="hasBookmark()" 
-      class="hover:bg-[var(--bg-surface-hover)] rounded-xl"
-      title="{{ t('toolbar.starPage') }}"
-    >
-      <mat-icon class="text-base">{{ hasBookmark() ? 'star' : 'star_border' }}</mat-icon>
-    </button>
-
-    <!-- Bookmarks dropdown list -->
-    <button 
-      mat-icon-button 
-      [matMenuTriggerFor]="bookmarksMenu" 
-      class="hover:bg-[var(--bg-surface-hover)] rounded-xl"
-      title="{{ t('toolbar.bookmarksList') }}"
-    >
-      <mat-icon class="text-base text-[var(--text-secondary)]">bookmarks</mat-icon>
-    </button>
-    <mat-menu #bookmarksMenu="matMenu" class="custom-menu">
-      <div class="px-4 py-2 border-b border-[var(--border-color)] text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-wide">{{ t('toolbar.bookmarks') }}</div>
-      <button 
-        mat-menu-item 
-        *ngFor="let path of bookmarks()" 
-        [routerLink]="path"
-      >
-        <mat-icon class="text-sm text-amber-500">star</mat-icon>
-        <span>{{ getRouteLabel(path) }}</span>
-      </button>
-      <div *ngIf="bookmarks().length === 0" class="px-4 py-3 text-center text-xs text-[var(--text-muted)] font-normal">{{ t('toolbar.noBookmarks') }}</div>
-    </mat-menu>
-
-    <!-- Active branch selector -->
-    <mat-form-field appearance="outline" class="w-32 density-compact" style="margin-bottom: -1.25em;">
-      <mat-select [value]="dataService.selectedBranch()" (selectionChange)="dataService.selectedBranch.set($event.value)">
-        <mat-option *ngFor="let branch of dataService.branches" [value]="branch">
-          {{ branch }}
-        </mat-option>
-      </mat-select>
-    </mat-form-field>
-
-    <!-- Language Selector Toggle -->
-    <button mat-icon-button [matMenuTriggerFor]="langMenu" class="hover:bg-[var(--bg-surface-hover)] rounded-xl">
-      <mat-icon class="text-base text-[var(--text-secondary)]">translate</mat-icon>
-    </button>
-    <mat-menu #langMenu="matMenu" class="custom-menu">
-      <button mat-menu-item (click)="langService.setLanguage('en')">{{ t('toolbar.english') }}</button>
-      <button mat-menu-item (click)="langService.setLanguage('ar')">{{ t('toolbar.arabic') }}</button>
-    </mat-menu>
-
-    <!-- Theme toggler -->
-    <button mat-icon-button (click)="themeService.toggleTheme()" class="hover:bg-[var(--bg-surface-hover)] rounded-xl">
-      <mat-icon class="text-base text-[var(--text-secondary)]">
-        {{ themeService.isDarkMode() ? 'light_mode' : 'dark_mode' }}
-      </mat-icon>
-    </button>
-
-    <!-- Notifications bell dropdown -->
-    <button mat-icon-button [matMenuTriggerFor]="notifyMenu" (click)="markAllRead()" class="relative hover:bg-[var(--bg-surface-hover)] rounded-xl">
-      <mat-icon class="text-base text-[var(--text-secondary)]">notifications</mat-icon>
-      <span *ngIf="unreadCount() > 0" class="absolute top-1.5 right-1.5 w-2.5 h-2.5 rounded-full bg-red-500 animate-pulse"></span>
-    </button>
-    <mat-menu #notifyMenu="matMenu" class="custom-menu">
-      <div class="px-4 py-2.5 border-b border-[var(--border-color)] flex justify-between items-center text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-wide select-none">
-        <span>{{ t('toolbar.notifications') }}</span>
-        <span class="bg-red-500 text-white font-bold text-[8px] px-1.5 py-0.5 rounded-full" *ngIf="unreadCount() > 0">{{ unreadCount() }} {{ t('toolbar.new') }}</span>
-      </div>
-      <div class="w-64 max-w-xs flex flex-col divide-y divide-[var(--border-color-muted)] max-h-72 overflow-y-auto">
-        <div 
-          *ngFor="let n of notifications()" 
-          [class.bg-[var(--bg-canvas)]]="!n.read"
-          [class.bg-opacity-40]="!n.read"
-          class="px-4 py-3 text-left flex flex-col gap-1 hover:bg-[var(--bg-surface-hover)] transition-colors select-none"
-        >
-          <p class="text-xs text-[var(--text-primary)] leading-tight font-medium">{{ t(n.textKey) }}</p>
-          <span class="text-[9px] text-[var(--text-muted)] font-semibold">{{ n.time }}</span>
+    <!-- Area 1: Logo & Stacked Breadcrumbs/Branch (Start Side) -->
+    <div class="flex items-center gap-4">
+      <!-- System Logo & Info -->
+      <div class="flex items-center gap-2">
+        <span class="w-2.5 h-2.5 rounded-full bg-emerald-500 shadow-sm animate-pulse" 
+              [class.bg-emerald-500]="connectionState() === 'online'" 
+              [class.bg-rose-500]="connectionState() === 'offline'" 
+              [class.bg-purple-500]="connectionState() === 'demo'"></span>
+        <div class="flex flex-col text-left leading-none">
+          <span class="text-xs font-black tracking-wider uppercase text-[var(--text-primary)]">GastroERP</span>
+          <span class="text-[9px] text-[var(--text-muted)] font-mono">Enterprise v1.0.0</span>
         </div>
-        <div *ngIf="notifications().length === 0" class="px-4 py-6 text-center text-xs text-[var(--text-muted)] font-normal">{{ t('toolbar.noNotifications') }}</div>
       </div>
-    </mat-menu>
+      
+      <mat-divider [vertical]="true" class="h-6 hidden md:block opacity-60"></mat-divider>
 
-    <!-- User Profile details -->
-    <div class="flex items-center gap-3 border-l border-[var(--border-color)] ps-4 cursor-pointer" [matMenuTriggerFor]="profileMenu">
-      <img 
-        src="https://images.unsplash.com/photo-1577219491135-ce391730fb2c?w=80&auto=format&fit=crop&q=80" 
-        alt="Julian Profile" 
-        class="h-8 w-8 rounded-xl object-cover shadow-sm"
-      />
-      <div class="hidden md:flex flex-col text-left leading-tight">
-        <span class="text-xs font-bold text-[var(--text-primary)]">{{ t('toolbar.userName') }}</span>
-        <span class="text-[9px] text-[var(--text-secondary)]">{{ t('toolbar.role') }}</span>
+      <!-- Breadcrumbs & Branch Info Stack -->
+      <div class="hidden md:flex flex-col text-right leading-tight select-none shrink-0">
+        <!-- Row 1: Breadcrumb path -->
+        <div class="flex items-center gap-1 text-[10px] text-[var(--text-muted)] font-semibold uppercase">
+          <span class="hover:text-[var(--text-primary)] cursor-pointer transition-colors" [routerLink]="['/dashboard']">{{ t('nav.dashboard') }}</span>
+          <mat-icon class="text-[9px] w-auto h-auto leading-none text-[var(--text-muted)] mx-0.5">chevron_right</mat-icon>
+          <span class="font-extrabold text-[var(--text-primary)]">{{ getActiveRouteLabel() }}</span>
+        </div>
+        <!-- Row 2: Selected Branch (Read-Only) -->
+        <div class="flex items-center gap-1 text-xs font-bold text-[var(--text-primary)] mt-0.5 select-none">
+          <mat-icon class="text-xs text-[var(--accent-color)] w-auto h-auto leading-none">location_on</mat-icon>
+          <span>العيادة • {{ dataService.selectedBranch() }}</span>
+        </div>
       </div>
     </div>
-    <mat-menu #profileMenu="matMenu" class="custom-menu">
-      <button mat-menu-item>{{ t('toolbar.myProfile') }}</button>
-      <button mat-menu-item>{{ t('nav.settings') }}</button>
-      <mat-divider></mat-divider>
-      <button mat-menu-item class="text-red-500" (click)="logout()">{{ t('toolbar.logout') }}</button>
-    </mat-menu>
 
+    <!-- Area 2: Global Search (Middle Area) -->
+    <div class="flex-1 max-w-md mx-6 hidden md:flex items-center">
+      <button 
+        (click)="openPaletteCommand()" 
+        class="premium-search w-full flex items-center justify-between px-3 py-1.5 rounded-[10px] text-xs text-[var(--text-muted)] font-semibold shadow-inner select-none cursor-pointer"
+        title="{{ t('toolbar.searchHint') }}"
+      >
+        <div class="flex items-center gap-2">
+          <mat-icon class="text-sm">search</mat-icon>
+          <span class="truncate text-[var(--text-secondary)]">{{ t('toolbar.searchPlaceholder') }}</span>
+        </div>
+        <span class="text-[9px] bg-[var(--bg-surface)] border border-[var(--border-color)] px-1 rounded font-mono font-bold uppercase shrink-0 text-[var(--text-primary)]">Ctrl+K</span>
+      </button>
+    </div>
+
+    <!-- Area 3: Actions & Profile Menu (End Side) -->
+    <div class="flex items-center gap-2 sm:gap-3">
+      
+
+      <!-- AI Assistant Button -->
+      <button 
+        [matMenuTriggerFor]="aiMenu" 
+        class="icon-btn relative"
+        title="{{ t('toolbar.aiState') }}"
+      >
+        <mat-icon class="text-base">psychology</mat-icon>
+        <span class="absolute top-1 right-1 w-2 h-2 rounded-full shadow-sm animate-pulse" 
+              [class.bg-emerald-500]="aiState() === 'connected'" 
+              [class.bg-amber-500]="aiState() === 'connecting'" 
+              [class.bg-rose-500]="aiState() === 'offline'"></span>
+      </button>
+      <mat-menu #aiMenu="matMenu" class="custom-menu">
+        <div class="px-4 py-2 border-b border-[var(--border-color)] flex justify-between items-center text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-wide">
+          <span>Gastro AI</span>
+          <span class="flex items-center gap-1 text-[8px] font-semibold" 
+                [class.text-emerald-500]="aiState() === 'connected'" 
+                [class.text-amber-500]="aiState() === 'connecting'" 
+                [class.text-rose-500]="aiState() === 'offline'">
+            <span class="w-1.5 h-1.5 rounded-full" 
+                  [class.bg-emerald-500]="aiState() === 'connected'" 
+                  [class.bg-amber-500]="aiState() === 'connecting'" 
+                  [class.bg-rose-500]="aiState() === 'offline'"></span>
+            {{ aiState() === 'connected' ? t('toolbar.aiState.connected') : aiState() === 'connecting' ? t('toolbar.aiState.connecting') : t('toolbar.aiState.offline') }}
+          </span>
+        </div>
+        <div class="px-4 py-3 w-64 text-xs text-[var(--text-primary)]">
+          <p class="font-semibold text-xs mb-1">💡 آخر المقترحات الذكية:</p>
+          <ul class="list-disc pl-4 text-[10px] text-[var(--text-secondary)] flex flex-col gap-1">
+            <li>تحسين مستويات مخزون اللحوم للويكند القادم.</li>
+            <li>زيادة الطلب المتوقعة على المشروبات الباردة غداً.</li>
+          </ul>
+        </div>
+      </mat-menu>
+
+      <!-- Favorites Star Button -->
+      <button 
+        [matMenuTriggerFor]="favoritesMenu" 
+        class="icon-btn"
+        [class.text-amber-500]="hasBookmark()" 
+        title="{{ t('toolbar.favorites') }}"
+      >
+        <mat-icon class="text-base">{{ hasBookmark() ? 'star' : 'star_border' }}</mat-icon>
+      </button>
+      <mat-menu #favoritesMenu="matMenu" class="custom-menu">
+        <div class="px-4 py-2 border-b border-[var(--border-color)] text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-wide select-none">شاشاتي المفضلة</div>
+        <button mat-menu-item *ngFor="let path of bookmarks()" [routerLink]="path">
+          <mat-icon class="text-sm text-amber-500">star</mat-icon>
+          <span>{{ getRouteLabel(path) }}</span>
+        </button>
+        <div *ngIf="bookmarks().length === 0" class="px-4 py-3 text-center text-xs text-[var(--text-muted)] font-normal">لا توجد صفحات مفضلة.</div>
+        <mat-divider></mat-divider>
+        <button mat-menu-item (click)="toggleBookmark()">
+          <mat-icon class="text-sm">{{ hasBookmark() ? 'star_border' : 'star' }}</mat-icon>
+          <span>{{ hasBookmark() ? 'إزالة الصفحة الحالية' : 'إضافة الصفحة الحالية' }}</span>
+        </button>
+      </mat-menu>
+
+      <!-- Notifications Bell Button -->
+      <button 
+        [matMenuTriggerFor]="notifyMenu" 
+        (click)="markAllRead()" 
+        class="icon-btn relative"
+      >
+        <mat-icon class="text-base">notifications</mat-icon>
+        <span *ngIf="unreadCount() > 0" class="absolute top-1 right-1 w-2 h-2 rounded-full bg-rose-500 animate-pulse border border-[var(--bg-surface)]"></span>
+      </button>
+      <mat-menu #notifyMenu="matMenu" class="custom-menu">
+        <div class="px-4 py-2 border-b border-[var(--border-color)] flex justify-between items-center text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-wide select-none">
+          <span>{{ t('toolbar.notifications') }}</span>
+          <span class="bg-rose-500 text-white font-bold text-[8px] px-1.5 py-0.5 rounded-full" *ngIf="unreadCount() > 0">{{ unreadCount() }} جديد</span>
+        </div>
+        <div class="px-2 py-1 border-b border-[var(--border-color)] flex items-center justify-between text-[9px] font-semibold text-[var(--text-secondary)]">
+          <span class="px-2 py-0.5 rounded bg-[var(--bg-canvas)] text-[var(--text-primary)] cursor-pointer">الكل</span>
+          <span class="px-2 py-0.5 rounded cursor-pointer">غير مقروء</span>
+          <span class="px-2 py-0.5 rounded cursor-pointer">النظام</span>
+          <span class="px-2 py-0.5 rounded cursor-pointer">المخزون</span>
+        </div>
+        <div class="w-64 max-w-xs flex flex-col divide-y divide-[var(--border-color-muted)] max-h-72 overflow-y-auto">
+          <div 
+            *ngFor="let n of notifications()" 
+            [class.bg-[var(--bg-canvas)]]="!n.read"
+            [class.bg-opacity-40]="!n.read"
+            class="px-4 py-3 text-left flex flex-col gap-1 hover:bg-[var(--bg-surface-hover)] transition-colors select-none"
+          >
+            <p class="text-xs text-[var(--text-primary)] leading-tight font-medium">{{ t(n.textKey) }}</p>
+            <span class="text-[9px] text-[var(--text-muted)] font-semibold">{{ n.time }}</span>
+          </div>
+          <div *ngIf="notifications().length === 0" class="px-4 py-6 text-center text-xs text-[var(--text-muted)] font-normal">{{ t('toolbar.noNotifications') }}</div>
+        </div>
+      </mat-menu>
+
+      <!-- Language Selector (AR | EN text button) -->
+      <button 
+        (click)="toggleLanguage()" 
+        class="flex items-center justify-center font-black text-[10px] text-[var(--text-secondary)] px-2.5 h-[36px] border border-[var(--border-color)] rounded-[10px] hover:bg-[var(--bg-surface-hover)] transition-all cursor-pointer"
+        title="تغيير اللغة"
+      >
+        <span>{{ langService.language() === 'en' ? 'AR' : 'EN' }}</span>
+      </button>
+
+      <!-- Theme Mode Toggler -->
+      <button 
+        (click)="themeService.toggleTheme()" 
+        class="icon-btn"
+        title="تغيير المظهر"
+      >
+        <mat-icon class="text-base">
+          {{ themeService.isDarkMode() ? 'light_mode' : 'dark_mode' }}
+        </mat-icon>
+      </button>
+
+      <mat-divider [vertical]="true" class="h-6 hidden sm:block opacity-60"></mat-divider>
+
+      <!-- User Profile details -->
+      <div 
+        class="flex items-center gap-2.5 cursor-pointer select-none" 
+        [matMenuTriggerFor]="profileMenu"
+      >
+        <img 
+          src="https://images.unsplash.com/photo-1577219491135-ce391730fb2c?w=80&auto=format&fit=crop&q=80" 
+          alt="Julian Profile" 
+          class="h-8 w-8 rounded-full object-cover shadow-sm ring-2 ring-[var(--border-color)] hover:ring-[var(--accent-color)] transition-all"
+        />
+        <div class="hidden md:flex flex-col text-left leading-tight">
+          <span class="text-xs font-extrabold text-[var(--text-primary)]">جوليان ستيرلينغ</span>
+          <span class="text-[9px] text-[var(--text-secondary)] font-semibold">رئيس الطهاة • وسط المدينة</span>
+        </div>
+      </div>
+      <mat-menu #profileMenu="matMenu" class="custom-menu">
+        <div class="px-4 py-2 border-b border-[var(--border-color)]">
+          <div class="font-bold text-xs text-[var(--text-primary)]">جوليان ستيرلينغ</div>
+          <div class="text-[9px] text-[var(--text-muted)]">chef.julian&#64;gastroerp.com</div>
+        </div>
+        <button mat-menu-item><mat-icon class="text-sm">person</mat-icon><span>الملف الشخصي</span></button>
+        <button mat-menu-item><mat-icon class="text-sm">vpn_key</mat-icon><span>تغيير كلمة المرور</span></button>
+        <button mat-menu-item><mat-icon class="text-sm">settings</mat-icon><span>الإعدادات</span></button>
+        <button mat-menu-item><mat-icon class="text-sm">history</mat-icon><span>سجل النشاط</span></button>
+        <mat-divider></mat-divider>
+        <button mat-menu-item class="text-rose-500" (click)="logout()">
+          <mat-icon class="text-sm text-rose-500">logout</mat-icon>
+          <span>تسجيل الخروج</span>
+        </button>
+      </mat-menu>
+
+    </div>
+  </header>
+
+  <!-- System Status Bar -->
+  <div class="h-10 bg-[var(--bg-canvas)] dark:bg-[#1E293B]/10 border-b border-[var(--border-color)] px-6 flex items-center gap-3 overflow-x-auto whitespace-nowrap scrollbar-hide select-none transition-all duration-300">
+    <!-- Connection Status -->
+    <div class="status-pill bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20">
+      <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+      <span>متصل بالإنترنت</span>
+    </div>
+
+    <mat-divider [vertical]="true" class="h-3 shrink-0 opacity-40"></mat-divider>
+
+    <!-- License -->
+    <div class="status-pill bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20">
+      <mat-icon class="text-xs w-auto h-auto leading-none">vpn_key</mat-icon>
+      <span>{{ t('toolbar.license') }}</span>
+    </div>
+
+    <mat-divider [vertical]="true" class="h-3 shrink-0 opacity-40"></mat-divider>
+
+    <!-- AI Connection -->
+    <div class="status-pill bg-purple-500/10 text-purple-600 dark:text-purple-400 border-purple-500/20">
+      <mat-icon class="text-xs w-auto h-auto leading-none">psychology</mat-icon>
+      <span>مساعد AI متصل</span>
+    </div>
+
+    <mat-divider [vertical]="true" class="h-3 shrink-0 opacity-40"></mat-divider>
+
+    <!-- ZATCA status -->
+    <div class="status-pill bg-teal-500/10 text-teal-600 dark:text-teal-400 border-teal-500/20">
+      <mat-icon class="text-xs w-auto h-auto leading-none">verified</mat-icon>
+      <span>{{ t('toolbar.zatca') }}</span>
+    </div>
+
+    <mat-divider [vertical]="true" class="h-3 shrink-0 opacity-40"></mat-divider>
+
+    <!-- Last Backup -->
+    <div class="status-pill bg-slate-500/10 text-slate-600 dark:text-slate-400 border-slate-500/20">
+      <mat-icon class="text-xs w-auto h-auto leading-none">backup</mat-icon>
+      <span>{{ t('toolbar.backup') }}</span>
+    </div>
+
+    <mat-divider [vertical]="true" class="h-3 shrink-0 opacity-40"></mat-divider>
+
+    <!-- Pending approvals -->
+    <div class="status-pill bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20 animate-pulse">
+      <mat-icon class="text-xs w-auto h-auto leading-none">pending_actions</mat-icon>
+      <span>{{ t('toolbar.pendingApprovals') }}</span>
+    </div>
+
+    <mat-divider [vertical]="true" class="h-3 shrink-0 opacity-40"></mat-divider>
+
+    <!-- Database status -->
+    <div class="status-pill bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border-indigo-500/20">
+      <mat-icon class="text-xs w-auto h-auto leading-none">database</mat-icon>
+      <span>{{ t('toolbar.database') }}</span>
+    </div>
   </div>
-
-</header>
+</div>

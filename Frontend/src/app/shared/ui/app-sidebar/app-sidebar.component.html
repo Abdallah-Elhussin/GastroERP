@@ -1,124 +1,124 @@
 <aside 
   [class.w-64]="!isCollapsed()"
   [class.w-20]="isCollapsed()"
-  class="h-full bg-[var(--bg-surface)] border-r border-[var(--border-color)] flex flex-col justify-between transition-all duration-300 overflow-hidden flex-shrink-0"
+  class="h-full bg-white dark:bg-[#0b0f19] border-e border-slate-200 dark:border-slate-800 flex flex-col justify-between transition-all duration-300 overflow-hidden flex-shrink-0"
 >
   
-  <div class="flex flex-col gap-6">
-    
-    <div class="h-16 border-b border-[var(--border-color)] px-6 flex items-center justify-between overflow-hidden select-none flex-shrink-0">
-      <div class="flex items-center gap-3">
-        <img 
-          [src]="dataService.branding().logoUrl" 
-          alt="GastroERP Logo" 
-          class="h-7 w-7 rounded-lg object-cover flex-shrink-0"
-        />
-        <span 
-          *ngIf="!isCollapsed()"
-          class="font-black text-sm tracking-wider uppercase text-[var(--text-primary)] truncate transition-all duration-200"
-        >
-          {{ dataService.branding().name }}
-        </span>
-      </div>
-      <button 
+  <!-- Header / User Profile Logo (Adapts to light/dark themes) -->
+  <div 
+    [class.px-6]="!isCollapsed()"
+    [class.px-0]="isCollapsed()"
+    [class.justify-between]="!isCollapsed()"
+    [class.justify-center]="isCollapsed()"
+    class="h-16 border-b border-slate-200 dark:border-slate-800 flex items-center overflow-hidden select-none flex-shrink-0 bg-white dark:bg-[#0b0f19]"
+  >
+    <div class="flex items-center gap-3" [class.px-4]="isCollapsed()">
+      <img 
+        src="https://images.unsplash.com/photo-1577219491135-ce391730fb2c?w=80&auto=format&fit=crop&q=80" 
+        alt="User Profile" 
+        class="h-8 w-8 rounded-full object-cover flex-shrink-0 shadow-sm border border-slate-200 dark:border-slate-700"
+      />
+      <span 
         *ngIf="!isCollapsed()"
-        (click)="toggleCollapse()"
-        class="text-[var(--text-muted)] hover:text-[var(--text-primary)] cursor-pointer"
-        title="{{ t('sidebar.collapse') }}"
+        class="font-black text-sm tracking-wider uppercase text-slate-800 dark:text-slate-100 truncate"
       >
-        <mat-icon class="text-sm">menu_open</mat-icon>
-      </button>
+        GastroERP
+      </span>
     </div>
-
-    <nav class="flex flex-col gap-1 px-4 select-none overflow-y-auto">
-      <ng-container *ngFor="let item of navItems">
-        <a 
-          *ngIf="!item.children"
-          [routerLink]="item.path"
-          routerLinkActive="bg-[var(--bg-canvas)] text-[var(--accent-color)] font-bold border-l-4 border-l-[var(--accent-color)]"
-          [class.justify-center]="isCollapsed()"
-          class="flex items-center gap-3 px-4 py-3 rounded-lg text-xs text-[var(--text-secondary)] hover:bg-[var(--bg-surface-hover)] hover:text-[var(--text-primary)] transition-all cursor-pointer"
-        >
-          <mat-icon class="text-base flex-shrink-0">{{ item.icon }}</mat-icon>
-          <span *ngIf="!isCollapsed()" class="truncate transition-opacity duration-200">{{ t(item.labelKey) }}</span>
-        </a>
-
-        <div *ngIf="item.children" class="flex flex-col gap-1">
-          <button
-            type="button"
-            (click)="toggleGroup(item.labelKey)"
-            [class.bg-[var(--bg-canvas)]="isGroupActive(item)"
-            [class.text-[var(--accent-color)]="isGroupActive(item)"
-            [class.font-bold]="isGroupActive(item)"
-            [class.justify-center]="isCollapsed()"
-            class="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-xs text-[var(--text-secondary)] hover:bg-[var(--bg-surface-hover)] hover:text-[var(--text-primary)] transition-all cursor-pointer"
-          >
-            <mat-icon class="text-base flex-shrink-0">{{ item.icon }}</mat-icon>
-            <span *ngIf="!isCollapsed()" class="truncate flex-1 text-start">{{ t(item.labelKey) }}</span>
-            <mat-icon *ngIf="!isCollapsed()" class="text-sm">{{ isGroupExpanded(item.labelKey) ? 'expand_less' : 'expand_more' }}</mat-icon>
-          </button>
-
-          <div *ngIf="isGroupExpanded(item.labelKey) && !isCollapsed()" class="flex flex-col gap-0.5 ms-3 border-s border-[var(--border-color)] ps-2">
-            <ng-container *ngFor="let child of item.children">
-              <div
-                *ngIf="child.sectionKey"
-                class="px-3 pt-2.5 pb-1 text-[9px] uppercase tracking-wider text-[var(--text-muted)] font-bold"
-              >
-                {{ t(child.sectionKey) }}
-              </div>
-              <a
-                [routerLink]="child.path"
-                routerLinkActive="bg-[var(--bg-canvas)] text-[var(--accent-color)] font-bold"
-                [routerLinkActiveOptions]="{ exact: child.path === '/inventory/items' || child.path === '/inventory/dashboard' || child.path === '/finance' }"
-                class="flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-[11px] text-[var(--text-secondary)] hover:bg-[var(--bg-surface-hover)] hover:text-[var(--text-primary)] transition-all cursor-pointer"
-              >
-                <mat-icon class="text-sm flex-shrink-0">{{ child.icon }}</mat-icon>
-                <span class="truncate">{{ t(child.labelKey) }}</span>
-              </a>
-            </ng-container>
-
-            <div *ngIf="item.labelKey === 'nav.inventory' && favoriteLinks().length" class="mt-2 pt-2 border-t border-[var(--border-color)]">
-              <div class="px-3 py-1 text-[9px] uppercase tracking-wider text-[var(--text-muted)] font-bold">
-                {{ t('inv.favorites.title') }}
-              </div>
-              <a
-                *ngFor="let fav of favoriteLinks()"
-                [routerLink]="fav.path"
-                class="flex items-center gap-2.5 px-3 py-2 rounded-lg text-[11px] text-[var(--text-secondary)] hover:bg-[var(--bg-surface-hover)] hover:text-[var(--text-primary)]"
-              >
-                <mat-icon class="text-sm flex-shrink-0">{{ fav.icon }}</mat-icon>
-                <span class="truncate">{{ t(fav.labelKey) }}</span>
-              </a>
-            </div>
-          </div>
-
-          <a
-            *ngIf="isCollapsed() && item.children[0]"
-            [routerLink]="item.children[0].path"
-            routerLinkActive="text-[var(--accent-color)]"
-            class="flex items-center justify-center py-2 text-[var(--text-muted)] hover:text-[var(--accent-color)]"
-            [title]="t(item.labelKey)"
-          >
-            <mat-icon class="text-base">{{ item.icon }}</mat-icon>
-          </a>
-        </div>
-      </ng-container>
-    </nav>
-
+    <button 
+      *ngIf="!isCollapsed()"
+      (click)="toggleCollapse()"
+      class="text-slate-400 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 p-1.5 rounded-lg cursor-pointer transition-all duration-200"
+      title="{{ t('sidebar.collapse') }}"
+    >
+      <mat-icon class="text-base flex items-center justify-center">menu</mat-icon>
+    </button>
   </div>
 
-  <div class="p-4 border-t border-[var(--border-color)] select-none flex-shrink-0">
+  <!-- Scrollable Navigation Items -->
+  <nav class="flex-1 flex flex-col gap-1 px-0 pt-3 select-none overflow-y-auto min-h-0 bg-white dark:bg-[#0b0f19]">
+    <ng-container *ngFor="let item of navItems">
+      
+      <!-- Single Link (Without Children) -->
+      <a 
+        *ngIf="!item.children"
+        [routerLink]="item.path"
+        routerLinkActive="active-nav-item font-bold"
+        [routerLinkActiveOptions]="{ exact: item.path === '/dashboard' || item.path === '/pos' || item.path === '/kds' }"
+        [class.justify-center]="isCollapsed()"
+        [class.px-6]="!isCollapsed()"
+        [class.px-0]="isCollapsed()"
+        class="w-full flex items-center gap-3.5 py-3.5 text-sm text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800/50 hover:text-slate-900 dark:hover:text-white transition-all duration-200 cursor-pointer border-l-[3.5px] border-l-transparent"
+        [title]="isCollapsed() ? t(item.labelKey) : ''"
+      >
+        <mat-icon class="text-lg flex-shrink-0 text-slate-400 dark:text-slate-500">{{ item.icon }}</mat-icon>
+        <span *ngIf="!isCollapsed()" class="truncate font-semibold">{{ t(item.labelKey) }}</span>
+      </a>
+
+      <!-- Group Menu (With Children) -->
+      <div *ngIf="item.children" class="flex flex-col gap-0.5">
+        
+        <!-- Toggle Button (Shown only when NOT collapsed) -->
+        <button
+          *ngIf="!isCollapsed()"
+          type="button"
+          (click)="toggleGroup(item.labelKey)"
+          [class.active-nav-group]="isGroupActive(item)"
+          class="w-full flex items-center justify-between px-6 py-3.5 text-sm text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800/50 hover:text-slate-900 dark:hover:text-white transition-all duration-200 cursor-pointer border-l-[3.5px] border-l-transparent"
+        >
+          <div class="flex items-center gap-3">
+            <mat-icon class="text-lg flex-shrink-0 text-slate-400 dark:text-slate-500">{{ item.icon }}</mat-icon>
+            <span class="truncate font-semibold">{{ t(item.labelKey) }}</span>
+          </div>
+          <mat-icon class="text-xs flex items-center justify-center text-slate-400 dark:text-slate-500">{{ isGroupExpanded(item.labelKey) ? 'expand_less' : 'expand_more' }}</mat-icon>
+        </button>
+
+        <!-- Submenu Container -->
+        <div 
+          *ngIf="isGroupExpanded(item.labelKey) && !isCollapsed()" 
+          class="flex flex-col gap-0.5 submenu-container py-1 bg-white dark:bg-[#0b0f19]"
+        >
+          <ng-container *ngFor="let child of item.children">
+            <div *ngIf="child.sectionKey" class="nav-section-label">{{ t(child.sectionKey) }}</div>
+            <a
+              [routerLink]="child.path"
+              routerLinkActive="active-sub-item font-extrabold"
+              [routerLinkActiveOptions]="{ exact: child.path === '/inventory/items' || child.path === '/finance' || child.path === '/workflow' || child.path === '/branding' || child.path === '/settings' }"
+              class="flex items-center py-2.5 px-4 text-xs text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800/40 hover:text-slate-800 dark:hover:text-white transition-all duration-200 cursor-pointer border-l-[3px] border-l-transparent"
+            >
+              <span class="truncate font-semibold">{{ t(child.labelKey) }}</span>
+            </a>
+          </ng-container>
+        </div>
+
+        <!-- Collapsed Link to First Child -->
+        <a
+          *ngIf="isCollapsed() && item.children[0]"
+          [routerLink]="item.children[0].path"
+          routerLinkActive="collapsed-active-item font-bold"
+          class="flex items-center justify-center py-3.5 text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800/40 hover:text-slate-800 dark:hover:text-white transition-all duration-200 cursor-pointer"
+          [title]="t(item.labelKey)"
+        >
+          <mat-icon class="text-lg flex-shrink-0 text-slate-400 dark:text-slate-500">{{ item.icon }}</mat-icon>
+        </a>
+
+      </div>
+    </ng-container>
+  </nav>
+
+  <!-- Sidenav Footer (Adapts to light/dark themes) -->
+  <div class="p-4 border-t border-slate-200 dark:border-slate-800 select-none flex-shrink-0 bg-white dark:bg-[#0b0f19] z-10">
     <button 
       *ngIf="isCollapsed()"
       (click)="toggleCollapse()"
-      class="w-full bg-[var(--bg-canvas)] hover:bg-[var(--bg-surface-hover)] border border-[var(--border-color)] py-2 rounded-xl text-[var(--text-primary)] flex items-center justify-center cursor-pointer"
+      class="w-full bg-slate-50 dark:bg-slate-900 hover:bg-slate-100 dark:hover:bg-slate-800 border border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 flex items-center justify-center cursor-pointer transition-all duration-200 hover:scale-105"
       title="{{ t('sidebar.expand') }}"
     >
-      <mat-icon class="text-base">chevron_right</mat-icon>
+      <mat-icon class="text-base flex-shrink-0 flex items-center justify-center">menu</mat-icon>
     </button>
     
-    <div *ngIf="!isCollapsed()" class="text-[9px] text-[var(--text-muted)] text-center font-semibold uppercase tracking-wider">
-      <span>{{ t('common.version') }}</span>
+    <div *ngIf="!isCollapsed()" class="text-[10px] text-slate-400 dark:text-slate-500 text-center font-bold tracking-wider select-none">
+      <span>الإصدار ١.٠.٠</span>
     </div>
   </div>
 

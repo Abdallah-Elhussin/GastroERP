@@ -121,7 +121,7 @@
     </label>
     <label>
       <span>{{ t('fin.ops.gl.filter.docType') }}</span>
-      <select [ngModel]="sourceModule()" (ngModelChange)="sourceModule.set($event === '' ? '' : +$event)">
+      <select [ngModel]="sourceModule()" (ngModelChange)="onSourceModuleChange($event)">
         <option value="">{{ t('common.all') }}</option>
         @for (s of sources; track s.value) {
           <option [value]="s.value">{{ t(s.labelKey) }}</option>

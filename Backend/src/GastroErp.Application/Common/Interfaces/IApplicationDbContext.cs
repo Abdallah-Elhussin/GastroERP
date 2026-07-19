@@ -54,6 +54,7 @@ public interface IApplicationDbContext
     DbSet<PermissionCategory> PermissionCategories { get; }
     DbSet<PermissionGroup> PermissionGroups { get; }
     DbSet<RolePermission> RolePermissions { get; }
+    DbSet<UserPermission> UserPermissions { get; }
     DbSet<UserSession> UserSessions { get; }
     DbSet<RefreshTokenEntity> RefreshTokens { get; }
 

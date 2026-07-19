@@ -102,6 +102,20 @@ export const FINANCE_ROUTES: Routes = [
     data: { requiredPermission: 'Settings.Users.View' }
   },
   {
+    path: 'roles',
+    loadComponent: () =>
+      import('./pages/roles-permissions.page').then(m => m.RolesPermissionsPage),
+    canActivate: [permissionGuard],
+    data: { requiredPermission: 'Settings.Users.View' }
+  },
+  {
+    path: 'user-permissions',
+    loadComponent: () =>
+      import('./pages/user-permissions.page').then(m => m.UserPermissionsPage),
+    canActivate: [permissionGuard],
+    data: { requiredPermission: 'Settings.Users.View' }
+  },
+  {
     path: 'fiscal-periods',
     loadComponent: () =>
       import('./pages/fiscal-periods.page').then(m => m.FiscalPeriodsPage),

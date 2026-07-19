@@ -24,6 +24,10 @@ public static class DependencyInjection
 {
     public static IServiceCollection AddApplicationLayer(this IServiceCollection services)
     {
+        services.AddMemoryCache();
+        services.AddScoped<GastroErp.Application.Common.Interfaces.Authorization.IEffectivePermissionService,
+            GastroErp.Application.Features.Identity.Services.EffectivePermissionService>();
+
         services.AddAutoMapper(config => {
             config.AddMaps(Assembly.GetExecutingAssembly());
         });

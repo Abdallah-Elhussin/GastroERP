@@ -43,7 +43,8 @@ public class PurchaseOrderWorkflowIntegrationTests
     public void SubmitForApproval_changes_status_and_raises_event()
     {
         var po = new Domain.Entities.Inventory.Purchasing.PurchaseOrder(
-            Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(), "PO-001", DateTimeOffset.UtcNow.AddDays(7));
+            Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(), "PO-001",
+            expectedDeliveryDate: DateTimeOffset.UtcNow.AddDays(7));
         po.AddLine(Guid.NewGuid(), Guid.NewGuid(), 10, 100);
         po.SubmitForApproval();
         Assert.Equal(PurchaseOrderStatus.PendingApproval, po.Status);

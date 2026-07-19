@@ -51,18 +51,27 @@ public sealed class Role : AuditableBaseEntity
 
     public void GrantPermission(Guid permissionId)
     {
-        if (IsSystem)
-            throw new InvalidOperationException("Permissions on system roles cannot be modified.");
         if (_permissions.Any(p => p.PermissionId == permissionId)) return;
         _permissions.Add(new RolePermission(Id, permissionId));
     }
 
     public void RevokePermission(Guid permissionId)
     {
-        if (IsSystem)
-            throw new InvalidOperationException("Permissions on system roles cannot be modified.");
         var perm = _permissions.FirstOrDefault(p => p.PermissionId == permissionId);
         if (perm is not null) _permissions.Remove(perm);
+    }
+
+    /// <summary>مزامنة صلاحيات الدور مع المجموعة المطلوبة (إضافة/إزالة).</summary>
+    public void SyncPermissions(IReadOnlyCollection<Guid> permissionIds)
+    {
+        var desired = permissionIds.Where(id => id != Guid.Empty).ToHashSet();
+        var current = _permissions.Select(p => p.PermissionId).ToHashSet();
+
+        foreach (var id in current.Except(desired))
+            RevokePermission(id);
+
+        foreach (var id in desired.Except(current))
+            GrantPermission(id);
     }
 
     public void UpdateName(string name, string? nameAr)
@@ -73,11 +82,18 @@ public sealed class Role : AuditableBaseEntity
         NameAr = nameAr;
     }
 
+    public void UpdateDescription(string? description)
+    {
+        Description = string.IsNullOrWhiteSpace(description) ? null : description.Trim();
+    }
+
     public void Deactivate()
     {
         if (IsSystem) throw new InvalidOperationException("System roles cannot be deactivated.");
         IsActive = false;
     }
+
+    public void Activate() => IsActive = true;
 }
 
 /// <summary>RolePermission — ربط الدور بالصلاحية</summary>

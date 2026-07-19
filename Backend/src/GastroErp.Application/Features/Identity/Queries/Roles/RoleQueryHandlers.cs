@@ -11,7 +11,8 @@ namespace GastroErp.Application.Features.Identity.Queries.Roles;
 public class RoleQueryHandlers : 
     IRequestHandler<GetRolesQuery, Result<IReadOnlyList<RoleDto>>>,
     IRequestHandler<GetRoleByIdQuery, Result<RoleDto>>,
-    IRequestHandler<GetPermissionsQuery, Result<IReadOnlyList<PermissionDto>>>
+    IRequestHandler<GetPermissionsQuery, Result<IReadOnlyList<PermissionDto>>>,
+    IRequestHandler<GetRolePermissionsQuery, Result<IReadOnlyList<Guid>>>
 {
     private readonly IApplicationDbContext _context;
     private readonly IMapper _mapper;
@@ -31,6 +32,7 @@ public class RoleQueryHandlers :
         var roles = await _context.Roles
             .AsNoTracking()
             .Where(r => r.IsSystem || r.TenantId == tenantId)
+            .OrderBy(r => r.Name)
             .ProjectTo<RoleDto>(_mapper.ConfigurationProvider)
             .ToListAsync(cancellationToken);
 
@@ -60,5 +62,18 @@ public class RoleQueryHandlers :
             .ToListAsync(cancellationToken);
 
         return Result<IReadOnlyList<PermissionDto>>.Success(permissions);
+    }
+
+    public async Task<Result<IReadOnlyList<Guid>>> Handle(GetRolePermissionsQuery request, CancellationToken cancellationToken)
+    {
+        var exists = await _context.Roles.AsNoTracking().AnyAsync(r => r.Id == request.RoleId, cancellationToken);
+        if (!exists) return Result<IReadOnlyList<Guid>>.Failure("Role not found.");
+
+        var ids = await _context.RolePermissions.AsNoTracking()
+            .Where(rp => rp.RoleId == request.RoleId)
+            .Select(rp => rp.PermissionId)
+            .ToListAsync(cancellationToken);
+
+        return Result<IReadOnlyList<Guid>>.Success(ids);
     }
 }

@@ -273,3 +273,15 @@ html, body {
     background: #fff !important;
   }
 }
+
+/* Custom Global UI/UX Legibility Enhancements */
+label {
+  font-size: 0.875rem !important; /* 14px instead of 12px */
+  color: var(--text-primary) !important; /* High contrast text-primary color */
+  font-weight: 600 !important; /* Semi-bold for high definition and readability */
+}
+
+input, select, textarea {
+  font-size: 0.875rem !important; /* 14px text-sm instead of 12px text-xs */
+}
+

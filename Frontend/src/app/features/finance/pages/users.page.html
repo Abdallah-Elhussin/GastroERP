@@ -1,4 +1,10 @@
 <div class="user-page">
+  <nav class="tabs auth-tabs">
+    <a class="tab" routerLink="/finance/roles">{{ t('auth.tab.roles') }}</a>
+    <a class="tab" routerLink="/finance/user-permissions">{{ t('auth.tab.userPermissions') }}</a>
+    <a class="tab active" routerLink="/finance/users">{{ t('auth.tab.users') }}</a>
+  </nav>
+
   <header class="page-header">
     <div>
       <h1>{{ t('fin.user.title') }}</h1>

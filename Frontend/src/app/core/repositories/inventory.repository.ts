@@ -63,6 +63,8 @@ export abstract class InventoryRepository {
   abstract getItemById(id: string): Observable<InventoryItemDefinition>;
   abstract createItem(payload: CreateInventoryItemPayload): Observable<InventoryItemDefinition>;
   abstract updateItem(id: string, payload: UpdateInventoryItemPayload): Observable<void>;
+  abstract deleteItem(id: string): Observable<void>;
+  abstract activateItem(id: string): Observable<void>;
 
   abstract getCategories(): Observable<InventoryCategory[]>;
   abstract createCategory(payload: CreateInventoryCategoryPayload): Observable<InventoryCategory>;

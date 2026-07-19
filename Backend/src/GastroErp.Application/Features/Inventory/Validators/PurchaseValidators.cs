@@ -10,8 +10,34 @@ public class CreatePurchaseOrderCommandValidator : AbstractValidator<CreatePurch
     {
         RuleFor(x => x.Dto.SupplierId).NotEmpty();
         RuleFor(x => x.Dto.DestinationWarehouseId).NotEmpty();
-        RuleFor(x => x.Dto.PoNumber).NotEmpty().MaximumLength(50);
-        RuleFor(x => x.Dto.ExpectedDeliveryDate).NotEmpty();
+        RuleFor(x => x.Dto.PoNumber).MaximumLength(50).When(x => !string.IsNullOrWhiteSpace(x.Dto.PoNumber));
+        RuleFor(x => x.Dto.ExchangeRate).GreaterThan(0);
+        RuleForEach(x => x.Dto.Lines).ChildRules(line =>
+        {
+            line.RuleFor(l => l.InventoryItemId).NotEmpty();
+            line.RuleFor(l => l.UnitId).NotEmpty();
+            line.RuleFor(l => l.Quantity).GreaterThan(0);
+            line.RuleFor(l => l.UnitPrice).GreaterThanOrEqualTo(0);
+        }).When(x => x.Dto.Lines is { Count: > 0 });
+    }
+}
+
+public class UpdatePurchaseOrderCommandValidator : AbstractValidator<UpdatePurchaseOrderCommand>
+{
+    public UpdatePurchaseOrderCommandValidator()
+    {
+        RuleFor(x => x.Id).NotEmpty();
+        RuleFor(x => x.Dto.SupplierId).NotEmpty();
+        RuleFor(x => x.Dto.DestinationWarehouseId).NotEmpty();
+        RuleFor(x => x.Dto.ExchangeRate).GreaterThan(0);
+        RuleFor(x => x.Dto.Lines).NotNull();
+        RuleForEach(x => x.Dto.Lines).ChildRules(line =>
+        {
+            line.RuleFor(l => l.InventoryItemId).NotEmpty();
+            line.RuleFor(l => l.UnitId).NotEmpty();
+            line.RuleFor(l => l.Quantity).GreaterThan(0);
+            line.RuleFor(l => l.UnitPrice).GreaterThanOrEqualTo(0);
+        });
     }
 }
 

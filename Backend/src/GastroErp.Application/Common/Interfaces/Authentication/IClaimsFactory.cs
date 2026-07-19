@@ -8,5 +8,8 @@ using GastroErp.Domain.Entities.Identity;
 /// </summary>
 public interface IClaimsFactory
 {
-    IEnumerable<Claim> CreateClaims(AppUser user, IReadOnlyCollection<string> roleNames);
+    IEnumerable<Claim> CreateClaims(
+        AppUser user,
+        IReadOnlyCollection<string> roleNames,
+        IReadOnlyCollection<string>? permissionNames = null);
 }
