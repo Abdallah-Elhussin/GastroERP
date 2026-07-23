@@ -4,6 +4,21 @@ public static class ApiRoutes
 {
     public const string Root = "api/v{version:apiVersion}";
 
+    public static class EnterpriseDashboard
+    {
+        public const string Base = $"{Root}/dashboard";
+        public const string Overview = $"{Base}/overview";
+        public const string Sales = $"{Base}/sales";
+        public const string Inventory = $"{Base}/inventory";
+        public const string Finance = $"{Base}/finance";
+        public const string Kitchen = $"{Base}/kitchen";
+        public const string Delivery = $"{Base}/delivery";
+        public const string Hr = $"{Base}/hr";
+        public const string Customers = $"{Base}/customers";
+        public const string Products = $"{Base}/products";
+        public const string Activities = $"{Base}/activities";
+    }
+
     public static class Auth
     {
         public const string Base = $"{Root}/auth";
@@ -74,6 +89,7 @@ public static class ApiRoutes
         public const string Adjustments = $"{Root}/inventory/stock/adjustments";
         public const string Waste = $"{Root}/inventory/stock/waste";
         public const string Dashboard = $"{Root}/inventory/dashboard";
+        public const string PurchasingDashboard = $"{Root}/inventory/purchasing-dashboard";
         public const string Settings = $"{Root}/inventory/settings";
         public const string Brands = $"{Root}/inventory/brands";
         public const string Manufacturers = $"{Root}/inventory/manufacturers";

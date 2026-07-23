@@ -97,7 +97,7 @@ public class GetInventoryItemsQueryHandler : IRequestHandler<GetInventoryItemsQu
         var items = await query.OrderBy(i => i.NameAr).Skip((request.PageNumber - 1) * request.PageSize).Take(request.PageSize).ToListAsync(cancellationToken);
         var projected = await InventoryItemDtoProjector.ProjectAsync(_context, items, cancellationToken);
 
-        return PagedResult<InventoryItemDto>.Success(projected, total, request.PageNumber, request.PageSize);
+        return PagedResult<InventoryItemDto>.Success(projected, request.PageNumber, request.PageSize, total);
     }
 }
 
@@ -134,7 +134,11 @@ public class GetWarehousesQueryHandler : IRequestHandler<GetWarehousesQuery, Pag
         var pageSize = request.PageSize is < 1 or > 200 ? 50 : request.PageSize;
 
         var query = _context.Warehouses.AsNoTracking().Include(w => w.Zones).Where(w => w.TenantId == request.TenantId);
-        if (request.BranchId.HasValue) query = query.Where(w => w.BranchId == request.BranchId.Value);
+        if (request.BranchId.HasValue)
+        {
+            var branchId = request.BranchId.Value;
+            query = query.Where(w => w.BranchId == null || w.BranchId == branchId);
+        }
         if (request.IsActive.HasValue) query = query.Where(w => w.IsActive == request.IsActive.Value);
         if (request.WarehouseType.HasValue) query = query.Where(w => w.WarehouseType == request.WarehouseType.Value);
         if (request.WarehouseTypeId.HasValue) query = query.Where(w => w.WarehouseTypeId == request.WarehouseTypeId.Value);
@@ -212,7 +216,12 @@ public class GetWarehouseLookupQueryHandler : IRequestHandler<GetWarehouseLookup
     public async Task<Result<List<WarehouseDto>>> Handle(GetWarehouseLookupQuery request, CancellationToken cancellationToken)
     {
         var query = _context.Warehouses.AsNoTracking().Include(w => w.Zones).Where(w => w.TenantId == request.TenantId);
-        if (request.BranchId.HasValue) query = query.Where(w => w.BranchId == request.BranchId.Value);
+        if (request.BranchId.HasValue)
+        {
+            var branchId = request.BranchId.Value;
+            // Branch warehouses + shared (no branch) warehouses.
+            query = query.Where(w => w.BranchId == null || w.BranchId == branchId);
+        }
         if (request.ActiveOnly) query = query.Where(w => w.IsActive);
         var items = await query.OrderBy(w => w.NameAr).ToListAsync(cancellationToken);
         var dtos = await GetWarehousesQueryHandler.EnrichWarehouseDtosAsync(

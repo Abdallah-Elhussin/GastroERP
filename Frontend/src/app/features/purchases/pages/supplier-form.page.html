@@ -1,0 +1,273 @@
+<app-inventory-page-shell [breadcrumbs]="breadcrumbs" [title]="pageTitle()">
+  <section class="toolbar" shellActions>
+    <button type="button" class="btn help" [title]="t('common.help')">?</button>
+    <button type="button" class="btn cancel" (click)="back()">
+      <mat-icon>close</mat-icon>
+      {{ t('common.cancel') }}
+    </button>
+    <button type="button" class="btn primary" [disabled]="!canSave() || saving()" (click)="save()">
+      <mat-icon>save</mat-icon>
+      {{ t('common.save') }}
+    </button>
+  </section>
+
+  @if (error()) {
+    <div class="form-error">{{ error() }}</div>
+  }
+
+  @if (loading()) {
+    <p class="muted">{{ t('common.loading') }}</p>
+  } @else {
+    <section class="card form-card">
+      <nav class="tabs" role="tablist">
+        <button
+          type="button"
+          class="tab"
+          [class.active]="tab() === 'data'"
+          (click)="setTab('data')"
+        >
+          <mat-icon>info</mat-icon>
+          {{ t('pur.sup.tab.data') }}
+        </button>
+        <button
+          type="button"
+          class="tab"
+          [class.active]="tab() === 'contact'"
+          (click)="setTab('contact')"
+        >
+          <mat-icon>phone</mat-icon>
+          {{ t('pur.sup.tab.contact') }}
+        </button>
+        <button
+          type="button"
+          class="tab"
+          [class.active]="tab() === 'payments'"
+          (click)="setTab('payments')"
+        >
+          <mat-icon>credit_card</mat-icon>
+          {{ t('pur.sup.tab.payments') }}
+        </button>
+      </nav>
+
+      <!-- بيانات المورد -->
+      @if (tab() === 'data') {
+        <div class="tab-body">
+          <div class="grid-4">
+            <label class="field">
+              <span>{{ t('pur.sup.col.code') }}</span>
+              <input type="text" [value]="code()" readonly tabindex="-1" class="code-readonly" />
+            </label>
+            <label class="field span-2">
+              <span>{{ t('pur.sup.col.name') }} *</span>
+              <input type="text" [ngModel]="nameAr()" (ngModelChange)="nameAr.set($event)" />
+            </label>
+            <label class="field">
+              <span>{{ t('pur.sup.col.nameEn') }}</span>
+              <input type="text" [ngModel]="nameEn()" (ngModelChange)="nameEn.set($event)" />
+            </label>
+            <label class="field">
+              <span>{{ t('pur.sup.col.taxNumber') }}</span>
+              <input type="text" [ngModel]="taxNumber()" (ngModelChange)="taxNumber.set($event)" />
+            </label>
+            <label class="check-field">
+              <input type="checkbox" [ngModel]="isActive()" (ngModelChange)="isActive.set($event)" />
+              <span>{{ t('pur.sup.col.active') }}</span>
+            </label>
+            <label class="check-field blacklist">
+              <input
+                type="checkbox"
+                [ngModel]="isBlacklisted()"
+                (ngModelChange)="isBlacklisted.set($event)"
+              />
+              <span>{{ t('pur.sup.col.blacklist') }}</span>
+            </label>
+          </div>
+
+          <div class="payment-card">
+            <h4>{{ t('pur.sup.paymentData') }}</h4>
+            <div class="grid-4">
+              <label class="field span-2">
+                <span>{{ t('pur.sup.col.account') }} *</span>
+                <select [ngModel]="apAccountId()" (ngModelChange)="apAccountId.set($event || null)">
+                  <option [ngValue]="null">{{ t('pur.sup.pickAccount') }}</option>
+                  @for (a of supplierAccounts(); track a.id) {
+                    <option [ngValue]="a.id">{{ accountLabel(a) }}</option>
+                  }
+                </select>
+              </label>
+              <label class="field">
+                <span>{{ t('pur.sup.col.costCenter') }}</span>
+                <select [ngModel]="costCenterId()" (ngModelChange)="costCenterId.set($event || null)">
+                  <option [ngValue]="null">{{ t('pur.sup.pickCostCenter') }}</option>
+                  @for (c of costCenters(); track c.id) {
+                    <option [ngValue]="c.id">{{ c.nameAr }}</option>
+                  }
+                </select>
+              </label>
+              <label class="field">
+                <span>{{ t('pur.sup.col.paymentTerm') }}</span>
+                <select [ngModel]="paymentTerms()" (ngModelChange)="onPaymentTermChange($event)">
+                  @for (p of paymentTermPresets; track p.value) {
+                    <option [ngValue]="p.value">{{ t(p.labelKey) }}</option>
+                  }
+                </select>
+              </label>
+              <label class="field">
+                <span>{{ t('pur.sup.col.creditLimit') }}</span>
+                <input
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  [ngModel]="creditLimit()"
+                  (ngModelChange)="creditLimit.set(+$event)"
+                />
+              </label>
+              <label class="field">
+                <span>{{ t('pur.sup.col.dueDays') }}</span>
+                <input
+                  type="number"
+                  min="0"
+                  [ngModel]="paymentDueDays()"
+                  (ngModelChange)="paymentDueDays.set(+$event)"
+                />
+              </label>
+            </div>
+          </div>
+        </div>
+      }
+
+      <!-- بيانات التواصل -->
+      @if (tab() === 'contact') {
+        <div class="tab-body">
+          <div class="grid-3">
+            <label class="field">
+              <span>{{ t('pur.sup.col.contactPerson') }}</span>
+              <input type="text" [ngModel]="contactPerson()" (ngModelChange)="contactPerson.set($event)" />
+            </label>
+            <label class="field">
+              <span>{{ t('pur.sup.col.mobile') }}</span>
+              <input type="text" [ngModel]="mobile()" (ngModelChange)="mobile.set($event)" />
+            </label>
+            <label class="field">
+              <span>{{ t('pur.sup.col.phone') }}</span>
+              <input type="text" [ngModel]="phone()" (ngModelChange)="phone.set($event)" />
+            </label>
+            <label class="field">
+              <span>{{ t('pur.sup.col.email') }}</span>
+              <input type="email" [ngModel]="email()" (ngModelChange)="email.set($event)" />
+            </label>
+            <label class="field">
+              <span>{{ t('pur.sup.col.website') }}</span>
+              <input type="text" [ngModel]="website()" (ngModelChange)="website.set($event)" />
+            </label>
+            <label class="field">
+              <span>{{ t('pur.sup.col.country') }}</span>
+              <input type="text" [ngModel]="country()" (ngModelChange)="country.set($event)" />
+            </label>
+            <label class="field">
+              <span>{{ t('pur.sup.col.city') }}</span>
+              <input type="text" [ngModel]="city()" (ngModelChange)="city.set($event)" />
+            </label>
+            <label class="field">
+              <span>{{ t('pur.sup.col.postalCode') }}</span>
+              <input type="text" [ngModel]="postalCode()" (ngModelChange)="postalCode.set($event)" />
+            </label>
+            <label class="field span-all">
+              <span>{{ t('pur.sup.col.address') }}</span>
+              <input type="text" [ngModel]="address()" (ngModelChange)="address.set($event)" />
+            </label>
+            <label class="field span-all">
+              <span>{{ t('pur.sup.col.notes') }}</span>
+              <textarea rows="3" [ngModel]="notes()" (ngModelChange)="notes.set($event)"></textarea>
+            </label>
+          </div>
+        </div>
+      }
+
+      <!-- طرق الدفع -->
+      @if (tab() === 'payments') {
+        <div class="tab-body">
+          <div class="pm-add">
+            <select [ngModel]="addPmKind()" (ngModelChange)="onAddPmKindChange($event)">
+              @for (k of paymentMethodKinds; track k.value) {
+                <option [ngValue]="k.value">{{ t(k.labelKey) }}</option>
+              }
+            </select>
+            <button type="button" class="btn primary" (click)="addPaymentMethod()">
+              <mat-icon>add</mat-icon>
+              {{ t('pur.sup.addPaymentMethod') }}
+            </button>
+          </div>
+
+          <div class="pm-table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>{{ t('pur.sup.col.paymentMethod') }}</th>
+                  <th>{{ t('pur.sup.col.default') }}</th>
+                  <th>{{ t('pur.sup.col.active') }}</th>
+                </tr>
+              </thead>
+              <tbody>
+                @if (paymentMethods().length === 0) {
+                  <tr>
+                    <td colspan="3" class="muted center">{{ t('pur.sup.noPaymentMethods') }}</td>
+                  </tr>
+                }
+                @for (pm of paymentMethods(); track $index; let i = $index) {
+                  <tr [class.selected]="selectedPmIndex() === i" (click)="selectedPmIndex.set(i)">
+                    <td>{{ pmLabel(pm.kind) }}</td>
+                    <td>
+                      @if (pm.isDefault) {
+                        <mat-icon class="star">star</mat-icon>
+                      } @else {
+                        —
+                      }
+                    </td>
+                    <td>
+                      <span class="badge on">{{ t('pur.sup.status.active') }}</span>
+                    </td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+
+          <div class="pm-actions">
+            <button
+              type="button"
+              class="btn outline"
+              [disabled]="selectedPmIndex() == null"
+              (click)="setDefaultPaymentMethod()"
+            >
+              <mat-icon>star</mat-icon>
+              {{ t('pur.sup.setDefault') }}
+            </button>
+            <button
+              type="button"
+              class="btn outline danger-text"
+              [disabled]="selectedPmIndex() == null"
+              (click)="removeSelectedPaymentMethod()"
+            >
+              <mat-icon>delete</mat-icon>
+              {{ t('inv.items.toolbar.delete') }}
+            </button>
+          </div>
+        </div>
+      }
+    </section>
+  }
+</app-inventory-page-shell>
+
+<app-dialog
+  [isOpen]="showSavedDialog()"
+  [title]="t('pur.sup.savedTitle')"
+  (close)="acknowledgeSaved()"
+>
+  <p class="saved-message">{{ t('pur.sup.savedMessage') }}</p>
+  <div class="saved-actions">
+    <button type="button" class="btn primary" (click)="acknowledgeSaved()">
+      {{ t('common.ok') }}
+    </button>
+  </div>
+</app-dialog>

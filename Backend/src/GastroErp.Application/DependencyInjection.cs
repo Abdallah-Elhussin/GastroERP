@@ -73,6 +73,8 @@ public static class DependencyInjection
         services.AddScoped<IExchangeRateService, ExchangeRateService>();
 
         services.AddScoped<IDashboardService, DashboardService>();
+        services.AddScoped<GastroErp.Application.Features.EnterpriseDashboard.Services.IEnterpriseDashboardAggregator,
+            GastroErp.Application.Features.EnterpriseDashboard.Services.EnterpriseDashboardAggregator>();
         services.AddScoped<ISalesAnalyticsService, SalesAnalyticsService>();
         services.AddScoped<GastroErp.Application.Features.Sales.Dashboard.ISalesDashboardService,
             GastroErp.Application.Features.Sales.Dashboard.SalesDashboardService>();

@@ -129,7 +129,7 @@
                     <select class="cell-select wide" [ngModel]="line.inventoryItemId" (ngModelChange)="onItemChange(i, $event)">
                       <option value="">{{ t('pur.po.pickItem') }}</option>
                       @for (item of items(); track item.id) {
-                        <option [value]="item.id">{{ item.nameAr }}</option>
+                        <option [value]="item.id">{{ itemLabel(item) }}</option>
                       }
                     </select>
                   } @else {

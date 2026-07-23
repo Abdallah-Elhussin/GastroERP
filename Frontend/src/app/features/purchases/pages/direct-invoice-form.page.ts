@@ -14,6 +14,7 @@ import { catchError, of } from 'rxjs';
 import { LanguageService } from '../../../core/services/language.service';
 import { AuthService } from '../../../core/services/auth.service';
 import { InventoryService } from '../../../core/services/inventory.service';
+import { InventoryRepository } from '../../../core/repositories/inventory.repository';
 import { PurchaseInvoiceRepository } from '../../../core/repositories/purchase-invoice.repository';
 import {
   CreatePurchaseInvoicePayload,
@@ -29,20 +30,30 @@ import {
   Warehouse
 } from '../../../core/models/inventory.models';
 import { InventoryPageShellComponent } from '../../inventory/shared/inventory-page-shell.component';
+import { AppDialogComponent } from '../../../shared/ui/app-dialog/app-dialog.component';
 
 const DIRECT_KIND = 2;
 const NATURE_INVENTORY = 1;
 
+type ResultDialogState = {
+  open: boolean;
+  success: boolean;
+  title: string;
+  message: string;
+  navigateToId?: string | null;
+};
+
 @Component({
   selector: 'app-direct-invoice-form-page',
   standalone: true,
-  imports: [CommonModule, FormsModule, MatIconModule, InventoryPageShellComponent],
+  imports: [CommonModule, FormsModule, MatIconModule, InventoryPageShellComponent, AppDialogComponent],
   templateUrl: './direct-invoice-form.page.html',
   styleUrl: './direct-invoice-form.page.scss',
   changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class DirectInvoiceFormPage implements OnInit {
   private repo = inject(PurchaseInvoiceRepository);
+  private inventoryRepo = inject(InventoryRepository);
   private inventory = inject(InventoryService);
   private route = inject(ActivatedRoute);
   private router = inject(Router);
@@ -52,6 +63,12 @@ export class DirectInvoiceFormPage implements OnInit {
   loading = signal(false);
   saving = signal(false);
   error = signal<string | null>(null);
+  resultDialog = signal<ResultDialogState>({
+    open: false,
+    success: true,
+    title: '',
+    message: ''
+  });
 
   docId = signal<string | null>(null);
   invoiceNumber = signal('');
@@ -133,36 +150,98 @@ export class DirectInvoiceFormPage implements OnInit {
   );
 
   ngOnInit(): void {
-    this.inventory.loadWarehouses();
-    this.inventory.loadItems();
-    this.inventory.loadUnits();
-    this.inventory
-      .getSuppliers(1, 500)
-      .pipe(catchError(() => of([] as SupplierSummary[])))
-      .subscribe(s => this.suppliers.set(s));
-
-    const pull = () => {
-      const wh = [...this.inventory.warehouses()];
-      this.warehouses.set(wh);
-      this.items.set([...this.inventory.items()]);
-      this.units.set([...this.inventory.units()]);
-      if (!this.warehouseId() && wh.length > 0) {
-        const preferred = wh.find(w => w.isDefault && w.isActive) ?? wh.find(w => w.isActive) ?? wh[0];
-        this.warehouseId.set(preferred.id);
-      }
-    };
-    pull();
-    setTimeout(pull, 400);
+    this.loadLookups();
 
     const id = this.route.snapshot.paramMap.get('id');
     if (id && id !== 'new') {
       this.docId.set(id);
       this.loadDoc(id);
+    } else {
+      this.loadNextInvoiceNumber();
+      if (this.lines().length === 0) this.addLine();
     }
+  }
+
+  private loadLookups(): void {
+    this.inventoryRepo
+      .getItems(undefined, 1, 200)
+      .pipe(catchError(() => of([] as InventoryItemDefinition[])))
+      .subscribe(rows => {
+        const active = rows.filter(i => i.isActive !== false);
+        this.items.set(active);
+        this.inventory.items.set(active);
+      });
+
+    this.inventoryRepo
+      .getUnits()
+      .pipe(catchError(() => of([] as InventoryUnit[])))
+      .subscribe(rows => {
+        this.units.set(rows);
+        this.inventory.units.set(rows);
+      });
+
+    this.inventoryRepo
+      .getWarehouseLookup()
+      .pipe(catchError(() => of([] as Warehouse[])))
+      .subscribe(rows => {
+        // Prefer warehouses that can receive / purchase stock.
+        const usable = rows.filter(
+          w =>
+            w.isActive !== false &&
+            (w.allowReceiving !== false || w.allowPurchase !== false)
+        );
+        const list = usable.length > 0 ? usable : rows.filter(w => w.isActive !== false);
+        this.warehouses.set(list);
+        this.inventory.warehouses.set(list);
+
+        const preferred =
+          list.find(w => w.isDefault && w.isActive) ?? list.find(w => w.isActive) ?? list[0] ?? null;
+        if (preferred) {
+          if (!this.warehouseId()) this.warehouseId.set(preferred.id);
+          const defaultId = this.warehouseId() || preferred.id;
+          this.lines.set(
+            this.lines().map(l =>
+              l.lineWarehouseId ? l : { ...l, lineWarehouseId: defaultId }
+            )
+          );
+        }
+      });
+
+    this.inventory
+      .getSuppliers(1, 200)
+      .pipe(catchError(() => of([] as SupplierSummary[])))
+      .subscribe(s => this.suppliers.set(s));
+  }
+
+  private loadNextInvoiceNumber(): void {
+    this.repo
+      .getNextNumber(2)
+      .pipe(catchError(() => of('')))
+      .subscribe(n => {
+        if (n) this.invoiceNumber.set(n);
+      });
+  }
+
+  itemLabel(item: InventoryItemDefinition): string {
+    const code = (item.sku || item.barcode || '').trim();
+    return code ? `${code} — ${item.nameAr}` : item.nameAr;
+  }
+
+  warehouseLabel(w: Warehouse): string {
+    const code = (w.code || '').trim();
+    return code ? `${code} — ${w.nameAr}` : w.nameAr;
   }
 
   t(key: string): string {
     return this.lang.t(key);
+  }
+
+  acknowledgeResult(): void {
+    const navId = this.resultDialog().navigateToId;
+    this.resultDialog.set({ open: false, success: true, title: '', message: '' });
+    if (navId) {
+      void this.router.navigate(['/purchases/direct-invoices', navId], { replaceUrl: true });
+    }
   }
 
   onNatureChange(value: number): void {
@@ -288,10 +367,13 @@ export class DirectInvoiceFormPage implements OnInit {
         next: doc => {
           this.applyDoc(doc);
           this.saving.set(false);
+          this.openResult(true, this.t('pur.dpi.result.savedTitle'), this.t('pur.dpi.result.savedMessage'));
         },
         error: err => {
-          this.error.set(err?.error?.error ?? this.t('pur.dpi.saveFailed'));
+          const reason = this.extractError(err, this.t('pur.dpi.saveFailed'));
+          this.error.set(reason);
           this.saving.set(false);
+          this.openResult(false, this.t('pur.dpi.result.failedTitle'), reason);
         }
       });
       return;
@@ -303,6 +385,7 @@ export class DirectInvoiceFormPage implements OnInit {
       supplierId: this.supplierId()!,
       invoiceDate: this.toDateOnly(this.invoiceDate()),
       currency: this.currency(),
+      invoiceNumber: this.invoiceNumber() || null,
       warehouseId: this.warehouseId(),
       dueDate: this.dueDate() ? this.toDateOnly(this.dueDate()!) : null,
       supplierInvoiceNumber: this.supplierInvoiceNumber() || null,
@@ -317,11 +400,19 @@ export class DirectInvoiceFormPage implements OnInit {
     this.repo.create(createPayload).subscribe({
       next: doc => {
         this.saving.set(false);
-        void this.router.navigate(['/purchases/direct-invoices', doc.id], { replaceUrl: true });
+        this.invoiceNumber.set(doc.invoiceNumber || this.invoiceNumber());
+        this.openResult(
+          true,
+          this.t('pur.dpi.result.savedTitle'),
+          this.t('pur.dpi.result.savedMessage'),
+          doc.id
+        );
       },
       error: err => {
-        this.error.set(err?.error?.error ?? this.t('pur.dpi.saveFailed'));
+        const reason = this.extractError(err, this.t('pur.dpi.saveFailed'));
+        this.error.set(reason);
         this.saving.set(false);
+        this.openResult(false, this.t('pur.dpi.result.failedTitle'), reason);
       }
     });
   }
@@ -329,13 +420,28 @@ export class DirectInvoiceFormPage implements OnInit {
   approve(): void {
     const id = this.docId();
     if (!id || !this.canManage()) return;
-    this.runAction(() => this.repo.approve(id));
+    this.runAction(
+      () => this.repo.approve(id),
+      {
+        successTitle: this.t('pur.dpi.result.approveSuccessTitle'),
+        successMessage: this.t('pur.dpi.result.approveSuccessMessage'),
+        failedTitle: this.t('pur.dpi.result.approveFailedTitle')
+      }
+    );
   }
 
   post(): void {
     const id = this.docId();
     if (!id || !this.canManage() || !this.isApproved()) return;
-    this.runAction(() => this.repo.post(id));
+    const docNo = this.invoiceNumber() || id;
+    this.runAction(
+      () => this.repo.post(id),
+      {
+        successTitle: this.t('pur.dpi.result.postSuccessTitle'),
+        successMessage: this.t('pur.dpi.result.postSuccessMessage').replace('{number}', docNo),
+        failedTitle: this.t('pur.dpi.result.postFailedTitle')
+      }
+    );
   }
 
   unpost(): void {
@@ -354,7 +460,7 @@ export class DirectInvoiceFormPage implements OnInit {
   createReturn(): void {
     const id = this.docId();
     if (!id || !this.isPosted()) return;
-    void this.router.navigate(['/purchases/direct-returns/new'], {
+    void this.router.navigate(['/purchases/invoice-returns/new'], {
       queryParams: { purchaseInvoiceId: id }
     });
   }
@@ -437,19 +543,18 @@ export class DirectInvoiceFormPage implements OnInit {
   private recalcLine(line: DirectInvoiceLineDraft): DirectInvoiceLineDraft {
     const qty = Number(line.quantity) || 0;
     const unitPrice = Number(line.unitPrice) || 0;
-    const discountPercent = Math.max(0, Number(line.discountPercent) || 0);
-    let discountAmount = Math.max(0, Number(line.discountAmount) || 0);
-    const taxPercent = Math.max(0, Number(line.taxPercent) || 0);
-    let taxAmount = Math.max(0, Number(line.taxAmount) || 0);
+    const discountPercent = Math.max(0, Math.min(100, Number(line.discountPercent) || 0));
+    // VAT rate is fixed/read-only at 15%.
+    const taxPercent = 15;
 
     const lineGross = qty * unitPrice;
-    if (discountAmount <= 0 && discountPercent > 0) {
-      discountAmount = Math.round((lineGross * discountPercent) / 100 * 10000) / 10000;
-    }
+    const discountAmount =
+      discountPercent > 0
+        ? Math.round(((lineGross * discountPercent) / 100) * 10000) / 10000
+        : Math.max(0, Number(line.discountAmount) || 0);
+
     const lineNet = Math.max(0, lineGross - discountAmount);
-    if (taxAmount <= 0 && taxPercent > 0) {
-      taxAmount = Math.round((lineNet * taxPercent) / 100 * 10000) / 10000;
-    }
+    const taxAmount = Math.round(((lineNet * taxPercent) / 100) * 10000) / 10000;
     const lineTotal = lineNet + taxAmount;
 
     return {
@@ -482,19 +587,49 @@ export class DirectInvoiceFormPage implements OnInit {
     }
   }
 
-  private runAction(action: () => import('rxjs').Observable<void>): void {
+  private runAction(
+    action: () => import('rxjs').Observable<void>,
+    feedback?: { successTitle: string; successMessage: string; failedTitle: string }
+  ): void {
     this.saving.set(true);
     this.error.set(null);
     action().subscribe({
       next: () => {
         this.saving.set(false);
         if (this.docId()) this.loadDoc(this.docId()!);
+        if (feedback) {
+          this.openResult(true, feedback.successTitle, feedback.successMessage);
+        }
       },
       error: err => {
-        this.error.set(err?.error?.error ?? this.t('pur.dpi.actionFailed'));
+        const reason = this.extractError(err, this.t('pur.dpi.actionFailed'));
+        this.error.set(reason);
         this.saving.set(false);
+        if (feedback) {
+          this.openResult(false, feedback.failedTitle, reason);
+        }
       }
     });
+  }
+
+  private openResult(
+    success: boolean,
+    title: string,
+    message: string,
+    navigateToId?: string | null
+  ): void {
+    this.resultDialog.set({ open: true, success, title, message, navigateToId: navigateToId ?? null });
+  }
+
+  private extractError(err: unknown, fallback: string): string {
+    const body = (err as { error?: { error?: string; message?: string }; message?: string })?.error;
+    if (body && typeof body === 'object') {
+      if (typeof body.error === 'string' && body.error.trim()) return body.error.trim();
+      if (typeof body.message === 'string' && body.message.trim()) return body.message.trim();
+    }
+    const msg = (err as { message?: string })?.message;
+    if (typeof msg === 'string' && msg.trim() && !msg.startsWith('Http failure')) return msg.trim();
+    return fallback;
   }
 
   private todayIso(): string {

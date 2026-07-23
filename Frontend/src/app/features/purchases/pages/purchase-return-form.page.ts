@@ -15,11 +15,12 @@ import { catchError, of } from 'rxjs';
 import { environment } from '../../../../environments/environment';
 import { LanguageService } from '../../../core/services/language.service';
 import { AuthService } from '../../../core/services/auth.service';
-import { InventoryService } from '../../../core/services/inventory.service';
+import { InventoryRepository } from '../../../core/repositories/inventory.repository';
 import { GoodsReceiptRepository } from '../../../core/repositories/goods-receipt.repository';
 import { PurchaseReturnRepository } from '../../../core/repositories/purchase-return.repository';
 import {
   CreatePurchaseReturnPayload,
+  PurchaseInvoiceForReturn,
   PurchaseReturnDoc,
   PurchaseReturnLine,
   PurchaseReturnReason,
@@ -28,6 +29,7 @@ import {
 import { GoodsReceiptDoc } from '../../../core/models/goods-receipt.models';
 import { Warehouse } from '../../../core/models/inventory.models';
 import { InventoryPageShellComponent } from '../../inventory/shared/inventory-page-shell.component';
+import { AppDialogComponent } from '../../../shared/ui/app-dialog/app-dialog.component';
 
 interface InvoiceOption {
   id: string;
@@ -39,10 +41,31 @@ interface InvoiceOption {
   totalAmount: number;
 }
 
+interface ReturnLineView extends PurchaseReturnLine {
+  lineWarehouseId?: string | null;
+  lineWarehouseNameAr?: string | null;
+  isDisabled?: boolean;
+  discountPercent?: number;
+}
+
+type ResultDialogState = {
+  open: boolean;
+  success: boolean;
+  title: string;
+  message: string;
+  navigateToId?: string | null;
+};
+
+function previewReturnNumber(sequence = 1): string {
+  const now = new Date();
+  const period = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}`;
+  return `PR${period}${String(Math.max(1, sequence)).padStart(4, '0')}`;
+}
+
 @Component({
   selector: 'app-purchase-return-form-page',
   standalone: true,
-  imports: [CommonModule, FormsModule, MatIconModule, InventoryPageShellComponent],
+  imports: [CommonModule, FormsModule, MatIconModule, InventoryPageShellComponent, AppDialogComponent],
   templateUrl: './purchase-return-form.page.html',
   styleUrl: './purchase-return-form.page.scss',
   changeDetection: ChangeDetectionStrategy.OnPush
@@ -50,7 +73,7 @@ interface InvoiceOption {
 export class PurchaseReturnFormPage implements OnInit {
   private repo = inject(PurchaseReturnRepository);
   private grnRepo = inject(GoodsReceiptRepository);
-  private inventory = inject(InventoryService);
+  private inventoryRepo = inject(InventoryRepository);
   private http = inject(HttpClient);
   private route = inject(ActivatedRoute);
   private router = inject(Router);
@@ -60,6 +83,13 @@ export class PurchaseReturnFormPage implements OnInit {
   loading = signal(false);
   saving = signal(false);
   error = signal<string | null>(null);
+  resultDialog = signal<ResultDialogState>({
+    open: false,
+    success: true,
+    title: '',
+    message: ''
+  });
+  approveConfirmOpen = signal(false);
 
   docId = signal<string | null>(null);
   returnNumber = signal('');
@@ -70,10 +100,10 @@ export class PurchaseReturnFormPage implements OnInit {
   currency = signal('SAR');
   notes = signal('');
   referenceNumber = signal('');
-  reasonNotes = signal('');
   returnReasonId = signal<string | null>(null);
   warehouseId = signal<string | null>(null);
   warehouseNameAr = signal('');
+  warehouseLocked = signal(false);
   supplierId = signal<string | null>(null);
   supplierNameAr = signal('');
   goodsReceiptId = signal<string | null>(null);
@@ -81,8 +111,9 @@ export class PurchaseReturnFormPage implements OnInit {
   purchaseInvoiceId = signal<string | null>(null);
   purchaseInvoiceNumber = signal('');
 
-  lines = signal<PurchaseReturnLine[]>([]);
+  lines = signal<ReturnLineView[]>([]);
   selectedLineIndex = signal<number | null>(null);
+  sourceLoaded = signal(false);
 
   reasons = signal<PurchaseReturnReason[]>([]);
   warehouses = signal<Warehouse[]>([]);
@@ -90,12 +121,13 @@ export class PurchaseReturnFormPage implements OnInit {
   invoices = signal<InvoiceOption[]>([]);
 
   isDirectRoute = signal(false);
+  /** Invoice returns screen: FromReceipt + Direct purchase invoices. */
+  isInvoiceReturnsMode = signal(false);
 
   breadcrumbs = computed(() => {
-    const listKey = this.isDirectRoute() ? 'pur.nav.directReturns' : 'pur.nav.purchaseReturns';
-    const listPath = this.isDirectRoute()
-      ? '/purchases/direct-returns'
-      : '/purchases/purchase-returns';
+    const invoiceMode = this.isInvoiceReturnsMode();
+    const listKey = invoiceMode ? 'pur.nav.invoiceReturns' : 'pur.nav.purchaseReturns';
+    const listPath = invoiceMode ? '/purchases/invoice-returns' : '/purchases/purchase-returns';
     return [
       { labelKey: 'nav.purchases', path: '/purchases/dashboard' },
       { labelKey: listKey, path: listPath },
@@ -103,9 +135,16 @@ export class PurchaseReturnFormPage implements OnInit {
     ];
   });
 
-  canManage = computed(() => this.auth.hasPermission('Inventory.Manage'));
-  isDraft = computed(() => this.status() === 'Draft');
+  canManage = computed(() =>
+    this.auth.hasPermission('Inventory.Manage') || this.auth.hasPermission('Purchases.Manage')
+  );
+  /** Editable draft only — after approval the document is locked. */
+  isEditableDraft = computed(() => this.status() === 'Draft');
+  isApproved = computed(() => this.status() === 'Approved');
   isPosted = computed(() => this.status() === 'Posted');
+  canApprove = computed(() => !!this.docId() && this.status() === 'Draft');
+  canPost = computed(() => !!this.docId() && this.status() === 'Approved');
+  canCancel = computed(() => !!this.docId() && this.status() === 'Draft');
   isNew = computed(() => !this.docId());
   pageTitle = computed(() =>
     this.isNew()
@@ -129,53 +168,70 @@ export class PurchaseReturnFormPage implements OnInit {
   showCreditNote = computed(() => this.returnType() === 2 || this.returnType() === 3);
   usesGrnSource = computed(() => this.returnType() === 1);
   usesInvoiceSource = computed(() => this.returnType() === 2 || this.returnType() === 3);
+  hasInvoiceSource = computed(() => !!this.purchaseInvoiceId());
+  linesEnabled = computed(() =>
+    this.usesGrnSource() ? !!this.goodsReceiptId() : this.hasInvoiceSource() && this.sourceLoaded()
+  );
+  canSaveDraft = computed(() => {
+    if (!this.canManage() || !this.isEditableDraft() || this.saving()) return false;
+    if (this.usesInvoiceSource() && !this.purchaseInvoiceId()) return false;
+    if (this.usesGrnSource() && !this.goodsReceiptId()) return false;
+    return true;
+  });
   grandTotal = computed(() => this.lines().reduce((s, l) => s + (Number(l.lineTotal) || 0), 0));
   listBasePath = computed(() =>
-    this.isDirectRoute() ? '/purchases/direct-returns' : '/purchases/purchase-returns'
+    this.isInvoiceReturnsMode() ? '/purchases/invoice-returns' : '/purchases/purchase-returns'
   );
+  warehouseDisplayName = computed(() => {
+    const name = this.warehouseNameAr();
+    if (name) return name;
+    const id = this.warehouseId();
+    const match = this.warehouses().find(w => w.id === id);
+    return match ? this.warehouseLabel(match) : '—';
+  });
 
   ngOnInit(): void {
     const path = this.route.snapshot.routeConfig?.path ?? '';
     const parentPath = this.route.parent?.snapshot.routeConfig?.path ?? '';
     const url = this.router.url;
-    const isDirect =
+    const data = this.route.snapshot.data;
+    const invoiceMode =
+      data['invoiceReturnsMode'] === true ||
+      url.includes('/invoice-returns') ||
       url.includes('/direct-returns') ||
+      path.startsWith('invoice-returns') ||
       path.startsWith('direct-returns') ||
-      parentPath.startsWith('direct-returns') ||
-      this.route.snapshot.data['defaultReturnType'] === 3;
-    this.isDirectRoute.set(isDirect);
+      parentPath.startsWith('invoice-returns') ||
+      parentPath.startsWith('direct-returns');
+    this.isInvoiceReturnsMode.set(invoiceMode);
+    this.isDirectRoute.set(invoiceMode); // keeps template "locked type" behavior
 
     const qpType = Number(this.route.snapshot.queryParamMap.get('returnType'));
-    if (isDirect) {
-      this.returnType.set(3);
+    if (invoiceMode) {
+      // Default AfterInvoice until a Direct invoice is selected.
+      this.returnType.set(qpType === 3 ? 3 : 2);
     } else if (qpType === 1 || qpType === 2 || qpType === 3) {
       this.returnType.set(qpType);
     }
 
-    this.inventory.loadWarehouses();
-    const pullWh = () => this.warehouses.set([...this.inventory.warehouses()]);
-    pullWh();
-    setTimeout(pullWh, 400);
-
+    this.loadWarehouses();
     this.loadReasons();
     this.loadSourceOptions();
-
-    const qpInvoiceId = this.route.snapshot.queryParamMap.get('purchaseInvoiceId');
-    if (qpInvoiceId && !this.route.snapshot.paramMap.get('id')) {
-      this.purchaseInvoiceId.set(qpInvoiceId);
-      this.returnType.set(isDirect ? 3 : 2);
-      this.loadSourceOptions();
-      // Prefill lines from posted invoice when opening "create return" from DPI.
-      this.repo.previewFromInvoice(qpInvoiceId).subscribe({
-        next: doc => this.applyPreview(doc),
-        error: () => undefined
-      });
-    }
 
     const id = this.route.snapshot.paramMap.get('id');
     if (id && id !== 'new') {
       this.docId.set(id);
       this.loadDoc(id);
+    } else {
+      this.loadNextReturnNumber();
+    }
+
+    const qpInvoiceId = this.route.snapshot.queryParamMap.get('purchaseInvoiceId');
+    if (qpInvoiceId && !id) {
+      this.purchaseInvoiceId.set(qpInvoiceId);
+      if (!invoiceMode) this.returnType.set(2);
+      this.loadSourceOptions();
+      this.loadFromInvoice();
     }
   }
 
@@ -183,8 +239,19 @@ export class PurchaseReturnFormPage implements OnInit {
     return this.lang.t(key);
   }
 
+  warehouseLabel(w: Warehouse): string {
+    const code = (w.code || '').trim();
+    return code ? `${code} — ${w.nameAr}` : w.nameAr;
+  }
+
+  onWarehouseChange(id: string | null): void {
+    this.warehouseId.set(id);
+    const match = this.warehouses().find(w => w.id === id);
+    this.warehouseNameAr.set(match?.nameAr || '');
+  }
+
   onReturnTypeChange(value: number): void {
-    if (!this.isDraft() || this.docId()) return;
+    if (!this.isEditableDraft() || this.docId()) return;
     this.returnType.set(Number(value));
     this.goodsReceiptId.set(null);
     this.goodsReceiptNumber.set('');
@@ -194,8 +261,30 @@ export class PurchaseReturnFormPage implements OnInit {
     this.supplierNameAr.set('');
     this.warehouseId.set(null);
     this.warehouseNameAr.set('');
+    this.warehouseLocked.set(false);
     this.lines.set([]);
+    this.sourceLoaded.set(false);
+    this.error.set(null);
     this.loadSourceOptions();
+  }
+
+  onInvoiceChange(invoiceId: string | null): void {
+    if (!this.isEditableDraft() || this.docId()) return;
+    this.purchaseInvoiceId.set(invoiceId);
+    this.lines.set([]);
+    this.sourceLoaded.set(false);
+    this.supplierId.set(null);
+    this.supplierNameAr.set('');
+    this.warehouseId.set(null);
+    this.warehouseNameAr.set('');
+    this.warehouseLocked.set(false);
+    this.purchaseInvoiceNumber.set('');
+    this.error.set(null);
+    if (!invoiceId) {
+      this.error.set(this.t('pur.pr.validation.source'));
+      return;
+    }
+    this.loadFromInvoice();
   }
 
   loadFromSource(): void {
@@ -217,10 +306,12 @@ export class PurchaseReturnFormPage implements OnInit {
     this.repo.previewFromGrn(grnId).subscribe({
       next: preview => {
         this.applyPreview(preview);
+        this.sourceLoaded.set(true);
         this.loading.set(false);
       },
       error: err => {
         this.error.set(err?.error?.error ?? this.t('pur.pr.loadFailed'));
+        this.sourceLoaded.set(false);
         this.loading.set(false);
       }
     });
@@ -234,20 +325,31 @@ export class PurchaseReturnFormPage implements OnInit {
     }
     this.loading.set(true);
     this.error.set(null);
-    this.repo.previewFromInvoice(invId).subscribe({
-      next: preview => {
-        this.applyPreview(preview);
+    this.repo.getInvoiceForReturn(invId).subscribe({
+      next: data => {
+        this.applyInvoiceForReturn(data);
         this.loading.set(false);
       },
       error: err => {
-        this.error.set(err?.error?.error ?? this.t('pur.pr.loadFailed'));
+        const msg =
+          err?.error?.error ??
+          err?.error?.message ??
+          this.t('pur.pr.loadFailed');
+        this.error.set(msg);
+        this.lines.set([]);
+        this.sourceLoaded.set(false);
         this.loading.set(false);
       }
     });
   }
 
   save(): void {
-    if (!this.canManage() || !this.isDraft()) return;
+    if (!this.canSaveDraft()) {
+      if (this.usesInvoiceSource() && !this.purchaseInvoiceId()) {
+        this.error.set(this.t('pur.pr.validation.source'));
+      }
+      return;
+    }
     if (!this.warehouseId()) {
       this.error.set(this.t('pur.pr.validation.warehouse'));
       return;
@@ -260,9 +362,20 @@ export class PurchaseReturnFormPage implements OnInit {
       this.error.set(this.t('pur.pr.validation.source'));
       return;
     }
-    const activeLines = this.lines().filter(l => Number(l.returnQuantity) > 0);
+    if (!this.returnReasonId()) {
+      this.error.set(this.t('pur.pr.validation.reason'));
+      return;
+    }
+    const activeLines = this.lines().filter(l => !l.isDisabled && Number(l.returnQuantity) > 0);
     if (activeLines.length === 0) {
       this.error.set(this.t('pur.pr.validation.lines'));
+      return;
+    }
+    const over = activeLines.find(l => Number(l.returnQuantity) > Number(l.availableToReturn));
+    if (over) {
+      this.error.set(
+        this.t('pur.pr.validation.qtyExceeds').replace('{max}', String(over.availableToReturn))
+      );
       return;
     }
 
@@ -292,7 +405,7 @@ export class PurchaseReturnFormPage implements OnInit {
       const payload: UpdatePurchaseReturnPayload = {
         returnDate: this.toIsoDate(this.returnDate()),
         returnReasonId: this.returnReasonId(),
-        reasonNotes: this.reasonNotes() || null,
+        reasonNotes: null,
         referenceNumber: this.referenceNumber() || null,
         notes: this.notes() || null,
         lines: linePayload
@@ -301,10 +414,11 @@ export class PurchaseReturnFormPage implements OnInit {
         next: doc => {
           this.applyDoc(doc);
           this.saving.set(false);
+          this.error.set(null);
         },
         error: err => {
-          this.error.set(err?.error?.error ?? this.t('pur.pr.saveFailed'));
           this.saving.set(false);
+          this.error.set(err?.error?.error ?? this.t('pur.pr.saveFailed'));
         }
       });
       return;
@@ -318,7 +432,7 @@ export class PurchaseReturnFormPage implements OnInit {
       purchaseInvoiceId: this.usesInvoiceSource() ? this.purchaseInvoiceId() : null,
       returnDate: this.toIsoDate(this.returnDate()),
       returnReasonId: this.returnReasonId(),
-      reasonNotes: this.reasonNotes() || null,
+      reasonNotes: null,
       referenceNumber: this.referenceNumber() || null,
       notes: this.notes() || null,
       currency: this.currency(),
@@ -328,38 +442,66 @@ export class PurchaseReturnFormPage implements OnInit {
     this.repo.create(createPayload).subscribe({
       next: doc => {
         this.saving.set(false);
+        this.error.set(null);
         void this.router.navigate([this.listBasePath(), doc.id], { replaceUrl: true });
       },
       error: err => {
-        this.error.set(err?.error?.error ?? this.t('pur.pr.saveFailed'));
         this.saving.set(false);
+        this.error.set(err?.error?.error ?? this.t('pur.pr.saveFailed'));
       }
     });
   }
 
-  approve(): void {
-    const id = this.docId();
-    if (!id || !this.canManage()) return;
-    this.runAction(() => this.repo.approve(id));
-  }
-
   post(): void {
     const id = this.docId();
-    if (!id || !this.canManage()) return;
-    this.runAction(() => this.repo.post(id));
+    if (!id || !this.canManage() || !this.canPost()) return;
+    this.runAction(
+      () => this.repo.post(id),
+      {
+        successTitle: this.t('pur.pr.result.postSuccessTitle'),
+        successMessage: this.t('pur.pr.result.postSuccessMessage').replace(
+          '{number}',
+          this.returnNumber() || id
+        )
+      }
+    );
   }
 
-  unpost(): void {
+  openApproveConfirm(): void {
+    if (!this.canApprove() || !this.canManage()) return;
+    this.approveConfirmOpen.set(true);
+  }
+
+  closeApproveConfirm(): void {
+    this.approveConfirmOpen.set(false);
+  }
+
+  confirmApprove(): void {
     const id = this.docId();
     if (!id || !this.canManage()) return;
-    this.runAction(() => this.repo.unpost(id));
+    this.approveConfirmOpen.set(false);
+    this.runAction(
+      () => this.repo.approve(id),
+      {
+        successTitle: this.t('pur.pr.result.approveSuccessTitle'),
+        successMessage: this.t('pur.pr.result.approveSuccessMessage')
+      }
+    );
   }
 
   cancelDoc(): void {
     const id = this.docId();
-    if (!id || !this.canManage()) return;
+    if (!id || !this.canManage() || !this.canCancel()) return;
     if (!confirm(this.t('pur.pr.confirmCancel'))) return;
     this.runAction(() => this.repo.cancel(id));
+  }
+
+  acknowledgeResult(): void {
+    const navId = this.resultDialog().navigateToId;
+    this.resultDialog.set({ open: false, success: true, title: '', message: '' });
+    if (navId && navId !== this.docId()) {
+      void this.router.navigate([this.listBasePath(), navId], { replaceUrl: true });
+    }
   }
 
   back(): void {
@@ -370,27 +512,52 @@ export class PurchaseReturnFormPage implements OnInit {
     this.selectedLineIndex.set(index);
   }
 
-  updateLine(index: number, patch: Partial<PurchaseReturnLine>): void {
-    if (!this.isDraft()) return;
+  updateLine(index: number, patch: Partial<ReturnLineView>): void {
+    if (!this.isEditableDraft()) return;
     const next = [...this.lines()];
     const row = { ...next[index], ...patch };
+    if (row.isDisabled) return;
+
     let qty = Number(row.returnQuantity) || 0;
-    const available = Number(row.availableToReturn) || qty;
+    if (qty < 0) qty = 0;
+    const available = Number(row.availableToReturn) || 0;
     if (qty > available) {
+      this.error.set(
+        this.t('pur.pr.validation.qtyExceeds').replace('{max}', String(available))
+      );
       qty = available;
-      row.returnQuantity = available;
+    } else if (this.error()?.includes('كمية المرتجع') || this.error()?.includes('exceed')) {
+      this.error.set(null);
     }
+    row.returnQuantity = qty;
+
     const cost = Number(row.unitCost) || 0;
-    const discount = Number(row.discountAmount) || 0;
-    const taxPercent = Number(row.taxPercent) || 0;
+    const discountPercent = Number(row.discountPercent) || 0;
     const origQty = Number(row.originalQuantity) || 0;
+    const origDiscount = Number(row.discountAmount) || 0;
+    const discount =
+      discountPercent > 0
+        ? Math.round(((qty * cost * discountPercent) / 100) * 10000) / 10000
+        : origQty > 0
+          ? Math.round((origDiscount * (qty / origQty)) * 10000) / 10000
+          : 0;
+    row.discountAmount = discount;
+
+    const taxPercent = Number(row.taxPercent) || 0;
     row.lineSubTotal = Math.max(0, qty * cost - discount);
     if (taxPercent > 0) {
-      row.taxAmount = Math.round(row.lineSubTotal * taxPercent) / 100;
-    } else if (origQty > 0 && 'returnQuantity' in patch) {
+      row.taxAmount = Math.round(((row.lineSubTotal * taxPercent) / 100) * 10000) / 10000;
+    } else if (origQty > 0) {
       const baseTax = Number(next[index].taxAmount) || 0;
-      const baseQty = Number(next[index].returnQuantity) || origQty;
-      row.taxAmount = baseQty > 0 ? Math.round((baseTax * qty) / baseQty * 100) / 100 : 0;
+      const baseQty = Number(next[index].returnQuantity) || 0;
+      row.taxAmount =
+        baseQty > 0
+          ? Math.round((baseTax * (qty / baseQty)) * 10000) / 10000
+          : origQty > 0
+            ? Math.round((baseTax * (qty / origQty)) * 10000) / 10000
+            : 0;
+    } else {
+      row.taxAmount = 0;
     }
     row.lineTotal = row.lineSubTotal + (Number(row.taxAmount) || 0);
     next[index] = row;
@@ -410,6 +577,14 @@ export class PurchaseReturnFormPage implements OnInit {
     }
   }
 
+  invoiceOptionLabel(inv: InvoiceOption): string {
+    const kindLabel =
+      Number(inv.kind) === 2
+        ? this.t('pur.pr.invoiceKind.direct')
+        : this.t('pur.pr.invoiceKind.fromReceipt');
+    return `${inv.invoiceNumber} — ${kindLabel}`;
+  }
+
   private loadDoc(id: string): void {
     this.loading.set(true);
     this.repo.getById(id).subscribe({
@@ -422,6 +597,73 @@ export class PurchaseReturnFormPage implements OnInit {
         this.loading.set(false);
       }
     });
+  }
+
+  private loadNextReturnNumber(): void {
+    this.returnNumber.set(previewReturnNumber(1));
+    this.repo
+      .getNextNumber()
+      .pipe(catchError(() => of('')))
+      .subscribe(n => {
+        this.returnNumber.set(n && /^PR\d{10}$/.test(n) ? n : previewReturnNumber(1));
+      });
+  }
+
+  private loadWarehouses(): void {
+    this.inventoryRepo
+      .getWarehouseLookup()
+      .pipe(catchError(() => of([] as Warehouse[])))
+      .subscribe(rows => {
+        const usable = rows.filter(
+          w =>
+            w.isActive !== false &&
+            (w.allowReceiving !== false || w.allowPurchase !== false)
+        );
+        const list = usable.length > 0 ? usable : rows.filter(w => w.isActive !== false);
+        this.warehouses.set(list);
+
+        if (!this.warehouseId()) {
+          const preferred =
+            list.find(w => w.isDefault && w.isActive) ?? list.find(w => w.isActive) ?? list[0] ?? null;
+          if (preferred && !this.sourceLoaded()) {
+            this.warehouseId.set(preferred.id);
+            this.warehouseNameAr.set(preferred.nameAr || '');
+          }
+        } else {
+          this.ensureWarehouseInList(this.warehouseId()!, this.warehouseNameAr());
+        }
+      });
+  }
+
+  private ensureWarehouseInList(id: string, nameAr?: string | null): void {
+    if (!id) return;
+    if (this.warehouses().some(w => w.id === id)) return;
+    this.warehouses.update(list => [
+      ...list,
+      {
+        id,
+        code: '',
+        nameAr: nameAr || id,
+        nameEn: undefined,
+        warehouseType: 'Main',
+        allowPurchase: true,
+        allowSales: false,
+        allowTransfer: true,
+        allowInventoryCount: true,
+        allowManufacturing: false,
+        allowNegativeStock: false,
+        allowReservation: false,
+        allowReceiving: true,
+        allowIssue: true,
+        allowAdjustment: true,
+        isPosWarehouse: false,
+        isDefault: false,
+        isSystem: false,
+        useBins: false,
+        isActive: true,
+        zoneCount: 0
+      }
+    ]);
   }
 
   private loadReasons(): void {
@@ -449,16 +691,83 @@ export class PurchaseReturnFormPage implements OnInit {
       return;
     }
 
+    // Invoice returns mode: load both FromReceipt (kind=1) and Direct (kind=2).
     let params = new HttpParams().set('page', 1).set('pageSize', 100).set('status', 2);
-    if (this.returnType() === 3) {
-      params = params.set('kind', 2);
-    } else if (this.returnType() === 2) {
-      params = params.set('kind', 1);
+    if (!this.isInvoiceReturnsMode()) {
+      if (this.returnType() === 3) params = params.set('kind', 2);
+      else if (this.returnType() === 2) params = params.set('kind', 1);
     }
     this.http
       .get<InvoiceOption[]>(`${environment.apiBaseUrl}/inventory/purchase-invoices`, { params })
       .pipe(catchError(() => of([] as InvoiceOption[])))
       .subscribe(rows => this.invoices.set(rows ?? []));
+  }
+
+  private applyInvoiceForReturn(data: PurchaseInvoiceForReturn): void {
+    const h = data.header;
+    if (!h.canCreateReturn) {
+      const code = (h.blockReasonCode || '').toLowerCase();
+      if (code.includes('cancel')) this.error.set(this.t('pur.pr.invoiceCancelled'));
+      else if (code.includes('nothing') || code.includes('return'))
+        this.error.set(this.t('pur.pr.nothingToReturn'));
+      else       this.error.set(h.blockReason || this.t('pur.pr.invoiceBlocked'));
+      this.lines.set([]);
+      this.sourceLoaded.set(false);
+      this.supplierId.set(h.supplierId);
+      this.supplierNameAr.set(h.supplierNameAr || '');
+      this.purchaseInvoiceNumber.set(h.invoiceNumber || '');
+      this.returnType.set(Number(h.kind) === 2 ? 3 : 2);
+      return;
+    }
+
+    this.error.set(null);
+    this.supplierId.set(h.supplierId);
+    this.supplierNameAr.set(h.supplierNameAr || '');
+    this.purchaseInvoiceId.set(h.id);
+    this.purchaseInvoiceNumber.set(h.invoiceNumber || '');
+    // Kind: FromReceipt=1 → AfterInvoice=2; Direct=2 → Direct=3
+    this.returnType.set(Number(h.kind) === 2 ? 3 : 2);
+    this.currency.set(h.currency || 'SAR');
+    if (h.warehouseId) {
+      this.warehouseId.set(h.warehouseId);
+      this.warehouseNameAr.set(h.warehouseNameAr || '');
+      this.ensureWarehouseInList(h.warehouseId, h.warehouseNameAr);
+      this.warehouseLocked.set(true);
+    } else {
+      this.warehouseLocked.set(false);
+    }
+    if (h.externalReference || h.supplierInvoiceNumber) {
+      this.referenceNumber.set(h.externalReference || h.supplierInvoiceNumber || '');
+    }
+    if (h.notes) this.notes.set(h.notes);
+
+    const mapped: ReturnLineView[] = (data.items || []).map(i => ({
+      inventoryItemId: i.inventoryItemId,
+      itemNameAr: i.itemNameAr,
+      itemSku: i.itemSku,
+      unitId: i.unitId,
+      unitNameAr: i.unitNameAr,
+      purchaseInvoiceLineId: i.purchaseInvoiceLineId,
+      originalQuantity: i.originalQuantity,
+      previouslyReturnedQuantity: i.previouslyReturnedQuantity,
+      availableToReturn: i.remainingQuantity,
+      returnQuantity: 0,
+      unitCost: i.unitPrice,
+      discountAmount: 0,
+      discountPercent: i.discountPercent,
+      taxPercent: i.taxPercent,
+      taxAmount: 0,
+      lineSubTotal: 0,
+      lineTotal: 0,
+      notes: i.description,
+      destroyItem: false,
+      lineWarehouseId: i.warehouseId,
+      lineWarehouseNameAr: i.warehouseNameAr,
+      isDisabled: i.isDisabled || i.remainingQuantity <= 0
+    }));
+
+    this.lines.set(mapped);
+    this.sourceLoaded.set(true);
   }
 
   private applyPreview(doc: PurchaseReturnDoc): void {
@@ -467,13 +776,22 @@ export class PurchaseReturnFormPage implements OnInit {
     this.supplierNameAr.set(doc.supplierNameAr || '');
     this.warehouseId.set(doc.warehouseId);
     this.warehouseNameAr.set(doc.warehouseNameAr || '');
+    this.ensureWarehouseInList(doc.warehouseId, doc.warehouseNameAr);
+    this.warehouseLocked.set(!!doc.warehouseId);
     this.goodsReceiptId.set(doc.goodsReceiptId ?? null);
     this.goodsReceiptNumber.set(doc.goodsReceiptNumber || '');
     this.purchaseInvoiceId.set(doc.purchaseInvoiceId ?? null);
     this.purchaseInvoiceNumber.set(doc.purchaseInvoiceNumber || '');
     this.currency.set(doc.currency || 'SAR');
     if (doc.notes) this.notes.set(doc.notes);
-    this.lines.set((doc.lines || []).map(l => ({ ...l })));
+    this.lines.set(
+      (doc.lines || []).map(l => ({
+        ...l,
+        returnQuantity: Number(l.returnQuantity) || 0,
+        isDisabled: Number(l.availableToReturn) <= 0
+      }))
+    );
+    this.sourceLoaded.set(true);
   }
 
   private applyDoc(doc: PurchaseReturnDoc): void {
@@ -486,10 +804,11 @@ export class PurchaseReturnFormPage implements OnInit {
     this.currency.set(doc.currency || 'SAR');
     this.notes.set(doc.notes || '');
     this.referenceNumber.set(doc.referenceNumber || '');
-    this.reasonNotes.set(doc.reasonNotes || '');
     this.returnReasonId.set(doc.returnReasonId ?? null);
     this.warehouseId.set(doc.warehouseId);
     this.warehouseNameAr.set(doc.warehouseNameAr || '');
+    this.ensureWarehouseInList(doc.warehouseId, doc.warehouseNameAr);
+    this.warehouseLocked.set(true);
     this.supplierId.set(doc.supplierId);
     this.supplierNameAr.set(doc.supplierNameAr || '');
     this.goodsReceiptId.set(doc.goodsReceiptId ?? null);
@@ -497,6 +816,7 @@ export class PurchaseReturnFormPage implements OnInit {
     this.purchaseInvoiceId.set(doc.purchaseInvoiceId ?? null);
     this.purchaseInvoiceNumber.set(doc.purchaseInvoiceNumber || '');
     this.lines.set((doc.lines || []).map(l => ({ ...l })));
+    this.sourceLoaded.set(true);
   }
 
   private mapStatus(status: string | number, unified: number): string {
@@ -531,18 +851,41 @@ export class PurchaseReturnFormPage implements OnInit {
     }
   }
 
-  private runAction(action: () => import('rxjs').Observable<void>): void {
+  private runAction(
+    action: () => import('rxjs').Observable<void>,
+    messages?: { successTitle: string; successMessage: string }
+  ): void {
     this.saving.set(true);
     this.error.set(null);
     action().subscribe({
       next: () => {
         this.saving.set(false);
         if (this.docId()) this.loadDoc(this.docId()!);
+        if (messages) {
+          this.showResult(true, messages.successTitle, messages.successMessage);
+        }
       },
       error: err => {
-        this.error.set(err?.error?.error ?? this.t('pur.pr.actionFailed'));
         this.saving.set(false);
+        const msg = err?.error?.error ?? this.t('pur.pr.actionFailed');
+        this.error.set(msg);
+        this.showResult(false, this.t('pur.pr.result.failedTitle'), msg);
       }
+    });
+  }
+
+  private showResult(
+    success: boolean,
+    title: string,
+    message: string,
+    navigateToId?: string | null
+  ): void {
+    this.resultDialog.set({
+      open: true,
+      success,
+      title,
+      message,
+      navigateToId: navigateToId ?? null
     });
   }
 

@@ -160,9 +160,11 @@
 }
 
 .field input:disabled,
+.field input.code-readonly,
 .field select:disabled {
   background: #f8fafc;
   color: #64748b;
+  cursor: default;
 }
 
 .span-2 {
@@ -286,6 +288,12 @@ tr.empty-row td {
   width: 100%;
 }
 
+.readonly-cell {
+  background: #f8fafc;
+  color: #64748b;
+  font-weight: 600;
+}
+
 .num {
   font-variant-numeric: tabular-nums;
   font-weight: 700;
@@ -358,4 +366,27 @@ tr.empty-row td {
     width: 100%;
     margin-inline-end: 0;
   }
+}
+
+.result-message {
+  margin: 0;
+  font-size: 0.95rem;
+  color: var(--text-primary, #1e293b);
+  text-align: center;
+  line-height: 1.7;
+  white-space: pre-line;
+}
+
+.result-message.success {
+  color: #166534;
+}
+
+.result-message.failure {
+  color: #b91c1c;
+}
+
+.result-actions {
+  display: flex;
+  justify-content: center;
+  margin-top: 1.25rem;
 }

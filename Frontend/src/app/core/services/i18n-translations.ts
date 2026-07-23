@@ -13,6 +13,7 @@ export const I18N_TRANSLATIONS: Dict = {
   'common.actions': { en: 'Actions', ar: 'إجراءات' },
   'common.add': { en: 'Add', ar: 'إضافة' },
   'common.close': { en: 'Close', ar: 'إغلاق' },
+  'common.ok': { en: 'OK', ar: 'موافق' },
   'common.search': { en: 'Search', ar: 'بحث' },
   'common.apply': { en: 'Apply', ar: 'تطبيق' },
   'common.reset': { en: 'Reset', ar: 'إعادة تعيين' },
@@ -2382,8 +2383,116 @@ export const I18N_TRANSLATIONS: Dict = {
   'pur.nav.goodsReceipts': { en: 'Receipt & Inspection', ar: 'سندات الفحص والاستلام' },
   'pur.nav.purchaseReturns': { en: 'Purchase Returns', ar: 'مرتجعات الشراء' },
   'pur.nav.purchaseInvoices': { en: 'Purchase Invoices', ar: 'فواتير المشتريات' },
+  'pur.pi.subtitle': {
+    en: 'Invoices created from posted goods receipts (PO → GRN → Invoice).',
+    ar: 'فواتير ناتجة عن سندات الاستلام المرحّلة (أمر شراء ← استلام ← فاتورة).'
+  },
+  'pur.pi.searchPlaceholder': { en: 'Search invoice number…', ar: 'بحث برقم الفاتورة…' },
+  'pur.pi.new': { en: 'New', ar: 'جديد' },
+  'pur.pi.edit': { en: 'Edit', ar: 'تعديل' },
+  'pur.pi.refresh': { en: 'Refresh', ar: 'تحديث' },
+  'pur.pi.approve': { en: 'Approve', ar: 'اعتماد' },
+  'pur.pi.post': { en: 'Post', ar: 'ترحيل' },
+  'pur.pi.unpost': { en: 'Unpost', ar: 'عكس الترحيل' },
+  'pur.pi.createReturn': { en: 'Create purchase return', ar: 'إنشاء مرتجع شراء' },
+  'pur.pi.cancel': { en: 'Cancel', ar: 'إلغاء' },
+  'pur.pi.back': { en: 'Back', ar: 'رجوع' },
+  'pur.pi.save': { en: 'Save', ar: 'حفظ' },
+  'pur.pi.showDeleted': { en: 'Show cancelled', ar: 'عرض الملغى' },
+  'pur.pi.emptyTitle': { en: 'No purchase invoices', ar: 'لا توجد فواتير مشتريات' },
+  'pur.pi.empty': {
+    en: 'Post a goods receipt, then create an invoice from it.',
+    ar: 'رحّل سند فحص واستلام ثم أنشئ فاتورة منه.'
+  },
+  'pur.pi.loadFailed': { en: 'Could not load purchase invoices.', ar: 'تعذر تحميل فواتير المشتريات.' },
+  'pur.pi.saveFailed': { en: 'Could not save purchase invoice.', ar: 'تعذر حفظ فاتورة المشتريات.' },
+  'pur.pi.actionFailed': { en: 'Action failed.', ar: 'فشل تنفيذ الإجراء.' },
+  'pur.pi.confirmCancel': { en: 'Cancel this invoice?', ar: 'إلغاء هذه الفاتورة؟' },
+  'pur.pi.createTitle': { en: 'New purchase invoice', ar: 'فاتورة مشتريات جديدة' },
+  'pur.pi.docTitle': { en: 'Purchase invoice', ar: 'فاتورة مشتريات' },
+  'pur.pi.formBreadcrumb': { en: 'Document', ar: 'المستند' },
+  'pur.pi.headerTitle': { en: 'Invoice data', ar: 'بيانات الفاتورة' },
+  'pur.pi.linesTitle': { en: 'Invoice lines', ar: 'بنود الفاتورة' },
+  'pur.pi.fromReceiptHint': {
+    en: 'Select a posted goods receipt. Lines are loaded from remaining quantities to invoice.',
+    ar: 'اختر سند استلام مرحّل. تُحمَّل البنود من الكميات المتبقية للفوترة.'
+  },
+  'pur.pi.fromGrn': { en: 'From goods receipt', ar: 'من سند الاستلام' },
+  'pur.pi.pickGrn': { en: 'Select posted goods receipt', ar: 'اختر سند استلام مرحّل' },
+  'pur.pi.autoNumber': { en: 'Preview number', ar: 'الرقم المتوقع' },
+  'pur.pi.noLines': {
+    en: 'No lines. Choose a posted receipt with remaining quantity.',
+    ar: 'لا توجد بنود. اختر سنداً مرحّلاً بكميات متبقية.'
+  },
+  'pur.pi.filter.all': { en: 'All', ar: 'الكل' },
+  'pur.pi.filter.today': { en: 'Today', ar: 'اليوم' },
+  'pur.pi.filter.7d': { en: 'Last 7 days', ar: 'آخر 7 أيام' },
+  'pur.pi.filter.30d': { en: 'Last 30 days', ar: 'آخر 30 يوم' },
+  'pur.pi.filter.anyDate': { en: 'Any date', ar: 'أي تاريخ' },
+  'pur.pi.status.draft': { en: 'Draft', ar: 'مسودة' },
+  'pur.pi.status.approved': { en: 'Approved', ar: 'معتمد' },
+  'pur.pi.status.posted': { en: 'Posted', ar: 'مرحّل' },
+  'pur.pi.status.reversed': { en: 'Reversed', ar: 'معكوس' },
+  'pur.pi.status.cancelled': { en: 'Cancelled', ar: 'ملغي' },
+  'pur.pi.paymentMode.credit': { en: 'Credit', ar: 'آجل' },
+  'pur.pi.paymentMode.cash': { en: 'Cash', ar: 'نقدي' },
+  'pur.pi.col.docNumber': { en: 'Document no.', ar: 'رقم المستند' },
+  'pur.pi.col.date': { en: 'Date', ar: 'التاريخ' },
+  'pur.pi.col.supplier': { en: 'Supplier', ar: 'المورد' },
+  'pur.pi.col.warehouse': { en: 'Warehouse', ar: 'المستودع' },
+  'pur.pi.col.paymentMode': { en: 'Payment mode', ar: 'طريقة السداد' },
+  'pur.pi.col.status': { en: 'Status', ar: 'الحالة' },
+  'pur.pi.col.subTotal': { en: 'Subtotal', ar: 'المجموع الفرعي' },
+  'pur.pi.col.tax': { en: 'Tax', ar: 'الضريبة' },
+  'pur.pi.col.total': { en: 'Total', ar: 'الإجمالي' },
+  'pur.pi.col.ref': { en: 'Reference', ar: 'رقم المرجع' },
+  'pur.pi.col.grn': { en: 'Goods receipt', ar: 'سند الاستلام' },
+  'pur.pi.col.dueDate': { en: 'Due date', ar: 'تاريخ الاستحقاق' },
+  'pur.pi.col.supplierInvoice': { en: 'Supplier invoice no.', ar: 'رقم فاتورة المورد' },
+  'pur.pi.col.currency': { en: 'Currency', ar: 'العملة' },
+  'pur.pi.col.notes': { en: 'Notes', ar: 'ملاحظات' },
+  'pur.pi.col.item': { en: 'Item', ar: 'الصنف' },
+  'pur.pi.col.unit': { en: 'Unit', ar: 'الوحدة' },
+  'pur.pi.col.qty': { en: 'Quantity', ar: 'الكمية' },
+  'pur.pi.col.unitPrice': { en: 'Unit price', ar: 'سعر الوحدة' },
+  'pur.pi.col.lineTotal': { en: 'Line total', ar: 'إجمالي السطر' },
+  'pur.pi.totalRecords': { en: 'Total records', ar: 'إجمالي السجلات' },
+  'pur.pi.pageSize': { en: 'Page size', ar: 'عدد السجلات' },
+  'pur.pi.validation.grn': { en: 'Select a goods receipt first.', ar: 'اختر سند استلام أولاً.' },
+  'pur.pi.validation.supplier': { en: 'Supplier is required.', ar: 'المورد مطلوب.' },
+  'pur.pi.validation.lines': { en: 'Invoice must have lines.', ar: 'يجب أن تحتوي الفاتورة على بنود.' },
+  'pur.pi.validation.grnMustBePosted': {
+    en: 'Only posted goods receipts can be invoiced.',
+    ar: 'يمكن فوترة سندات الاستلام المرحّلة فقط.'
+  },
+  'pur.pi.validation.nothingToInvoice': {
+    en: 'All quantities on this receipt are already invoiced.',
+    ar: 'كل كميات هذا السند مفوترة مسبقاً.'
+  },
+  'pur.pi.result.savedTitle': { en: 'Saved', ar: 'تم الحفظ' },
+  'pur.pi.result.savedMessage': {
+    en: 'Purchase invoice saved successfully.',
+    ar: 'تم حفظ فاتورة المشتريات بنجاح.'
+  },
+  'pur.pi.result.approveSuccessTitle': { en: 'Approved', ar: 'تم الاعتماد' },
+  'pur.pi.result.approveSuccessMessage': {
+    en: 'Invoice approved. You can post it now.',
+    ar: 'تم اعتماد الفاتورة. يمكنك ترحيلها الآن.'
+  },
+  'pur.pi.result.approveFailedTitle': { en: 'Approval failed', ar: 'فشل الاعتماد' },
+  'pur.pi.result.postSuccessTitle': { en: 'Posted', ar: 'تم الترحيل' },
+  'pur.pi.result.postSuccessMessage': {
+    en: 'Document {number} was posted successfully.',
+    ar: 'تم ترحيل المستند {number} بنجاح.'
+  },
+  'pur.pi.result.postFailedTitle': { en: 'Posting failed', ar: 'فشل الترحيل' },
+  'pur.pi.result.failedTitle': { en: 'Operation failed', ar: 'فشلت العملية' },
   'pur.nav.directInvoices': { en: 'Direct Purchase Invoices', ar: 'فواتير مشتريات مباشرة' },
   'pur.nav.directReturns': { en: 'Direct Purchase Returns', ar: 'مرتجع مشتريات (مباشر)' },
+  'pur.nav.invoiceReturns': {
+    en: 'Purchase Invoice Returns',
+    ar: 'مرتجع فواتير المشتريات'
+  },
   'pur.nav.suppliers': { en: 'Suppliers', ar: 'الموردين' },
   'pur.nav.tripleMatch': { en: 'Triple Match', ar: 'المطابقة الثلاثية' },
   'pur.dash.title': { en: 'Purchasing Dashboard', ar: 'داش بورد المشتريات' },
@@ -2405,6 +2514,11 @@ export const I18N_TRANSLATIONS: Dict = {
   'pur.dash.recent': { en: 'Recent activity', ar: 'آخر العمليات' },
   'pur.dash.alertsEmpty': { en: 'No purchasing alerts.', ar: 'لا توجد تنبيهات مشتريات حالياً.' },
   'pur.dash.recentEmpty': { en: 'No recent purchasing documents.', ar: 'لا توجد عمليات حديثة.' },
+  'pur.dash.loadFailed': { en: 'Could not load purchasing dashboard.', ar: 'تعذر تحميل لوحة المشتريات.' },
+  'pur.dash.activity.PurchaseOrder': { en: 'Purchase order', ar: 'أمر شراء' },
+  'pur.dash.activity.GoodsReceipt': { en: 'Goods receipt', ar: 'سند استلام' },
+  'pur.dash.activity.PurchaseInvoice': { en: 'Purchase invoice', ar: 'فاتورة مشتريات' },
+  'pur.dash.activity.DirectInvoice': { en: 'Direct purchase invoice', ar: 'فاتورة مشتريات مباشرة' },
   'pur.dash.cycleTitle': { en: 'Official purchasing cycle', ar: 'الدورة الرسمية للمشتريات' },
   'pur.dash.path1': {
     en: 'Credit path: Supplier → PO → GRN (Dr Inventory / Cr GRNI) → AP Invoice → Payment Voucher',
@@ -2442,6 +2556,96 @@ export const I18N_TRANSLATIONS: Dict = {
     en: 'Supplier card requires AP account, payment terms, credit limit, due days, currency, and tax number.',
     ar: 'بطاقة المورد تتطلب حساب الذمة وشروط السداد والحد الائتماني ومدة الاستحقاق والعملة والرقم الضريبي.'
   },
+  'pur.sup.subtitle': {
+    en: 'Define and manage purchasing suppliers.',
+    ar: 'تعريف وإدارة موردي المشتريات.'
+  },
+  'pur.sup.searchPlaceholder': { en: 'Search code, name, tax…', ar: 'بحث بالكود أو الاسم أو الرقم الضريبي…' },
+  'pur.sup.filter.activeOnly': { en: 'Active only', ar: 'النشط فقط' },
+  'pur.sup.emptyTitle': { en: 'No suppliers yet', ar: 'لا يوجد موردون بعد' },
+  'pur.sup.empty': {
+    en: 'Create the first supplier to use in purchase orders and invoices.',
+    ar: 'أنشئ أول مورد لاستخدامه في أوامر وفواتير الشراء.'
+  },
+  'pur.sup.loadFailed': { en: 'Failed to load suppliers.', ar: 'فشل تحميل الموردين.' },
+  'pur.sup.saveFailed': { en: 'Failed to save supplier.', ar: 'فشل حفظ المورد.' },
+  'pur.sup.deleteFailed': { en: 'Failed to delete supplier.', ar: 'فشل حذف المورد.' },
+  'pur.sup.confirmDelete': {
+    en: 'Delete this supplier? This cannot be undone if unused.',
+    ar: 'حذف هذا المورد؟ لا يمكن التراجع إن لم يكن مستخدماً.'
+  },
+  'pur.sup.createTitle': { en: 'New supplier', ar: 'مورد جديد' },
+  'pur.sup.editTitle': { en: 'Edit supplier data', ar: 'تحرير بيانات المورد' },
+  'pur.sup.formBreadcrumb': { en: 'Supplier', ar: 'المورد' },
+  'pur.sup.autoCode': { en: 'Auto', ar: 'تلقائي' },
+  'pur.sup.savedTitle': { en: 'Saved', ar: 'تم الحفظ' },
+  'pur.sup.savedMessage': {
+    en: 'Supplier data was saved successfully.',
+    ar: 'تم حفظ بيانات المورد بنجاح.'
+  },
+  'pur.sup.tab.data': { en: 'Supplier data', ar: 'بيانات المورد' },
+  'pur.sup.tab.contact': { en: 'Contact information', ar: 'بيانات التواصل' },
+  'pur.sup.tab.payments': { en: 'Payment methods', ar: 'طرق الدفع' },
+  'pur.sup.paymentData': { en: 'Payment data', ar: 'بيانات الدفع' },
+  'pur.sup.pickAccount': { en: 'Select AP account', ar: 'اختر الحساب' },
+  'pur.sup.pickCostCenter': { en: 'Select cost center', ar: 'اختر مركز التكلفة' },
+  'pur.sup.addPaymentMethod': { en: 'Add', ar: 'إضافة' },
+  'pur.sup.setDefault': { en: 'Set as default', ar: 'تعيين افتراضي' },
+  'pur.sup.noPaymentMethods': { en: 'No payment methods yet.', ar: 'لا توجد طرق دفع بعد.' },
+  'pur.sup.total': { en: 'Total', ar: 'إجمالي' },
+  'pur.sup.records': { en: 'records', ar: 'سجل' },
+  'pur.sup.col.code': { en: 'Code', ar: 'الكود' },
+  'pur.sup.col.name': { en: 'Name', ar: 'الاسم' },
+  'pur.sup.col.nameEn': { en: 'Name (EN)', ar: 'الاسم إنجليزي' },
+  'pur.sup.col.taxNumber': { en: 'Tax number', ar: 'الرقم الضريبي' },
+  'pur.sup.col.active': { en: 'Active', ar: 'نشط' },
+  'pur.sup.col.blacklist': { en: 'Blacklist', ar: 'القائمة السوداء' },
+  'pur.sup.col.account': { en: 'Account', ar: 'الحساب' },
+  'pur.sup.col.costCenter': { en: 'Cost center', ar: 'مركز التكلفة' },
+  'pur.sup.col.paymentTerm': { en: 'Payment term', ar: 'شرط الدفع' },
+  'pur.sup.col.dueDays': { en: 'Due days', ar: 'أيام الاستحقاق' },
+  'pur.sup.col.creditLimit': { en: 'Credit limit', ar: 'الحد الائتماني' },
+  'pur.sup.col.balance': { en: 'Balance', ar: 'الرصيد' },
+  'pur.sup.col.city': { en: 'City', ar: 'المدينة' },
+  'pur.sup.col.status': { en: 'Status', ar: 'الحالة' },
+  'pur.sup.col.contactPerson': { en: 'Contact person', ar: 'الشخص المسؤول' },
+  'pur.sup.col.mobile': { en: 'Mobile', ar: 'الجوال' },
+  'pur.sup.col.phone': { en: 'Phone', ar: 'الهاتف' },
+  'pur.sup.col.email': { en: 'Email', ar: 'البريد الإلكتروني' },
+  'pur.sup.col.website': { en: 'Website', ar: 'الموقع' },
+  'pur.sup.col.country': { en: 'Country', ar: 'الدولة' },
+  'pur.sup.col.postalCode': { en: 'Postal code', ar: 'الرمز البريدي' },
+  'pur.sup.col.address': { en: 'Address', ar: 'العنوان' },
+  'pur.sup.col.notes': { en: 'Notes', ar: 'ملاحظات' },
+  'pur.sup.col.paymentMethod': { en: 'Payment method', ar: 'طريقة الدفع' },
+  'pur.sup.col.default': { en: 'Default', ar: 'افتراضي' },
+  'pur.sup.status.active': { en: 'Active', ar: 'نشط' },
+  'pur.sup.status.inactive': { en: 'Inactive', ar: 'غير نشط' },
+  'pur.sup.status.blacklisted': { en: 'Blacklisted', ar: 'قائمة سوداء' },
+  'pur.sup.term.cash': { en: 'Cash', ar: 'نقدي' },
+  'pur.sup.term.15': { en: '15 Days', ar: '15 يوم' },
+  'pur.sup.term.30': { en: '30 Days', ar: '30 يوم' },
+  'pur.sup.term.60': { en: '60 Days', ar: '60 يوم' },
+  'pur.sup.pm.cash': { en: 'Cash', ar: 'نقدي' },
+  'pur.sup.pm.credit': { en: 'Credit', ar: 'آجل' },
+  'pur.sup.pm.bank': { en: 'Bank transfer', ar: 'تحويل بنكي' },
+  'pur.sup.pm.cheque': { en: 'Cheque', ar: 'شيك' },
+  'pur.sup.pm.card': { en: 'Card', ar: 'بطاقة' },
+  'pur.sup.validation.name': { en: 'Supplier name is required.', ar: 'اسم المورد إلزامي.' },
+  'pur.sup.validation.account': { en: 'AP account is required.', ar: 'الحساب المحاسبي إلزامي.' },
+  'pur.sup.validation.email': { en: 'Invalid email format.', ar: 'صيغة البريد الإلكتروني غير صحيحة.' },
+  'pur.sup.validation.creditLimit': {
+    en: 'Credit limit cannot be negative.',
+    ar: 'الحد الائتماني لا يقبل قيماً سالبة.'
+  },
+  'pur.sup.validation.pmDuplicate': {
+    en: 'This payment method is already added.',
+    ar: 'طريقة الدفع هذه مضافة مسبقاً.'
+  },
+  'pur.sup.validation.pmKind': {
+    en: 'Payment method must be Cash or Credit.',
+    ar: 'طريقة الدفع يجب أن تكون نقدي أو آجل.'
+  },
   'pur.note.tripleMatch': {
     en: 'Triple match compares a PO against all receipts and all invoices (qty, price, discount, tax).',
     ar: 'المطابقة الثلاثية تقارن أمر الشراء مع كل الاستلامات وكل الفواتير (كمية، سعر، خصم، ضريبة).'
@@ -2467,6 +2671,35 @@ export const I18N_TRANSLATIONS: Dict = {
   'pur.grn.saveFailed': { en: 'Could not save goods receipt.', ar: 'تعذر حفظ سند الاستلام.' },
   'pur.grn.actionFailed': { en: 'Action failed.', ar: 'فشل تنفيذ الإجراء.' },
   'pur.grn.confirmCancel': { en: 'Cancel this receipt document?', ar: 'إلغاء سند الاستلام؟' },
+  'pur.grn.confirmSaveTitle': { en: 'Confirm save', ar: 'تأكيد الحفظ' },
+  'pur.grn.confirmSave': { en: 'Save this goods receipt?', ar: 'هل تريد حفظ سند الفحص والاستلام؟' },
+  'pur.grn.confirmSaveYes': { en: 'Save', ar: 'حفظ' },
+  'pur.grn.confirmSaveNo': { en: 'Cancel', ar: 'إلغاء' },
+  'pur.grn.confirmApproveTitle': { en: 'Confirm approval', ar: 'تأكيد الاعتماد' },
+  'pur.grn.confirmApprove': {
+    en: 'You cannot undo after approval. Continue?',
+    ar: 'لا يمكن التراجع بعد الاعتماد. هل تريد المتابعة؟'
+  },
+  'pur.grn.confirmApproveYes': { en: 'Approve', ar: 'موافقة' },
+  'pur.grn.confirmApproveNo': { en: 'Cancel', ar: 'إلغاء' },
+  'pur.grn.result.savedTitle': { en: 'Saved', ar: 'تم الحفظ' },
+  'pur.grn.result.savedMessage': {
+    en: 'Goods receipt saved successfully.',
+    ar: 'تم حفظ سند الفحص والاستلام بنجاح.'
+  },
+  'pur.grn.result.approveSuccessTitle': { en: 'Approved', ar: 'تم الاعتماد' },
+  'pur.grn.result.approveSuccessMessage': {
+    en: 'The receipt was approved. You can post it now.',
+    ar: 'تم اعتماد السند. يمكنك ترحيله الآن.'
+  },
+  'pur.grn.result.approveFailedTitle': { en: 'Approval failed', ar: 'فشل الاعتماد' },
+  'pur.grn.result.postSuccessTitle': { en: 'Posted', ar: 'تم الترحيل' },
+  'pur.grn.result.postSuccessMessage': {
+    en: 'Document {number} was posted successfully.',
+    ar: 'تم ترحيل المستند {number} بنجاح.'
+  },
+  'pur.grn.result.postFailedTitle': { en: 'Posting failed', ar: 'فشل الترحيل' },
+  'pur.grn.result.failedTitle': { en: 'Operation failed', ar: 'فشلت العملية' },
   'pur.grn.createTitle': { en: 'New goods receipt', ar: 'سند فحص واستلام جديد' },
   'pur.grn.docTitle': { en: 'Goods receipt document', ar: 'سند الفحص والاستلام' },
   'pur.grn.formBreadcrumb': { en: 'Document', ar: 'المستند' },
@@ -2474,9 +2707,14 @@ export const I18N_TRANSLATIONS: Dict = {
   'pur.grn.inspectionTitle': { en: 'Inspection', ar: 'قسم الفحص' },
   'pur.grn.linesTitle': { en: 'Item details', ar: 'تفاصيل البنود' },
   'pur.grn.loadFromPo': { en: 'Load from purchase order', ar: 'تحميل من أمر شراء' },
+  'pur.grn.reloadFromPo': { en: 'Reload lines from PO', ar: 'إعادة تحميل البنود من أمر الشراء' },
   'pur.grn.deleteLine': { en: 'Delete row', ar: 'حذف السطر' },
   'pur.grn.noLines': { en: 'No lines yet. Load from a purchase order.', ar: 'لا توجد بنود بعد. حمّل من أمر شراء.' },
-  'pur.grn.autoNumber': { en: 'Auto on save', ar: 'تلقائي عند الحفظ' },
+  'pur.grn.noLinesHint': {
+    en: 'Select a purchase order above to load remaining quantities.',
+    ar: 'اختر أمر شراء أعلاه لتحميل الكميات المتبقية.'
+  },
+  'pur.grn.autoNumber': { en: 'Preview number', ar: 'الرقم المتوقع' },
   'pur.grn.pickSupplier': { en: 'Select supplier', ar: 'اختر المورد' },
   'pur.grn.pickPo': { en: 'Select purchase order', ar: 'اختر أمر الشراء' },
   'pur.grn.pickWarehouse': { en: 'Select warehouse', ar: 'اختر المستودع' },
@@ -2694,6 +2932,24 @@ export const I18N_TRANSLATIONS: Dict = {
     ar: 'تعذر حفظ فاتورة المشتريات المباشرة.'
   },
   'pur.dpi.actionFailed': { en: 'Action failed.', ar: 'فشل تنفيذ الإجراء.' },
+  'pur.dpi.result.savedTitle': { en: 'Saved', ar: 'تم الحفظ' },
+  'pur.dpi.result.savedMessage': {
+    en: 'The operation completed successfully.',
+    ar: 'تمت العملية بنجاح.'
+  },
+  'pur.dpi.result.postSuccessTitle': { en: 'Posted', ar: 'تم الترحيل' },
+  'pur.dpi.result.postSuccessMessage': {
+    en: 'Posting completed successfully.\nDocument number: {number}',
+    ar: 'تمت عملية الترحيل بنجاح.\nرقم السند: {number}'
+  },
+  'pur.dpi.result.postFailedTitle': { en: 'Posting failed', ar: 'فشل الترحيل' },
+  'pur.dpi.result.approveSuccessTitle': { en: 'Approved', ar: 'تم الاعتماد' },
+  'pur.dpi.result.approveSuccessMessage': {
+    en: 'The invoice was approved successfully.',
+    ar: 'تم اعتماد الفاتورة بنجاح.'
+  },
+  'pur.dpi.result.approveFailedTitle': { en: 'Approval failed', ar: 'فشل الاعتماد' },
+  'pur.dpi.result.failedTitle': { en: 'Operation failed', ar: 'فشلت العملية' },
   'pur.dpi.confirmCancel': { en: 'Cancel this invoice?', ar: 'إلغاء هذه الفاتورة؟' },
   'pur.dpi.createTitle': { en: 'New direct purchase invoice', ar: 'فاتورة مشتريات مباشرة جديدة' },
   'pur.dpi.docTitle': { en: 'Direct purchase invoice', ar: 'فاتورة مشتريات مباشرة' },
@@ -2706,7 +2962,7 @@ export const I18N_TRANSLATIONS: Dict = {
     en: 'No lines yet. Add items to the invoice.',
     ar: 'لا توجد بنود بعد. أضف أصنافاً إلى الفاتورة.'
   },
-  'pur.dpi.autoNumber': { en: 'Auto on save', ar: 'تلقائي عند الحفظ' },
+  'pur.dpi.autoNumber': { en: 'Auto', ar: 'تلقائي' },
   'pur.dpi.pickSupplier': { en: 'Select supplier', ar: 'اختر المورد' },
   'pur.dpi.pickWarehouse': { en: 'Select warehouse', ar: 'اختر المستودع' },
   'pur.dpi.pickItem': { en: 'Select item', ar: 'اختر الصنف' },
@@ -2742,6 +2998,7 @@ export const I18N_TRANSLATIONS: Dict = {
   'pur.dpi.col.unit': { en: 'Unit', ar: 'الوحدة' },
   'pur.dpi.col.unitPrice': { en: 'Unit price', ar: 'سعر الوحدة' },
   'pur.dpi.col.discountPercent': { en: 'Discount %', ar: 'خصم %' },
+  'pur.dpi.col.discountAmount': { en: 'Discount', ar: 'الخصم' },
   'pur.dpi.col.taxPercent': { en: 'Tax %', ar: 'نسبة الضريبة' },
   'pur.dpi.col.tax': { en: 'Tax amount', ar: 'مبلغ الضريبة' },
   'pur.dpi.col.subtotal': { en: 'Subtotal', ar: 'المجموع الفرعي' },
@@ -2798,6 +3055,12 @@ export const I18N_TRANSLATIONS: Dict = {
     en: 'Direct purchase returns against a direct purchase invoice.',
     ar: 'مرتجعات المشتريات المباشرة مقابل فاتورة مشتريات مباشرة.'
   },
+  'pur.pr.invoiceSubtitle': {
+    en: 'Returns against posted purchase invoices and direct purchase invoices.',
+    ar: 'مرتجعات مقابل فواتير المشتريات وفواتير المشتريات المباشرة المرحّلة.'
+  },
+  'pur.pr.invoiceKind.fromReceipt': { en: 'Purchase invoice', ar: 'فاتورة مشتريات' },
+  'pur.pr.invoiceKind.direct': { en: 'Direct purchase invoice', ar: 'فاتورة مشتريات مباشرة' },
   'pur.pr.searchPlaceholder': { en: 'Search return number or notes…', ar: 'بحث برقم المرتجع أو الملاحظات…' },
   'pur.pr.new': { en: '+ New', ar: '+ جديد' },
   'pur.pr.edit': { en: 'Edit', ar: 'تعديل' },
@@ -2818,7 +3081,31 @@ export const I18N_TRANSLATIONS: Dict = {
   'pur.pr.loadFailed': { en: 'Could not load purchase returns.', ar: 'تعذر تحميل مرتجعات الشراء.' },
   'pur.pr.saveFailed': { en: 'Could not save purchase return.', ar: 'تعذر حفظ مرتجع الشراء.' },
   'pur.pr.actionFailed': { en: 'Action failed.', ar: 'فشل تنفيذ الإجراء.' },
-  'pur.pr.confirmCancel': { en: 'Cancel this return document?', ar: 'إلغاء سند المرتجع؟' },
+  'pur.pr.confirmCancel': { en: 'Cancel this draft return?', ar: 'إلغاء مسودة المرتجع؟' },
+  'pur.pr.confirmApproveTitle': { en: 'Confirm approval', ar: 'تأكيد الاعتماد' },
+  'pur.pr.confirmApprove': {
+    en: 'After approval you cannot undo this step. Continue?',
+    ar: 'بعد الاعتماد لا يمكن التراجع عن هذه الخطوة. هل تريد المتابعة؟'
+  },
+  'pur.pr.confirmApproveYes': { en: 'Approve', ar: 'موافقة' },
+  'pur.pr.confirmApproveNo': { en: 'Cancel', ar: 'إلغاء' },
+  'pur.pr.result.approveSuccessTitle': { en: 'Approved', ar: 'تم الاعتماد' },
+  'pur.pr.result.approveSuccessMessage': {
+    en: 'The return was approved. You can post it now.',
+    ar: 'تم اعتماد المرتجع. يمكنك ترحيله الآن.'
+  },
+  'pur.pr.result.savedTitle': { en: 'Saved', ar: 'تم الحفظ' },
+  'pur.pr.result.savedMessage': {
+    en: 'Purchase return saved.',
+    ar: 'تم حفظ مرتجع الشراء.'
+  },
+  'pur.pr.result.postSuccessTitle': { en: 'Posted', ar: 'تم الترحيل' },
+  'pur.pr.result.postSuccessMessage': {
+    en: 'Document {number} was posted successfully.',
+    ar: 'تم ترحيل المستند {number} بنجاح.'
+  },
+  'pur.pr.result.failedTitle': { en: 'Operation failed', ar: 'فشلت العملية' },
+  'pur.pr.autoNumber': { en: 'Auto number', ar: 'رقم تلقائي' },
   'pur.pr.createTitle': { en: 'New purchase return', ar: 'مرتجع شراء جديد' },
   'pur.pr.docTitle': { en: 'Purchase return', ar: 'مرتجع الشراء' },
   'pur.pr.formBreadcrumb': { en: 'Document', ar: 'المستند' },
@@ -2829,7 +3116,6 @@ export const I18N_TRANSLATIONS: Dict = {
     en: 'No lines yet. Select a source document and load.',
     ar: 'لا توجد بنود بعد. اختر المستند المصدر ثم حمّل.'
   },
-  'pur.pr.autoNumber': { en: 'Auto on save', ar: 'تلقائي عند الحفظ' },
   'pur.pr.supplierLocked': { en: 'From source document', ar: 'من المستند المصدر' },
   'pur.pr.pickGrn': { en: 'Select goods receipt', ar: 'اختر سند الاستلام' },
   'pur.pr.pickInvoice': { en: 'Select purchase invoice', ar: 'اختر فاتورة المشتريات' },
@@ -2843,8 +3129,8 @@ export const I18N_TRANSLATIONS: Dict = {
     ar: 'مبلغ المرتجع سيخصم من حساب المورد'
   },
   'pur.pr.tip': {
-    en: 'Tip: adjust return quantities then Save before Approve/Post. Stock and GL update only on Post.',
-    ar: 'نصيحة: عدّل كميات المرتجع ثم احفظ قبل الاعتماد/الترحيل. المخزون والقيود تتحدث عند الترحيل فقط.'
+    en: 'Tip: Save as draft, Approve (irreversible), then Post (irreversible).',
+    ar: 'نصيحة: احفظ كمسودة، ثم اعتمد (لا تراجع)، ثم رحّل (لا تراجع).'
   },
   'pur.pr.totalRecords': { en: 'Total', ar: 'إجمالي' },
   'pur.pr.pageSize': { en: 'Rows', ar: 'سجلات' },
@@ -2863,10 +3149,13 @@ export const I18N_TRANSLATIONS: Dict = {
   'pur.pr.col.item': { en: 'Item', ar: 'الصنف' },
   'pur.pr.col.unit': { en: 'Unit', ar: 'الوحدة' },
   'pur.pr.col.originalQty': { en: 'Original qty', ar: 'الكمية الأصلية' },
+  'pur.pr.col.returnedQty': { en: 'Previously returned', ar: 'المرتجع سابقاً' },
+  'pur.pr.col.remainingQty': { en: 'Remaining', ar: 'المتبقي للإرجاع' },
   'pur.pr.col.returnQty': { en: 'Return qty', ar: 'كمية المرتجع' },
   'pur.pr.col.unitPrice': { en: 'Unit price', ar: 'سعر الوحدة' },
   'pur.pr.col.tax': { en: 'Tax', ar: 'الضريبة' },
   'pur.pr.col.lineTotal': { en: 'Total', ar: 'الإجمالي' },
+  'pur.pr.col.discount': { en: 'Discount', ar: 'الخصم' },
   'pur.pr.status.draft': { en: 'Draft', ar: 'مسودة' },
   'pur.pr.status.approved': { en: 'Approved', ar: 'معتمد' },
   'pur.pr.status.posted': { en: 'Posted', ar: 'مرحل' },
@@ -2881,13 +3170,34 @@ export const I18N_TRANSLATIONS: Dict = {
   'pur.pr.filter.30d': { en: 'Last 30 days', ar: 'آخر 30 يوم' },
   'pur.pr.filter.anyDate': { en: 'Any date', ar: 'كل التواريخ' },
   'pur.pr.validation.source': {
-    en: 'Select the original goods receipt or purchase invoice.',
-    ar: 'اختر سند الاستلام أو فاتورة المشتريات الأصلية.'
+    en: 'Please select the original purchase invoice first.',
+    ar: 'الرجاء اختيار فاتورة المشتريات الأصلية أولاً.'
   },
   'pur.pr.validation.warehouse': { en: 'Warehouse is required.', ar: 'المستودع مطلوب.' },
+  'pur.pr.validation.reason': { en: 'Return reason is required.', ar: 'سبب المرتجع مطلوب.' },
   'pur.pr.validation.lines': {
     en: 'Add at least one line with return quantity.',
     ar: 'أضف بنداً واحداً على الأقل بكمية مرتجع.'
+  },
+  'pur.pr.validation.qtyExceeds': {
+    en: 'Return quantity cannot exceed remaining quantity ({max}).',
+    ar: 'كمية المرتجع لا يمكن أن تتجاوز الكمية المتبقية ({max}).'
+  },
+  'pur.pr.nothingToReturn': {
+    en: 'No remaining quantities to return.',
+    ar: 'لا توجد كميات متبقية للإرجاع.'
+  },
+  'pur.pr.invoiceCancelled': {
+    en: 'Cannot create a return from a cancelled invoice.',
+    ar: 'لا يمكن إنشاء مرتجع من فاتورة ملغاة.'
+  },
+  'pur.pr.invoiceBlocked': {
+    en: 'This invoice cannot be used for returns.',
+    ar: 'لا يمكن استخدام هذه الفاتورة لإنشاء مرتجع.'
+  },
+  'pur.pr.linesDisabledHint': {
+    en: 'Please select the original purchase invoice first.',
+    ar: 'الرجاء اختيار فاتورة المشتريات الأصلية أولاً.'
   },
   'fin.ops.nav.openingBalances': { en: 'Opening Balances', ar: 'الأرصدة الافتتاحية' },
   'fin.ops.nav.journalVouchers': { en: 'Journal Vouchers', ar: 'القيود اليومية' },

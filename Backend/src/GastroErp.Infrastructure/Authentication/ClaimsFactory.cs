@@ -12,7 +12,8 @@ public class ClaimsFactory : IClaimsFactory
     public IEnumerable<Claim> CreateClaims(
         AppUser user,
         IReadOnlyCollection<string> roleNames,
-        IReadOnlyCollection<string>? permissionNames = null)
+        IReadOnlyCollection<string>? permissionNames = null,
+        Guid? defaultBranchId = null)
     {
         var claims = new List<Claim>
         {
@@ -21,6 +22,9 @@ public class ClaimsFactory : IClaimsFactory
             new(ClaimTypes.Name, user.FullName),
             new("TenantId", user.TenantId.ToString())
         };
+
+        if (defaultBranchId.HasValue && defaultBranchId.Value != Guid.Empty)
+            claims.Add(new Claim("BranchId", defaultBranchId.Value.ToString()));
 
         foreach (var role in roleNames)
             claims.Add(new Claim(ClaimTypes.Role, role));

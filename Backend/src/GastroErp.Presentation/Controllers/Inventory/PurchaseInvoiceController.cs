@@ -31,6 +31,11 @@ public class PurchaseInvoiceController : BaseApiController
             TenantId, kind, status, supplierId, warehouseId, paymentMode, nature, search, from, to,
             query.Page, query.PageSize)));
 
+    [HttpGet($"{ApiRoutes.Inventory.PurchaseInvoices}/next-number")]
+    [HasPermission(Permissions.Inventory.View)]
+    public async Task<IActionResult> NextNumber([FromQuery] PurchaseInvoiceKind kind = PurchaseInvoiceKind.FromReceipt)
+        => HandleResult(await Mediator.Send(new GetNextPurchaseInvoiceNumberQuery(TenantId, kind)));
+
     [HttpGet($"{ApiRoutes.Inventory.PurchaseInvoices}/{{id:guid}}")]
     [HasPermission(Permissions.Inventory.View)]
     public async Task<IActionResult> GetById(Guid id)

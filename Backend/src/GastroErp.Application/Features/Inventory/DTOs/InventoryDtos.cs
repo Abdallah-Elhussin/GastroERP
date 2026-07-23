@@ -773,6 +773,77 @@ public record PurchaseReturnReasonDto(
     bool IsActive
 );
 
+// ─── Purchase invoice → return form (single round-trip) ───────────────────────
+
+public record PurchaseInvoiceForReturnHeaderDto(
+    Guid Id,
+    string InvoiceNumber,
+    PurchaseInvoiceKind Kind,
+    PurchasingDocumentStatus Status,
+    PurchaseInvoicePaymentMode PaymentMode,
+    DirectPurchaseNature Nature,
+    Guid SupplierId,
+    string SupplierNameAr,
+    Guid? WarehouseId,
+    string? WarehouseNameAr,
+    Guid? CostCenterId,
+    string? CostCenterNameAr,
+    DateOnly InvoiceDate,
+    DateOnly? DueDate,
+    string Currency,
+    decimal ExchangeRate,
+    string? SupplierInvoiceNumber,
+    string? ExternalReference,
+    string? Notes,
+    Guid? ApAccountId,
+    string? ApAccountNameAr,
+    decimal DiscountAmount,
+    decimal SubTotal,
+    decimal TaxAmount,
+    decimal TotalAmount,
+    bool CanCreateReturn,
+    string? BlockReason,
+    string? BlockReasonCode = null
+);
+
+public record PurchaseInvoiceForReturnLineDto(
+    Guid PurchaseInvoiceLineId,
+    Guid InventoryItemId,
+    string? ItemNameAr,
+    string? ItemSku,
+    string? Description,
+    Guid UnitId,
+    string? UnitNameAr,
+    Guid? WarehouseId,
+    string? WarehouseNameAr,
+    decimal OriginalQuantity,
+    decimal PreviouslyReturnedQuantity,
+    decimal RemainingQuantity,
+    decimal ReturnQuantity,
+    decimal UnitPrice,
+    decimal DiscountPercent,
+    decimal DiscountAmount,
+    decimal TaxPercent,
+    decimal TaxAmount,
+    decimal LineSubTotal,
+    decimal LineTotal,
+    bool IsDisabled
+);
+
+public record PurchaseInvoiceForReturnTaxDto(
+    decimal TaxPercent,
+    decimal TaxableAmount,
+    decimal TaxAmount
+);
+
+public record PurchaseInvoiceForReturnDto(
+    PurchaseInvoiceForReturnHeaderDto Header,
+    IReadOnlyList<PurchaseInvoiceForReturnLineDto> Items,
+    IReadOnlyList<PurchaseInvoiceForReturnTaxDto> Taxes,
+    decimal TotalRemainingQuantity,
+    decimal InvoiceTotalAmount
+);
+
 public record CreatePurchaseReturnLineInputDto(
     Guid InventoryItemId,
     Guid UnitId,

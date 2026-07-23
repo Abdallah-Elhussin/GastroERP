@@ -67,6 +67,7 @@ public record GetSuppliersQuery(
     int PageSize = 20) : IRequest<PagedResult<SupplierListItemDto>>;
 public record GetSupplierByIdQuery(Guid Id, bool IncludeStats = true) : IRequest<Result<SupplierDto>>;
 public record GetSupplierPurchasingDefaultsQuery(Guid Id) : IRequest<Result<SupplierPurchasingDefaultsDto>>;
+public record GetNextSupplierCodeQuery(Guid TenantId) : IRequest<Result<string>>;
 
 // ─── PurchaseOrder ────────────────────────────────────────────────────────────
 // ─── PurchaseOrder Queries ────────────────────────────────────────────────────
@@ -97,6 +98,7 @@ public record GetGoodsReceiptsQuery(
     int PageSize = 20) : IRequest<PagedResult<GoodsReceiptDto>>;
 public record GetGoodsReceiptByIdQuery(Guid Id) : IRequest<Result<GoodsReceiptDto>>;
 public record PreviewGoodsReceiptFromPoQuery(Guid TenantId, Guid PurchaseOrderId) : IRequest<Result<GoodsReceiptDto>>;
+public record GetNextGoodsReceiptNumberQuery(Guid TenantId) : IRequest<Result<string>>;
 
 // ─── PurchaseInvoice ──────────────────────────────────────────────────────────
 public record GetPurchaseInvoicesQuery(
@@ -113,6 +115,9 @@ public record GetPurchaseInvoicesQuery(
     int PageNumber = 1,
     int PageSize = 20) : IRequest<PagedResult<PurchaseInvoiceDto>>;
 public record GetPurchaseInvoiceByIdQuery(Guid Id) : IRequest<Result<PurchaseInvoiceDto>>;
+public record GetNextPurchaseInvoiceNumberQuery(
+    Guid TenantId,
+    PurchaseInvoiceKind Kind = PurchaseInvoiceKind.FromReceipt) : IRequest<Result<string>>;
 
 // ─── GoodsIssue ───────────────────────────────────────────────────────────────
 public record GetGoodsIssuesQuery(
@@ -166,6 +171,7 @@ public record GetInventoryTransactionsQuery(Guid TenantId, Guid? WarehouseId = n
 
 // ─── Dashboard (Phase F) ──────────────────────────────────────────────────────
 public record GetInventoryDashboardQuery(Guid TenantId) : IRequest<Result<InventoryDashboardDto>>;
+public record GetPurchasingDashboardQuery(Guid TenantId) : IRequest<Result<PurchasingDashboardDto>>;
 
 // ─── Inventory Settings (Phase I) ─────────────────────────────────────────────
 public record GetInventorySettingQuery(Guid TenantId, Guid? BranchId = null, Guid? CompanyId = null)
@@ -183,6 +189,8 @@ public record GetPurchaseReturnsQuery(
     Guid? SupplierId = null,
     Guid? WarehouseId = null,
     PurchaseReturnType? ReturnType = null,
+    /// <summary>When true, only AfterInvoice + Direct (invoice-based) returns.</summary>
+    bool InvoiceBasedOnly = false,
     PurchasingDocumentStatus? Status = null,
     string? Search = null,
     DateTimeOffset? From = null,
@@ -190,8 +198,12 @@ public record GetPurchaseReturnsQuery(
     int PageNumber = 1,
     int PageSize = 20) : IRequest<PagedResult<PurchaseReturnDto>>;
 public record GetPurchaseReturnByIdQuery(Guid Id) : IRequest<Result<PurchaseReturnDto>>;
+public record GetNextPurchaseReturnNumberQuery(Guid TenantId) : IRequest<Result<string>>;
 public record PreviewPurchaseReturnFromGrnQuery(Guid TenantId, Guid GoodsReceiptId) : IRequest<Result<PurchaseReturnDto>>;
 public record PreviewPurchaseReturnFromInvoiceQuery(Guid TenantId, Guid PurchaseInvoiceId) : IRequest<Result<PurchaseReturnDto>>;
+/// <summary>Loads purchase invoice header + lines + return quantities in one query for the return form.</summary>
+public record GetPurchaseInvoiceForReturnQuery(Guid TenantId, Guid PurchaseInvoiceId)
+    : IRequest<Result<PurchaseInvoiceForReturnDto>>;
 public record GetPurchaseReturnReasonsQuery(Guid TenantId, bool ActiveOnly = true) : IRequest<Result<IReadOnlyList<PurchaseReturnReasonDto>>>;
 
 // ─── InventoryReservation ─────────────────────────────────────────────────────

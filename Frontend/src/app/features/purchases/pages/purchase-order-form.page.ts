@@ -14,6 +14,7 @@ import { Observable, catchError, of } from 'rxjs';
 import { LanguageService } from '../../../core/services/language.service';
 import { AuthService } from '../../../core/services/auth.service';
 import { InventoryService } from '../../../core/services/inventory.service';
+import { InventoryRepository } from '../../../core/repositories/inventory.repository';
 import { PurchaseOrderRepository } from '../../../core/repositories/purchase-order.repository';
 import {
   CreatePurchaseOrderPayload,
@@ -41,6 +42,7 @@ import { InventoryPageShellComponent } from '../../inventory/shared/inventory-pa
 })
 export class PurchaseOrderFormPage implements OnInit {
   private repo = inject(PurchaseOrderRepository);
+  private inventoryRepo = inject(InventoryRepository);
   private inventory = inject(InventoryService);
   private route = inject(ActivatedRoute);
   private router = inject(Router);
@@ -119,25 +121,32 @@ export class PurchaseOrderFormPage implements OnInit {
   ] as const;
 
   ngOnInit(): void {
-    this.inventory.loadWarehouses();
-    this.inventory.loadItems();
-    this.inventory.loadUnits();
+    this.inventoryRepo
+      .getItems(undefined, 1, 200)
+      .pipe(catchError(() => of([] as InventoryItemDefinition[])))
+      .subscribe(rows => this.items.set(rows.filter(i => i.isActive !== false)));
+
+    this.inventoryRepo
+      .getUnits()
+      .pipe(catchError(() => of([] as InventoryUnit[])))
+      .subscribe(rows => this.units.set(rows));
+
+    this.inventoryRepo
+      .getWarehouseLookup()
+      .pipe(catchError(() => of([] as Warehouse[])))
+      .subscribe(rows => {
+        const list = rows.filter(w => w.isActive !== false);
+        this.warehouses.set(list);
+        if (!this.destinationWarehouseId() && list.length > 0) {
+          const preferred = list.find(w => w.isDefault) ?? list[0];
+          this.destinationWarehouseId.set(preferred.id);
+        }
+      });
+
     this.inventory
-      .getSuppliers(1, 500)
+      .getSuppliers(1, 200)
       .pipe(catchError(() => of([] as SupplierSummary[])))
       .subscribe(s => this.suppliers.set(s));
-
-    const pull = () => {
-      const wh = [...this.inventory.warehouses()];
-      this.warehouses.set(wh);
-      this.items.set([...this.inventory.items()]);
-      this.units.set([...this.inventory.units()]);
-      if (!this.destinationWarehouseId() && wh.length > 0) {
-        this.destinationWarehouseId.set(wh[0].id);
-      }
-    };
-    pull();
-    setTimeout(pull, 400);
 
     const id = this.route.snapshot.paramMap.get('id');
     if (id && id !== 'new') {
@@ -150,6 +159,11 @@ export class PurchaseOrderFormPage implements OnInit {
 
   t(key: string): string {
     return this.lang.t(key);
+  }
+
+  itemLabel(item: InventoryItemDefinition): string {
+    const code = (item.sku || item.barcode || '').trim();
+    return code ? `${code} — ${item.nameAr}` : item.nameAr;
   }
 
   isStepActive(code: number): boolean {

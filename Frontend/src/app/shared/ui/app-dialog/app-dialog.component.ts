@@ -36,7 +36,7 @@ import { MatIconModule } from '@angular/material/icon';
     </div>
   `,
   styles: [`
-    // Keyframes are imported from styles.scss globally
+    /* Keyframes are imported from styles.scss globally */
   `],
   changeDetection: ChangeDetectionStrategy.OnPush
 })

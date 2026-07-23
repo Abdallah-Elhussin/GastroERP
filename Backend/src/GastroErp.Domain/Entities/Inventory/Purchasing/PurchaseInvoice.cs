@@ -259,6 +259,27 @@ public sealed class PurchaseInvoice : AuditableBaseEntity, ITenantEntity
         RefreshPaymentStatus();
     }
 
+    /// <summary>Reverses a previously applied settlement (voucher reverse / cash unpost).</summary>
+    public void ReversePayment(decimal amount)
+    {
+        if (Status != PurchasingDocumentStatus.Posted)
+            throw new BusinessException(ErrorCodes.InvalidStatusTransition);
+        if (amount <= 0)
+            throw new BusinessException(ErrorCodes.InvalidAmount);
+        if (amount > PaidAmount + 0.0001m)
+            throw new BusinessException(ErrorCodes.InvalidAmount, "Cannot reverse more than paid amount.");
+
+        PaidAmount = Math.Max(0, PaidAmount - amount);
+        RefreshPaymentStatus();
+    }
+
+    /// <summary>Clears settlement when reversing a cash-posted invoice.</summary>
+    public void ClearSettlement()
+    {
+        PaidAmount = 0;
+        RefreshPaymentStatus();
+    }
+
     private void RefreshPaymentStatus()
     {
         if (_lines.Count > 0 && _lines.All(l => l.ReturnedQuantity >= l.Quantity))

@@ -165,6 +165,19 @@
   flex: 1;
 }
 
+.header-status {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  margin-bottom: 0.85rem;
+}
+
+.header-status > span {
+  color: var(--text-muted);
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
 .status-track .steps {
   display: flex;
   flex-wrap: wrap;
@@ -264,6 +277,25 @@ tr[data-tone='none'] {
   width: 1rem;
   height: 1rem;
   color: #ca8a04;
+}
+
+.result-message {
+  margin: 0 0 1rem;
+  line-height: 1.5;
+}
+
+.result-message.success {
+  color: #166534;
+}
+
+.result-message.failure {
+  color: #991b1b;
+}
+
+.result-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
 }
 
 .muted {

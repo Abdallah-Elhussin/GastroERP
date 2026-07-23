@@ -204,3 +204,13 @@ public class GetSupplierPurchasingDefaultsQueryHandler(IApplicationDbContext con
             warnings));
     }
 }
+
+public class GetNextSupplierCodeQueryHandler(IApplicationDbContext context)
+    : IRequestHandler<GetNextSupplierCodeQuery, Result<string>>
+{
+    public async Task<Result<string>> Handle(GetNextSupplierCodeQuery request, CancellationToken cancellationToken)
+    {
+        var code = await SupplierCodeAllocator.PeekNextAsync(context, request.TenantId, cancellationToken);
+        return Result<string>.Success(code);
+    }
+}

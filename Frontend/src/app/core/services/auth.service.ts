@@ -32,6 +32,7 @@ export class AuthService {
   isAuthenticated = signal<boolean>(false);
   userPermissions = signal<string[]>([]);
   userRoles = signal<string[]>([]);
+  currentUser = signal<CurrentUserProfile | null>(null);
 
   private idleTimer: any;
   private readonly TIMEOUT_MS = 30 * 60 * 1000; // 30 minutes idle timeout
@@ -57,6 +58,15 @@ export class AuthService {
 
     const aliases: Record<string, string[]> = {
       VIEW_HR: ['VIEW_HR', 'Hr.Employee.View', 'Hr.Dashboard.View'],
+      'Dashboard.View': [
+        'Dashboard.View',
+        'Reports.View',
+        'Sales.Dashboard.View',
+        'Sales.View',
+        'Inventory.View',
+        'Finance.View',
+        'Accounting.View'
+      ],
       VIEW_FINANCE: ['VIEW_FINANCE', 'Finance.View', 'Finance.Account.View', 'Accounting.View'],
       'Accounting.View': ['Accounting.View', 'VIEW_FINANCE', 'Finance.View', 'Finance.Account.View'],
       'Accounting.Create': ['Accounting.Create', 'Accounting.Update'],
@@ -721,7 +731,18 @@ export class AuthService {
       'Purchase.View': ['Purchase.View', 'Purchase.Create', 'Inventory.View'],
       'InventoryReports.View': ['InventoryReports.View', 'Reports.View', 'Inventory.View', 'Stock.View'],
       'Tax.View': ['Tax.View', 'Tax.Manage', 'Inventory.Manage', 'Inventory.View'],
-      'Tax.Manage': ['Tax.Manage', 'Inventory.Manage']
+      'Tax.Manage': ['Tax.Manage', 'Inventory.Manage'],
+      'Supplier.View': [
+        'Supplier.View',
+        'Supplier.Manage',
+        'Inventory.View',
+        'Inventory.Manage'
+      ],
+      'Supplier.Create': ['Supplier.Create', 'Supplier.Manage', 'Inventory.Manage'],
+      'Supplier.Update': ['Supplier.Update', 'Supplier.Manage', 'Inventory.Manage'],
+      'Supplier.Delete': ['Supplier.Delete', 'Supplier.Manage', 'Inventory.Manage'],
+      'Supplier.Activate': ['Supplier.Activate', 'Supplier.Manage', 'Inventory.Manage'],
+      'Supplier.Blacklist': ['Supplier.Blacklist', 'Supplier.Manage', 'Inventory.Manage']
     };
 
     const candidates = aliases[required] ?? [required];
@@ -731,6 +752,7 @@ export class AuthService {
   loadCurrentUser(): Observable<CurrentUserProfile | null> {
     return this.http.get<CurrentUserProfile>(`${this.API}/me`).pipe(
       tap((profile) => {
+        this.currentUser.set(profile);
         this.userRoles.set(profile.roles ?? []);
         const permissions = profile.permissions?.length
           ? profile.permissions
@@ -744,6 +766,7 @@ export class AuthService {
           this.userRoles.set(['Administrator']);
           this.userPermissions.set(['ALL']);
         }
+        this.currentUser.set(null);
         return of(null);
       })
     );
@@ -771,11 +794,14 @@ export class AuthService {
       }),
       switchMap(() => this.loadCurrentUser().pipe(map(() => ({ success: true })))),
       catchError((err) => {
-        const message = err.status === 0
-          ? 'Cannot reach API. Start Backend on http://localhost:5162'
-          : err.status === 401 || err.status === 422
+        const status = err?.status ?? err?.error?.status;
+        const message = status === 0
+          ? 'Cannot reach API. Start Backend on http://localhost:5162 and ensure ng serve uses proxy.conf.json'
+          : status === 401 || status === 422
             ? 'Invalid email or password.'
-            : 'Login failed. Please try again.';
+            : (err?.message?.includes('Cannot reach') || err?.message?.includes('network'))
+              ? 'Cannot reach API. Start Backend on http://localhost:5162'
+              : 'Login failed. Please try again.';
         return of({ success: false, error: message });
       })
     );
@@ -799,6 +825,7 @@ export class AuthService {
     this.isAuthenticated.set(false);
     this.userPermissions.set([]);
     this.userRoles.set([]);
+    this.currentUser.set(null);
     if (this.idleTimer) {
       clearTimeout(this.idleTimer);
     }

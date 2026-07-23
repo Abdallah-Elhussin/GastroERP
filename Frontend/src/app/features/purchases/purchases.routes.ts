@@ -81,14 +81,23 @@ export const PURCHASES_ROUTES: Routes = [
   {
     path: 'purchase-invoices',
     loadComponent: () =>
-      import('./pages/purchasing-module-placeholder.page').then(m => m.PurchasingModulePlaceholderPage),
+      import('./pages/purchase-invoices.page').then(m => m.PurchaseInvoicesPage),
     canActivate: [permissionGuard],
-    data: {
-      requiredPermission: 'Inventory.View',
-      moduleKey: 'pur.nav.purchaseInvoices',
-      moduleCode: 'PurchaseInvoices',
-      noteKey: 'pur.note.invoiceFromGrn'
-    }
+    data: { requiredPermission: 'Inventory.View' }
+  },
+  {
+    path: 'purchase-invoices/new',
+    loadComponent: () =>
+      import('./pages/purchase-invoice-form.page').then(m => m.PurchaseInvoiceFormPage),
+    canActivate: [permissionGuard],
+    data: { requiredPermission: 'Inventory.Manage' }
+  },
+  {
+    path: 'purchase-invoices/:id',
+    loadComponent: () =>
+      import('./pages/purchase-invoice-form.page').then(m => m.PurchaseInvoiceFormPage),
+    canActivate: [permissionGuard],
+    data: { requiredPermission: 'Inventory.View' }
   },
   {
     path: 'direct-invoices',
@@ -112,46 +121,59 @@ export const PURCHASES_ROUTES: Routes = [
     data: { requiredPermission: 'Inventory.View' }
   },
   {
-    path: 'direct-returns',
+    path: 'invoice-returns',
     loadComponent: () =>
       import('./pages/purchase-returns.page').then(m => m.PurchaseReturnsPage),
     canActivate: [permissionGuard],
     data: {
       requiredPermission: 'Inventory.View',
-      returnTypeFilter: 3
+      invoiceReturnsMode: true
     }
   },
   {
-    path: 'direct-returns/new',
+    path: 'invoice-returns/new',
     loadComponent: () =>
       import('./pages/purchase-return-form.page').then(m => m.PurchaseReturnFormPage),
     canActivate: [permissionGuard],
     data: {
       requiredPermission: 'Inventory.Manage',
-      defaultReturnType: 3
+      invoiceReturnsMode: true
     }
   },
   {
-    path: 'direct-returns/:id',
+    path: 'invoice-returns/:id',
     loadComponent: () =>
       import('./pages/purchase-return-form.page').then(m => m.PurchaseReturnFormPage),
     canActivate: [permissionGuard],
     data: {
       requiredPermission: 'Inventory.View',
-      defaultReturnType: 3
+      invoiceReturnsMode: true
     }
   },
+  // Legacy aliases → invoice returns (FromReceipt + Direct invoices)
+  { path: 'direct-returns', pathMatch: 'full', redirectTo: 'invoice-returns' },
+  { path: 'direct-returns/new', pathMatch: 'full', redirectTo: 'invoice-returns/new' },
+  { path: 'direct-returns/:id', redirectTo: 'invoice-returns/:id' },
   {
     path: 'suppliers',
     loadComponent: () =>
-      import('./pages/purchasing-module-placeholder.page').then(m => m.PurchasingModulePlaceholderPage),
+      import('./pages/suppliers.page').then(m => m.SuppliersPage),
     canActivate: [permissionGuard],
-    data: {
-      requiredPermission: 'Inventory.View',
-      moduleKey: 'pur.nav.suppliers',
-      moduleCode: 'Suppliers',
-      noteKey: 'pur.note.suppliers'
-    }
+    data: { requiredPermission: 'Supplier.View' }
+  },
+  {
+    path: 'suppliers/new',
+    loadComponent: () =>
+      import('./pages/supplier-form.page').then(m => m.SupplierFormPage),
+    canActivate: [permissionGuard],
+    data: { requiredPermission: 'Supplier.Create' }
+  },
+  {
+    path: 'suppliers/:id',
+    loadComponent: () =>
+      import('./pages/supplier-form.page').then(m => m.SupplierFormPage),
+    canActivate: [permissionGuard],
+    data: { requiredPermission: 'Supplier.View' }
   },
   {
     path: 'triple-match',

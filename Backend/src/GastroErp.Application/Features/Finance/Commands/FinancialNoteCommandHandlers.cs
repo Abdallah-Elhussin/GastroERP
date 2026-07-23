@@ -2,6 +2,7 @@ using GastroErp.Application.Common.Interfaces;
 using GastroErp.Application.Common.Responses;
 using GastroErp.Application.Features.Finance.DTOs;
 using GastroErp.Application.Features.Finance.Services;
+using GastroErp.Application.Features.Inventory.Services;
 using GastroErp.Domain.Common.Exceptions;
 using GastroErp.Domain.Common.Localization;
 using GastroErp.Domain.Entities.Finance;
@@ -314,6 +315,7 @@ public sealed class PostFinancialNoteCommandHandler(
             doc.MarkPosted(posted.Data!.Id, request.UserId);
             context.AccountingTransactions.Add(AccountingTransaction.Create(
                 doc.TenantId, doc.PostingSource, doc.Id, posted.Data.Id, doc.DocumentNumber));
+            await ApplyPurchaseInvoiceSettlementAsync(context, doc, apply: true, cancellationToken);
             await context.SaveChangesAsync(cancellationToken);
             return Result<FinancialNoteDto>.Success(
                 await CreateFinancialNoteCommandHandler.LoadDtoAsync(context, doc.Id, cancellationToken));
@@ -322,6 +324,29 @@ public sealed class PostFinancialNoteCommandHandler(
         {
             return Result<FinancialNoteDto>.Failure(ex.ErrorCode, ex.Message);
         }
+    }
+
+    private static async Task ApplyPurchaseInvoiceSettlementAsync(
+        IApplicationDbContext context,
+        DomainDoc doc,
+        bool apply,
+        CancellationToken cancellationToken)
+    {
+        if (doc.ReferenceType != FinancialNoteReferenceType.PurchaseInvoice
+            || doc.ReferenceDocumentId is not Guid invoiceId
+            || doc.PartyType != NotificationPartyType.Supplier)
+            return;
+
+        // Credit note to supplier reduces AP → settle invoice; reverse undoes it.
+        if (doc.NoteKind != FinancialNoteKind.Credit)
+            return;
+
+        if (apply)
+            await PurchaseInvoiceSettlement.ApplyAsync(
+                context, doc.TenantId, invoiceId, doc.TotalAmountInBase, cancellationToken);
+        else
+            await PurchaseInvoiceSettlement.ReverseAsync(
+                context, doc.TenantId, invoiceId, doc.TotalAmountInBase, cancellationToken);
     }
 }
 
@@ -347,6 +372,14 @@ public sealed class ReverseFinancialNoteCommandHandler(
         try
         {
             doc.MarkReversed();
+            if (doc.ReferenceType == FinancialNoteReferenceType.PurchaseInvoice
+                && doc.ReferenceDocumentId is Guid invoiceId
+                && doc.PartyType == NotificationPartyType.Supplier
+                && doc.NoteKind == FinancialNoteKind.Credit)
+            {
+                await PurchaseInvoiceSettlement.ReverseAsync(
+                    context, doc.TenantId, invoiceId, doc.TotalAmountInBase, cancellationToken);
+            }
             await context.SaveChangesAsync(cancellationToken);
             return Result<FinancialNoteDto>.Success(
                 await CreateFinancialNoteCommandHandler.LoadDtoAsync(context, doc.Id, cancellationToken));

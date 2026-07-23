@@ -25,6 +25,12 @@
 
     <!-- Login Form element -->
     <form [formGroup]="loginForm" (ngSubmit)="onSubmit()" class="flex flex-col gap-5">
+
+      @if (errorMessage()) {
+        <div class="rounded-xl border border-red-500/40 bg-red-500/10 px-3 py-2 text-xs font-medium text-red-500" role="alert">
+          {{ errorMessage() }}
+        </div>
+      }
       
       <!-- Email Input -->
       <div class="flex flex-col gap-1.5 text-left">
@@ -91,11 +97,16 @@
       <!-- Action submit button -->
       <button 
         type="submit" 
-        [disabled]="loginForm.invalid"
+        [disabled]="loginForm.invalid || submitting()"
         class="w-full bg-[var(--primary-color)] text-[var(--primary-contrast)] hover:bg-[var(--primary-color-hover)] disabled:bg-gray-400 disabled:cursor-not-allowed py-3.5 rounded-xl font-bold text-sm shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer mt-2"
       >
-        <span>{{ t('login.signInBtn') }}</span>
-        <mat-icon class="text-sm">arrow_forward</mat-icon>
+        @if (submitting()) {
+          <mat-icon class="text-sm animate-spin">progress_activity</mat-icon>
+          <span>{{ t('login.signingIn') }}</span>
+        } @else {
+          <span>{{ t('login.signInBtn') }}</span>
+          <mat-icon class="text-sm">arrow_forward</mat-icon>
+        }
       </button>
 
     </form>

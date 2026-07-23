@@ -34,6 +34,17 @@ export class GoodsReceiptRepository {
     return this.http.get<GoodsReceiptDoc>(`${this.base}/preview-from-po/${purchaseOrderId}`);
   }
 
+  getNextNumber(): Observable<string> {
+    return this.http.get(`${this.base}/next-number`, { responseType: 'text' }).pipe(
+      map(raw => {
+        const value = String(raw ?? '')
+          .trim()
+          .replace(/^"|"$/g, '');
+        return /^GRN\d{10}$/.test(value) ? value : '';
+      })
+    );
+  }
+
   create(payload: CreateGoodsReceiptPayload): Observable<GoodsReceiptDoc> {
     return this.http.post<GoodsReceiptDoc>(this.base, {
       tenantId: '00000000-0000-0000-0000-000000000000',

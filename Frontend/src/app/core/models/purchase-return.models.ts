@@ -121,7 +121,79 @@ export interface PurchaseReturnListParams {
   search?: string;
   status?: number | null;
   returnType?: number | null;
+  /** AfterInvoice + Direct only (purchase / direct invoice returns). */
+  invoiceBasedOnly?: boolean;
   from?: string | null;
   to?: string | null;
   supplierId?: string | null;
+}
+
+/** Response of GET .../invoice-for-return/{id} */
+export interface PurchaseInvoiceForReturnHeader {
+  id: string;
+  invoiceNumber: string;
+  kind: number;
+  status: number;
+  paymentMode: number;
+  nature: number;
+  supplierId: string;
+  supplierNameAr: string;
+  warehouseId?: string | null;
+  warehouseNameAr?: string | null;
+  costCenterId?: string | null;
+  costCenterNameAr?: string | null;
+  invoiceDate: string;
+  dueDate?: string | null;
+  currency: string;
+  exchangeRate: number;
+  supplierInvoiceNumber?: string | null;
+  externalReference?: string | null;
+  notes?: string | null;
+  apAccountId?: string | null;
+  apAccountNameAr?: string | null;
+  discountAmount: number;
+  subTotal: number;
+  taxAmount: number;
+  totalAmount: number;
+  canCreateReturn: boolean;
+  blockReason?: string | null;
+  blockReasonCode?: string | null;
+}
+
+export interface PurchaseInvoiceForReturnLine {
+  purchaseInvoiceLineId: string;
+  inventoryItemId: string;
+  itemNameAr?: string | null;
+  itemSku?: string | null;
+  description?: string | null;
+  unitId: string;
+  unitNameAr?: string | null;
+  warehouseId?: string | null;
+  warehouseNameAr?: string | null;
+  originalQuantity: number;
+  previouslyReturnedQuantity: number;
+  remainingQuantity: number;
+  returnQuantity: number;
+  unitPrice: number;
+  discountPercent: number;
+  discountAmount: number;
+  taxPercent: number;
+  taxAmount: number;
+  lineSubTotal: number;
+  lineTotal: number;
+  isDisabled: boolean;
+}
+
+export interface PurchaseInvoiceForReturnTax {
+  taxPercent: number;
+  taxableAmount: number;
+  taxAmount: number;
+}
+
+export interface PurchaseInvoiceForReturn {
+  header: PurchaseInvoiceForReturnHeader;
+  items: PurchaseInvoiceForReturnLine[];
+  taxes: PurchaseInvoiceForReturnTax[];
+  totalRemainingQuantity: number;
+  invoiceTotalAmount: number;
 }

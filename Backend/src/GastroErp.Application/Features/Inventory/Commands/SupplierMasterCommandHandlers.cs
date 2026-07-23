@@ -41,11 +41,16 @@ public class CreateSupplierCommandHandler(
             return Result<SupplierDto>.Failure("AccountNotFound", "AP account not found.");
 
         var code = string.IsNullOrWhiteSpace(dto.Code)
-            ? await GenerateCodeAsync(dto.TenantId, cancellationToken)
+            ? await SupplierCodeAllocator.PeekNextAsync(context, dto.TenantId, cancellationToken)
             : dto.Code.Trim().ToUpperInvariant();
 
         if (await context.Suppliers.AsNoTracking().AnyAsync(s => s.TenantId == dto.TenantId && s.Code == code, cancellationToken))
-            return Result<SupplierDto>.Failure("DuplicateCode", "Supplier code already exists.");
+        {
+            // Concurrent create with same previewed code — allocate a fresh period sequence.
+            code = await SupplierCodeAllocator.PeekNextAsync(context, dto.TenantId, cancellationToken);
+            if (await context.Suppliers.AsNoTracking().AnyAsync(s => s.TenantId == dto.TenantId && s.Code == code, cancellationToken))
+                return Result<SupplierDto>.Failure("DuplicateCode", "Supplier code already exists.");
+        }
 
         try
         {
@@ -76,12 +81,6 @@ public class CreateSupplierCommandHandler(
         }
     }
 
-    private async Task<string> GenerateCodeAsync(Guid tenantId, CancellationToken ct)
-    {
-        var count = await context.Suppliers.IgnoreQueryFilters()
-            .CountAsync(s => s.TenantId == tenantId, ct);
-        return $"SUP-{(count + 1):D5}";
-    }
 }
 
 public class UpsertSupplierMasterCommandHandler(

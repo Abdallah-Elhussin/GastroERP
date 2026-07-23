@@ -202,8 +202,9 @@ public sealed class PurchaseReturn : AuditableBaseEntity
 
     public void MarkPosted(Guid journalEntryId, Guid postedBy, Guid? creditNoteJournalId = null)
     {
-        if (Status is not (PurchasingDocumentStatus.Draft or PurchasingDocumentStatus.Approved))
-            throw new BusinessException(ErrorCodes.InvalidStatusTransition);
+        if (Status != PurchasingDocumentStatus.Approved)
+            throw new BusinessException(ErrorCodes.InvalidStatusTransition,
+                "Only approved returns can be posted.");
         if (_lines.Count == 0)
             throw new BusinessException(ErrorCodes.RequiredField);
 
@@ -216,6 +217,7 @@ public sealed class PurchaseReturn : AuditableBaseEntity
 
     public void Complete() => MarkPosted(Guid.Empty, Guid.Empty);
 
+    /// <summary>Permanent reversal marker (legacy). Purchase return posting is not reversible in the UI workflow.</summary>
     public void MarkReversed(Guid? reversalJournalId = null)
     {
         if (Status != PurchasingDocumentStatus.Posted)
@@ -226,8 +228,9 @@ public sealed class PurchaseReturn : AuditableBaseEntity
 
     public void Cancel()
     {
-        if (Status is PurchasingDocumentStatus.Posted or PurchasingDocumentStatus.Reversed)
-            throw new BusinessException(ErrorCodes.InvalidStatusTransition);
+        if (Status != PurchasingDocumentStatus.Draft)
+            throw new BusinessException(ErrorCodes.InvalidStatusTransition,
+                "Only draft returns can be cancelled.");
         Status = PurchasingDocumentStatus.Cancelled;
     }
 

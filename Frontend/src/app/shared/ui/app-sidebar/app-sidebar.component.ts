@@ -153,10 +153,9 @@ export class AppSidebarComponent {
         { path: '/purchases/dashboard', icon: 'analytics', labelKey: 'pur.nav.dashboard' },
         { path: '/purchases/purchase-orders', icon: 'shopping_cart', labelKey: 'pur.nav.purchaseOrders' },
         { path: '/purchases/goods-receipts', icon: 'inventory', labelKey: 'pur.nav.goodsReceipts' },
-        { path: '/purchases/purchase-returns', icon: 'assignment_return', labelKey: 'pur.nav.purchaseReturns' },
         { path: '/purchases/purchase-invoices', icon: 'receipt_long', labelKey: 'pur.nav.purchaseInvoices' },
         { path: '/purchases/direct-invoices', icon: 'flash_on', labelKey: 'pur.nav.directInvoices' },
-        { path: '/purchases/direct-returns', icon: 'undo', labelKey: 'pur.nav.directReturns' },
+        { path: '/purchases/invoice-returns', icon: 'undo', labelKey: 'pur.nav.invoiceReturns' },
         { path: '/purchases/suppliers', icon: 'storefront', labelKey: 'pur.nav.suppliers' },
         { path: '/purchases/triple-match', icon: 'compare_arrows', labelKey: 'pur.nav.tripleMatch' }
       ]

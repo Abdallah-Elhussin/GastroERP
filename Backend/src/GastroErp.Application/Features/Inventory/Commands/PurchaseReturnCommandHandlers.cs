@@ -103,7 +103,7 @@ public class CreatePurchaseReturnCommandHandler(
     {
         var dto = request.Dto;
         var number = string.IsNullOrWhiteSpace(dto.ReturnNumber)
-            ? $"PR-{DateTime.UtcNow:yyyyMMddHHmmss}"
+            ? await PurchaseReturnNumberAllocator.PeekNextAsync(context, request.TenantId, cancellationToken)
             : dto.ReturnNumber.Trim();
 
         PurchaseReturn doc;
@@ -155,16 +155,6 @@ public class CreatePurchaseReturnCommandHandler(
                 ? PurchaseReturnType.Direct
                 : PurchaseReturnType.AfterInvoice;
 
-            if (dto.ReturnType == PurchaseReturnType.Direct && inv.Kind != PurchaseInvoiceKind.Direct)
-                return Result<PurchaseReturnDto>.Failure("InvalidType", "Direct returns require a direct purchase invoice.");
-            if (dto.ReturnType == PurchaseReturnType.AfterInvoice && inv.Kind != PurchaseInvoiceKind.FromReceipt)
-                returnType = PurchaseReturnType.AfterInvoice;
-
-            if (dto.ReturnType == PurchaseReturnType.Direct)
-                returnType = PurchaseReturnType.Direct;
-            else if (dto.ReturnType == PurchaseReturnType.AfterInvoice)
-                returnType = PurchaseReturnType.AfterInvoice;
-
             var warehouseId = dto.WarehouseId != Guid.Empty
                 ? dto.WarehouseId
                 : inv.WarehouseId ?? Guid.Empty;
@@ -178,11 +168,9 @@ public class CreatePurchaseReturnCommandHandler(
 
             if (lines.Count == 0)
             {
-                lines = inv.Lines.Where(l => l.RemainingToReturn > 0).Select(l => new CreatePurchaseReturnLineInputDto(
-                    l.InventoryItemId, l.UnitId, l.Quantity, l.ReturnedQuantity, l.RemainingToReturn,
-                    l.UnitPrice, TaxAmount: l.RemainingToReturn > 0 && l.Quantity > 0
-                        ? Math.Round(l.TaxAmount * (l.RemainingToReturn / l.Quantity), 4) : 0,
-                    PurchaseInvoiceLineId: l.Id)).ToList();
+                return Result<PurchaseReturnDto>.Failure(
+                    "RequiredField",
+                    "Return lines with quantities greater than zero are required.");
             }
         }
 

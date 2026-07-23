@@ -103,6 +103,18 @@ public class ApplicationDbContextInitializer
             await _context.SaveChangesAsync();
         }
 
+        var defaultBranch = await _context.Branches
+            .Where(b => b.TenantId == tenantEntity.Id)
+            .OrderByDescending(b => b.IsDefault)
+            .ThenBy(b => b.NameAr)
+            .FirstOrDefaultAsync();
+        if (defaultBranch is not null
+            && !await _context.UserBranches.AnyAsync(ub => ub.UserId == adminUser.Id && ub.BranchId == defaultBranch.Id))
+        {
+            _context.UserBranches.Add(new UserBranch(adminUser.Id, defaultBranch.Id, tenantEntity.Id, isDefault: true, grantedBy: "seed"));
+            await _context.SaveChangesAsync();
+        }
+
         await _masterDataSeeder.SeedAllTenantsAsync(_context);
         _logger.LogInformation("Database seed completed.");
     }

@@ -1,4 +1,4 @@
-import { Component, ChangeDetectionStrategy, inject } from '@angular/core';
+import { Component, ChangeDetectionStrategy, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule, Router } from '@angular/router';
 import { FormBuilder, FormGroup, Validators, ReactiveFormsModule } from '@angular/forms';
@@ -35,6 +35,9 @@ export class LoginComponent {
   dataService = inject(DataService);
   authService = inject(AuthService);
 
+  readonly submitting = signal(false);
+  readonly errorMessage = signal<string | null>(null);
+
   loginForm: FormGroup = this.fb.group({
     email: ['admin@gastroerp.com', [Validators.required, Validators.email]],
     password: ['admin', Validators.required],
@@ -42,18 +45,28 @@ export class LoginComponent {
   });
 
   onSubmit(): void {
-    if (this.loginForm.valid) {
-      const { email, password } = this.loginForm.value;
-      this.authService.login(email, password).subscribe((result) => {
+    if (!this.loginForm.valid || this.submitting()) {
+      this.loginForm.markAllAsTouched();
+      return;
+    }
+
+    this.errorMessage.set(null);
+    this.submitting.set(true);
+    const { email, password } = this.loginForm.value;
+    this.authService.login(email, password).subscribe({
+      next: result => {
+        this.submitting.set(false);
         if (result.success) {
           this.router.navigate(['/dashboard']);
-        } else {
-          alert(result.error ?? this.t('login.invalidCredentials'));
+          return;
         }
-      });
-    } else {
-      this.loginForm.markAllAsTouched();
-    }
+        this.errorMessage.set(result.error ?? this.t('login.invalidCredentials'));
+      },
+      error: () => {
+        this.submitting.set(false);
+        this.errorMessage.set(this.t('login.invalidCredentials'));
+      }
+    });
   }
 
   t(key: string): string {

@@ -91,7 +91,7 @@ export class InventoryService {
   loadWarehouses(): void {
     this.loading.set(true);
     this.error.set(null);
-    this.repo.getWarehouses().pipe(
+    this.repo.getWarehouses({ isActive: true, pageSize: 200 }).pipe(
       catchError(err => {
         this.error.set(err?.error?.error ?? 'Failed to load warehouses.');
         return of([] as Warehouse[]);
@@ -106,7 +106,7 @@ export class InventoryService {
   loadItems(search?: string): void {
     this.loading.set(true);
     this.error.set(null);
-    this.repo.getItems(search).pipe(
+    this.repo.getItems(search, 1, 200).pipe(
       catchError(err => {
         this.error.set(err?.error?.error ?? 'Failed to load inventory items.');
         return of([] as InventoryItemDefinition[]);

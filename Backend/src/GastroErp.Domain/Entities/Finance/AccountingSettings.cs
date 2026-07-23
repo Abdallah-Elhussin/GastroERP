@@ -117,6 +117,14 @@ public sealed class AccountingSettings : AuditableBaseEntity, ITenantEntity
         FixedAssetAccountId = fixedAsset;
     }
 
+    /// <summary>Maps GRNI clearing account without rewriting the full mapping set.</summary>
+    public void SetGrniAccount(Guid grniAccountId)
+    {
+        if (grniAccountId == Guid.Empty)
+            throw new ArgumentException("GRNI account is required.", nameof(grniAccountId));
+        GrniAccountId = grniAccountId;
+    }
+
     public void UpdatePostingFlags(
         bool sales, bool purchases, bool goodsReceipt, bool goodsIssue,
         bool stockTransfer, bool waste, bool production, bool payroll)

@@ -3,6 +3,7 @@ using GastroErp.Application.Common.Responses;
 using GastroErp.Application.Features.Inventory.Commands;
 using GastroErp.Application.Features.Inventory.DTOs;
 using GastroErp.Application.Features.Inventory.Mapping;
+using GastroErp.Application.Features.Inventory.Services;
 using GastroErp.Domain.Entities.Inventory.Purchasing;
 using GastroErp.Domain.Enums;
 using MediatR;
@@ -104,5 +105,17 @@ public class PreviewGoodsReceiptFromPoQueryHandler(IApplicationDbContext context
 
         return Result<GoodsReceiptDto>.Success(
             await CreateGoodsReceiptCommandHandler.EnrichAsync(context, preview, cancellationToken));
+    }
+}
+
+public class GetNextGoodsReceiptNumberQueryHandler(IApplicationDbContext context)
+    : IRequestHandler<GetNextGoodsReceiptNumberQuery, Result<string>>
+{
+    public async Task<Result<string>> Handle(
+        GetNextGoodsReceiptNumberQuery request, CancellationToken cancellationToken)
+    {
+        var number = await GoodsReceiptNumberAllocator.PeekNextAsync(
+            context, request.TenantId, cancellationToken);
+        return Result<string>.Success(number);
     }
 }

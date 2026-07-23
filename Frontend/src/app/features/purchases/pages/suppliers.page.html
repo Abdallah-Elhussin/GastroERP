@@ -1,0 +1,112 @@
+<app-inventory-page-shell
+  [breadcrumbs]="breadcrumbs"
+  titleKey="pur.nav.suppliers"
+  subtitleKey="pur.sup.subtitle"
+>
+  <section class="toolbar" shellActions>
+    <div class="toolbar-row">
+      <div class="search-group">
+        <input
+          type="search"
+          [ngModel]="search()"
+          (ngModelChange)="search.set($event)"
+          [placeholder]="t('pur.sup.searchPlaceholder')"
+        />
+        <button type="button" class="btn primary" (click)="refresh()">
+          <mat-icon>search</mat-icon>
+          {{ t('inv.items.toolbar.search') }}
+        </button>
+      </div>
+
+      <button type="button" class="btn primary" [disabled]="!canCreate()" (click)="openNew()">
+        <mat-icon>add</mat-icon>
+        {{ t('inv.items.toolbar.new') }}
+      </button>
+      <button type="button" class="btn ghost" [disabled]="!canEdit() || !selected()" (click)="openEdit()">
+        <mat-icon>edit</mat-icon>
+        {{ t('inv.items.toolbar.edit') }}
+      </button>
+      <button type="button" class="btn ghost" [disabled]="!canDelete() || !selected()" (click)="deleteSelected()">
+        <mat-icon>delete</mat-icon>
+        {{ t('inv.items.toolbar.delete') }}
+      </button>
+      <button type="button" class="btn ghost" (click)="refresh()">
+        <mat-icon>refresh</mat-icon>
+        {{ t('inv.items.toolbar.refresh') }}
+      </button>
+
+      <label class="check">
+        <input type="checkbox" [ngModel]="activeOnly()" (ngModelChange)="activeOnly.set($event)" />
+        {{ t('pur.sup.filter.activeOnly') }}
+      </label>
+    </div>
+  </section>
+
+  @if (error()) {
+    <div class="form-error">{{ error() }}</div>
+  }
+
+  @if (loading()) {
+    <p class="muted">{{ t('common.loading') }}</p>
+  } @else if (filtered().length === 0) {
+    <div class="empty">
+      <mat-icon>local_shipping</mat-icon>
+      <h3>{{ t('pur.sup.emptyTitle') }}</h3>
+      <p>{{ t('pur.sup.empty') }}</p>
+      <button type="button" class="btn primary" [disabled]="!canCreate()" (click)="openNew()">
+        {{ t('inv.items.toolbar.new') }}
+      </button>
+    </div>
+  } @else {
+    <div class="table-card">
+      <table>
+        <thead>
+          <tr>
+            <th>{{ t('pur.sup.col.code') }}</th>
+            <th>{{ t('pur.sup.col.name') }}</th>
+            <th>{{ t('pur.sup.col.taxNumber') }}</th>
+            <th>{{ t('pur.sup.col.city') }}</th>
+            <th>{{ t('pur.sup.col.creditLimit') }}</th>
+            <th>{{ t('pur.sup.col.balance') }}</th>
+            <th>{{ t('pur.sup.col.status') }}</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (row of filtered(); track row.id) {
+            <tr
+              [class.selected]="selectedId() === row.id"
+              (click)="select(row)"
+              (dblclick)="openEdit()"
+            >
+              <td><code>{{ row.code }}</code></td>
+              <td>
+                <a [routerLink]="['/purchases/suppliers', row.id]" (click)="$event.stopPropagation()">
+                  <strong>{{ row.nameAr }}</strong>
+                </a>
+                @if (row.nameEn) {
+                  <div class="muted">{{ row.nameEn }}</div>
+                }
+              </td>
+              <td>{{ row.taxNumber || '—' }}</td>
+              <td>{{ row.city || '—' }}</td>
+              <td class="num">{{ row.creditLimit | number: '1.2-2' }}</td>
+              <td class="num" [class.over]="row.isOverCreditLimit">{{ row.currentBalance | number: '1.2-2' }}</td>
+              <td>
+                @if (row.isBlacklisted) {
+                  <span class="badge bad">{{ t('pur.sup.status.blacklisted') }}</span>
+                } @else if (row.isActive) {
+                  <span class="badge on">{{ t('pur.sup.status.active') }}</span>
+                } @else {
+                  <span class="badge">{{ t('pur.sup.status.inactive') }}</span>
+                }
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+      <footer class="table-foot">
+        {{ t('pur.sup.total') }}: {{ filtered().length }} {{ t('pur.sup.records') }}
+      </footer>
+    </div>
+  }
+</app-inventory-page-shell>

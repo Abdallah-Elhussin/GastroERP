@@ -27,12 +27,21 @@ import {
   Warehouse
 } from '../../../core/models/inventory.models';
 import { InventoryPageShellComponent } from '../../inventory/shared/inventory-page-shell.component';
+import { AppDialogComponent } from '../../../shared/ui/app-dialog/app-dialog.component';
 import { catchError, of } from 'rxjs';
+
+interface ResultDialogState {
+  open: boolean;
+  success: boolean;
+  title: string;
+  message: string;
+  navigateToId?: string | null;
+}
 
 @Component({
   selector: 'app-goods-receipt-form-page',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterLink, MatIconModule, InventoryPageShellComponent],
+  imports: [CommonModule, FormsModule, RouterLink, MatIconModule, InventoryPageShellComponent, AppDialogComponent],
   templateUrl: './goods-receipt-form.page.html',
   styleUrl: './goods-receipt-form.page.scss',
   changeDetection: ChangeDetectionStrategy.OnPush
@@ -48,6 +57,14 @@ export class GoodsReceiptFormPage implements OnInit {
   loading = signal(false);
   saving = signal(false);
   error = signal<string | null>(null);
+  resultDialog = signal<ResultDialogState>({
+    open: false,
+    success: true,
+    title: '',
+    message: ''
+  });
+  approveConfirmOpen = signal(false);
+  saveConfirmOpen = signal(false);
 
   docId = signal<string | null>(null);
   grnNumber = signal('');
@@ -71,6 +88,7 @@ export class GoodsReceiptFormPage implements OnInit {
   poCompletionPercent = signal<number | null>(null);
   supplierNameAr = signal('');
   supplierLocked = signal(false);
+  warehouseNameAr = signal('');
 
   inspectionResult = signal(1);
   inspectedBy = signal('');
@@ -145,6 +163,8 @@ export class GoodsReceiptFormPage implements OnInit {
       return;
     }
 
+    this.loadNextNumber();
+
     const poId = this.route.snapshot.queryParamMap.get('poId');
     if (poId) {
       this.purchaseOrderId.set(poId);
@@ -152,16 +172,37 @@ export class GoodsReceiptFormPage implements OnInit {
     }
   }
 
+  private loadNextNumber(): void {
+    this.repo.getNextNumber().pipe(catchError(() => of(''))).subscribe(n => {
+      if (n) this.grnNumber.set(n);
+    });
+  }
+
   t(key: string): string {
     return this.lang.t(key);
   }
 
-  loadFromPo(): void {
-    const poId = this.purchaseOrderId();
+  /** Selecting a PO loads supplier, warehouse, and lines automatically. */
+  onPurchaseOrderChange(poId: string | null): void {
+    const next = poId || null;
+    this.purchaseOrderId.set(next);
+    if (!this.isDraft() || this.docId()) return;
+
+    if (!next) {
+      this.clearPoLinkedFields();
+      return;
+    }
+
+    this.loadFromPo(next);
+  }
+
+  loadFromPo(explicitPoId?: string | null): void {
+    const poId = explicitPoId ?? this.purchaseOrderId();
     if (!poId) {
       this.error.set(this.t('pur.grn.validation.po'));
       return;
     }
+    this.purchaseOrderId.set(poId);
     this.loading.set(true);
     this.error.set(null);
     this.repo.previewFromPo(poId).subscribe({
@@ -174,6 +215,19 @@ export class GoodsReceiptFormPage implements OnInit {
         this.loading.set(false);
       }
     });
+  }
+
+  private clearPoLinkedFields(): void {
+    this.poNumber.set('');
+    this.poCompletionPercent.set(null);
+    this.supplierId.set(null);
+    this.supplierNameAr.set('');
+    this.supplierLocked.set(false);
+    this.warehouseId.set(null);
+    this.warehouseNameAr.set('');
+    this.lines.set([]);
+    this.selectedLineIndex.set(null);
+    this.error.set(null);
   }
 
   save(): void {
@@ -190,6 +244,20 @@ export class GoodsReceiptFormPage implements OnInit {
       this.error.set(this.t('pur.grn.validation.lines'));
       return;
     }
+    this.saveConfirmOpen.set(true);
+  }
+
+  closeSaveConfirm(): void {
+    this.saveConfirmOpen.set(false);
+  }
+
+  confirmSave(): void {
+    this.saveConfirmOpen.set(false);
+    this.persist();
+  }
+
+  private persist(): void {
+    if (!this.canManage() || !this.isDraft()) return;
 
     this.saving.set(true);
     this.error.set(null);
@@ -239,10 +307,13 @@ export class GoodsReceiptFormPage implements OnInit {
         next: doc => {
           this.applyDoc(doc);
           this.saving.set(false);
+          this.openResult(true, this.t('pur.grn.result.savedTitle'), this.t('pur.grn.result.savedMessage'));
         },
         error: err => {
-          this.error.set(err?.error?.error ?? this.t('pur.grn.saveFailed'));
+          const reason = this.extractError(err, this.t('pur.grn.saveFailed'));
+          this.error.set(reason);
           this.saving.set(false);
+          this.openResult(false, this.t('pur.grn.result.failedTitle'), reason);
         }
       });
       return;
@@ -250,6 +321,7 @@ export class GoodsReceiptFormPage implements OnInit {
 
     const createPayload: CreateGoodsReceiptPayload = {
       warehouseId: this.warehouseId()!,
+      grnNumber: this.grnNumber() || null,
       purchaseOrderId: this.purchaseOrderId() || null,
       supplierId: this.supplierId() || null,
       directReceipt: !this.purchaseOrderId(),
@@ -276,25 +348,59 @@ export class GoodsReceiptFormPage implements OnInit {
     this.repo.create(createPayload).subscribe({
       next: doc => {
         this.saving.set(false);
-        void this.router.navigate(['/purchases/goods-receipts', doc.id], { replaceUrl: true });
+        this.openResult(
+          true,
+          this.t('pur.grn.result.savedTitle'),
+          this.t('pur.grn.result.savedMessage'),
+          doc.id
+        );
       },
       error: err => {
-        this.error.set(err?.error?.error ?? this.t('pur.grn.saveFailed'));
+        const reason = this.extractError(err, this.t('pur.grn.saveFailed'));
+        this.error.set(reason);
         this.saving.set(false);
+        this.openResult(false, this.t('pur.grn.result.failedTitle'), reason);
       }
     });
   }
 
   approve(): void {
+    if (!this.docId() || !this.canManage() || !this.isDraft()) return;
+    this.approveConfirmOpen.set(true);
+  }
+
+  closeApproveConfirm(): void {
+    this.approveConfirmOpen.set(false);
+  }
+
+  confirmApprove(): void {
     const id = this.docId();
     if (!id || !this.canManage()) return;
-    this.runAction(() => this.repo.approve(id));
+    this.approveConfirmOpen.set(false);
+    this.runAction(
+      () => this.repo.approve(id),
+      {
+        successTitle: this.t('pur.grn.result.approveSuccessTitle'),
+        successMessage: this.t('pur.grn.result.approveSuccessMessage'),
+        failedTitle: this.t('pur.grn.result.approveFailedTitle')
+      }
+    );
   }
 
   post(): void {
     const id = this.docId();
-    if (!id || !this.canManage()) return;
-    this.runAction(() => this.repo.post(id));
+    if (!id || !this.canManage() || !this.isApproved()) return;
+    this.runAction(
+      () => this.repo.post(id),
+      {
+        successTitle: this.t('pur.grn.result.postSuccessTitle'),
+        successMessage: this.t('pur.grn.result.postSuccessMessage').replace(
+          '{number}',
+          this.grnNumber() || id
+        ),
+        failedTitle: this.t('pur.grn.result.postFailedTitle')
+      }
+    );
   }
 
   unpost(): void {
@@ -310,10 +416,20 @@ export class GoodsReceiptFormPage implements OnInit {
     this.runAction(() => this.repo.cancel(id));
   }
 
+  acknowledgeResult(): void {
+    const navId = this.resultDialog().navigateToId;
+    this.resultDialog.set({ open: false, success: true, title: '', message: '' });
+    if (navId && navId !== this.docId()) {
+      void this.router.navigate(['/purchases/goods-receipts', navId], { replaceUrl: true });
+    }
+  }
+
   createInvoice(): void {
     const id = this.docId();
     if (!id || !this.isPosted()) return;
-    void this.router.navigate(['/purchases/purchase-invoices'], { queryParams: { goodsReceiptId: id } });
+    void this.router.navigate(['/purchases/purchase-invoices/new'], {
+      queryParams: { goodsReceiptId: id }
+    });
   }
 
   back(): void {
@@ -373,6 +489,7 @@ export class GoodsReceiptFormPage implements OnInit {
     supplierId: string;
     supplierNameAr: string;
     warehouseId: string;
+    warehouseNameAr?: string;
     currency: string;
     notes?: string | null;
     lines: GoodsReceiptLine[];
@@ -384,6 +501,7 @@ export class GoodsReceiptFormPage implements OnInit {
     this.supplierNameAr.set(doc.supplierNameAr);
     this.supplierLocked.set(true);
     this.warehouseId.set(doc.warehouseId);
+    this.warehouseNameAr.set(doc.warehouseNameAr || '');
     this.currency.set(doc.currency || 'SAR');
     if (doc.notes) this.notes.set(doc.notes);
     this.lines.set(doc.lines.map(l => ({ ...l })));
@@ -407,6 +525,7 @@ export class GoodsReceiptFormPage implements OnInit {
     this.vehicleNumber.set(doc.vehicleNumber || '');
     this.waybillNumber.set(doc.waybillNumber || '');
     this.warehouseId.set(doc.warehouseId);
+    this.warehouseNameAr.set(doc.warehouseNameAr || '');
     this.supplierId.set(doc.supplierId);
     this.supplierNameAr.set(doc.supplierNameAr);
     this.purchaseOrderId.set(doc.purchaseOrderId ?? null);
@@ -455,19 +574,49 @@ export class GoodsReceiptFormPage implements OnInit {
     }
   }
 
-  private runAction(action: () => import('rxjs').Observable<void>): void {
+  private runAction(
+    action: () => import('rxjs').Observable<void>,
+    feedback?: { successTitle: string; successMessage: string; failedTitle: string }
+  ): void {
     this.saving.set(true);
     this.error.set(null);
     action().subscribe({
       next: () => {
         this.saving.set(false);
         if (this.docId()) this.loadDoc(this.docId()!);
+        if (feedback) {
+          this.openResult(true, feedback.successTitle, feedback.successMessage);
+        }
       },
       error: err => {
-        this.error.set(err?.error?.error ?? this.t('pur.grn.actionFailed'));
+        const reason = this.extractError(err, this.t('pur.grn.actionFailed'));
+        this.error.set(reason);
         this.saving.set(false);
+        if (feedback) {
+          this.openResult(false, feedback.failedTitle, reason);
+        }
       }
     });
+  }
+
+  private openResult(
+    success: boolean,
+    title: string,
+    message: string,
+    navigateToId?: string | null
+  ): void {
+    this.resultDialog.set({ open: true, success, title, message, navigateToId: navigateToId ?? null });
+  }
+
+  private extractError(err: unknown, fallback: string): string {
+    const body = (err as { error?: { error?: string; message?: string }; message?: string })?.error;
+    if (body && typeof body === 'object') {
+      if (typeof body.error === 'string' && body.error.trim()) return body.error.trim();
+      if (typeof body.message === 'string' && body.message.trim()) return body.message.trim();
+    }
+    const msg = (err as { message?: string })?.message;
+    if (typeof msg === 'string' && msg.trim() && !msg.startsWith('Http failure')) return msg.trim();
+    return fallback;
   }
 
   private todayIso(): string {

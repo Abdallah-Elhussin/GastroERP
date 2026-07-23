@@ -11,5 +11,6 @@ public interface IClaimsFactory
     IEnumerable<Claim> CreateClaims(
         AppUser user,
         IReadOnlyCollection<string> roleNames,
-        IReadOnlyCollection<string>? permissionNames = null);
+        IReadOnlyCollection<string>? permissionNames = null,
+        Guid? defaultBranchId = null);
 }

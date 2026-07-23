@@ -25,12 +25,19 @@ public class PurchaseReturnController : BaseApiController
         [FromQuery] Guid? supplierId = null,
         [FromQuery] Guid? warehouseId = null,
         [FromQuery] PurchaseReturnType? returnType = null,
+        [FromQuery] bool invoiceBasedOnly = false,
         [FromQuery] PurchasingDocumentStatus? status = null,
         [FromQuery] string? search = null,
         [FromQuery] DateTimeOffset? from = null,
         [FromQuery] DateTimeOffset? to = null)
         => HandlePagedResult(await Mediator.Send(new GetPurchaseReturnsQuery(
-            TenantId, supplierId, warehouseId, returnType, status, search, from, to, query.Page, query.PageSize)));
+            TenantId, supplierId, warehouseId, returnType, invoiceBasedOnly, status, search, from, to,
+            query.Page, query.PageSize)));
+
+    [HttpGet($"{ApiRoutes.Inventory.PurchaseReturns}/next-number")]
+    [HasPermission(Permissions.Inventory.View)]
+    public async Task<IActionResult> NextNumber()
+        => HandleResult(await Mediator.Send(new GetNextPurchaseReturnNumberQuery(TenantId)));
 
     [HttpGet($"{ApiRoutes.Inventory.PurchaseReturns}/{{id:guid}}")]
     [HasPermission(Permissions.Inventory.View)]
@@ -46,6 +53,11 @@ public class PurchaseReturnController : BaseApiController
     [HasPermission(Permissions.Inventory.View)]
     public async Task<IActionResult> PreviewFromInvoice(Guid purchaseInvoiceId)
         => HandleResult(await Mediator.Send(new PreviewPurchaseReturnFromInvoiceQuery(TenantId, purchaseInvoiceId)));
+
+    [HttpGet($"{ApiRoutes.Inventory.PurchaseReturns}/invoice-for-return/{{purchaseInvoiceId:guid}}")]
+    [HasPermission(Permissions.Inventory.View)]
+    public async Task<IActionResult> GetInvoiceForReturn(Guid purchaseInvoiceId)
+        => HandleResult(await Mediator.Send(new GetPurchaseInvoiceForReturnQuery(TenantId, purchaseInvoiceId)));
 
     [HttpGet($"{ApiRoutes.Inventory.PurchaseReturns}/reasons")]
     [HasPermission(Permissions.Inventory.View)]
@@ -81,11 +93,6 @@ public class PurchaseReturnController : BaseApiController
     [HasPermission(Permissions.Inventory.Manage)]
     public async Task<IActionResult> Post(Guid id)
         => HandleResult(await Mediator.Send(new PostPurchaseReturnCommand(id, CurrentUserId)));
-
-    [HttpPost($"{ApiRoutes.Inventory.PurchaseReturns}/{{id:guid}}/unpost")]
-    [HasPermission(Permissions.Inventory.Manage)]
-    public async Task<IActionResult> Unpost(Guid id)
-        => HandleResult(await Mediator.Send(new UnpostPurchaseReturnCommand(id, CurrentUserId)));
 
     [HttpPost($"{ApiRoutes.Inventory.PurchaseReturns}/{{id:guid}}/cancel")]
     [HasPermission(Permissions.Inventory.Manage)]

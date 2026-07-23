@@ -124,6 +124,7 @@ export interface UpdatePurchaseInvoicePayload {
   notes?: string | null;
   warehouseId?: string | null;
   nature?: number;
+  currency?: string;
   exchangeRate?: number;
   externalReference?: string | null;
   costCenterId?: string | null;

@@ -188,7 +188,21 @@ public class AuthCommandHandlers :
         ).ToListAsync(cancellationToken);
 
         var permissionNames = await _effectivePermissions.GetPermissionNamesAsync(user.Id, cancellationToken);
-        var claims = _claimsFactory.CreateClaims(user, roleNames, permissionNames);
+        var defaultBranchId = await _context.UserBranches.AsNoTracking()
+            .Where(ub => ub.UserId == user.Id)
+            .OrderByDescending(ub => ub.IsDefault)
+            .Select(ub => (Guid?)ub.BranchId)
+            .FirstOrDefaultAsync(cancellationToken);
+        // Fallback: tenant's first active branch when the user has no UserBranches rows.
+        if (defaultBranchId is null)
+        {
+            defaultBranchId = await _context.Branches.AsNoTracking()
+                .Where(b => b.TenantId == user.TenantId && b.Status == GastroErp.Domain.Enums.BranchStatus.Active)
+                .OrderBy(b => b.NameAr)
+                .Select(b => (Guid?)b.Id)
+                .FirstOrDefaultAsync(cancellationToken);
+        }
+        var claims = _claimsFactory.CreateClaims(user, roleNames, permissionNames, defaultBranchId);
         var accessToken = _jwtTokenGenerator.GenerateToken(claims);
         var refreshToken = existingRefreshToken ?? _refreshTokenService.GenerateRefreshToken();
 

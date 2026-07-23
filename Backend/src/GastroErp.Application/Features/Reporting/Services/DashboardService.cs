@@ -65,10 +65,15 @@ public sealed class DashboardService : IDashboardService
             new("cash_balance", "Cash Balance", cashBalance, "SAR")
         };
 
-        var dailyTrend = await periodOrders
-            .GroupBy(o => DateOnly.FromDateTime((o.CompletedAt ?? o.CreatedAt).UtcDateTime))
-            .Select(g => new { Date = g.Key, Revenue = g.Sum(o => o.GrandTotal) })
-            .OrderBy(x => x.Date).ToListAsync(ct);
+        var periodRows = await periodOrders
+            .Select(o => new { At = o.CompletedAt ?? o.CreatedAt, o.GrandTotal })
+            .ToListAsync(ct);
+
+        var dailyTrend = periodRows
+            .GroupBy(o => DateOnly.FromDateTime(o.At.UtcDateTime))
+            .Select(g => new { Date = g.Key, Revenue = g.Sum(x => x.GrandTotal) })
+            .OrderBy(x => x.Date)
+            .ToList();
 
         var revenueTrend = new LineChartDto(
             dailyTrend.Select(x => x.Date.ToString("yyyy-MM-dd")).ToList(),
@@ -82,28 +87,32 @@ public sealed class DashboardService : IDashboardService
             .Select(g => new { Method = g.Key, Amount = g.Sum(p => p.Amount) })
             .ToListAsync(ct);
 
-        var orderTypeMix = await periodOrders
-            .GroupBy(o => o.OrderType)
-            .Select(g => new { Type = g.Key, Revenue = g.Sum(o => o.GrandTotal) })
-            .ToListAsync(ct);
+        var orderTypeMix = periodRows.Count == 0
+            ? []
+            : (await periodOrders
+                .GroupBy(o => o.OrderType)
+                .Select(g => new { Type = g.Key, Revenue = g.Sum(o => o.GrandTotal) })
+                .ToListAsync(ct));
 
-        var topProducts = await (
-            from item in _context.OrderItems.AsNoTracking()
-            join order in periodOrders on item.SalesOrderId equals order.Id
-            where !item.IsVoided
-            group item by new { item.ProductId, item.ProductNameAr } into g
-            select new { g.Key.ProductId, g.Key.ProductNameAr, Revenue = g.Sum(i => i.LineTotal) })
-            .OrderByDescending(x => x.Revenue).Take(10).ToListAsync(ct);
+        var orderIds = await periodOrders.Select(o => o.Id).ToListAsync(ct);
+        var topProducts = orderIds.Count == 0
+            ? []
+            : (await _context.OrderItems.AsNoTracking()
+                .Where(i => orderIds.Contains(i.SalesOrderId) && !i.IsVoided)
+                .GroupBy(i => new { i.ProductId, i.ProductNameAr })
+                .Select(g => new { g.Key.ProductId, g.Key.ProductNameAr, Revenue = g.Sum(i => i.LineTotal) })
+                .OrderByDescending(x => x.Revenue).Take(10).ToListAsync(ct));
 
-        var topCategories = await (
-            from item in _context.OrderItems.AsNoTracking()
-            join order in periodOrders on item.SalesOrderId equals order.Id
-            join product in _context.Products.AsNoTracking() on item.ProductId equals product.Id
-            join category in _context.Categories.AsNoTracking() on product.CategoryId equals category.Id
-            where !item.IsVoided
-            group item by new { category.Id, category.NameAr } into g
-            select new { g.Key.Id, g.Key.NameAr, Revenue = g.Sum(i => i.LineTotal) })
-            .OrderByDescending(x => x.Revenue).Take(10).ToListAsync(ct);
+        var topCategories = orderIds.Count == 0
+            ? []
+            : (await (
+                from item in _context.OrderItems.AsNoTracking()
+                join product in _context.Products.AsNoTracking() on item.ProductId equals product.Id
+                join category in _context.Categories.AsNoTracking() on product.CategoryId equals category.Id
+                where orderIds.Contains(item.SalesOrderId) && !item.IsVoided
+                group item by new { category.Id, category.NameAr } into g
+                select new { g.Key.Id, g.Key.NameAr, Revenue = g.Sum(i => i.LineTotal) })
+                .OrderByDescending(x => x.Revenue).Take(10).ToListAsync(ct));
 
         return new ExecutiveDashboardDto(
             kpis, revenueTrend,

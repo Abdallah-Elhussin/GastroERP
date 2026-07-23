@@ -36,23 +36,15 @@
     <button
       type="button"
       class="btn info"
-      [disabled]="!canManage() || !selected() || (statusName(selected()!) !== 'Approved' && statusName(selected()!) !== 'Draft') || acting()"
+      [disabled]="!canManage() || !selected() || statusName(selected()!) !== 'Approved' || acting()"
       (click)="post()"
     >
       {{ t('pur.pr.post') }}
     </button>
     <button
       type="button"
-      class="btn ghost"
-      [disabled]="!canManage() || !selected() || statusName(selected()!) !== 'Posted' || acting()"
-      (click)="unpost()"
-    >
-      {{ t('pur.pr.unpost') }}
-    </button>
-    <button
-      type="button"
       class="btn danger"
-      [disabled]="!canManage() || !selected() || statusName(selected()!) === 'Posted' || statusName(selected()!) === 'Reversed' || statusName(selected()!) === 'Cancelled' || acting()"
+      [disabled]="!canManage() || !selected() || statusName(selected()!) !== 'Draft' || acting()"
       (click)="cancel()"
     >
       {{ t('pur.pr.cancel') }}

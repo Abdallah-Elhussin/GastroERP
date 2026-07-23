@@ -171,7 +171,7 @@ export class GoodsReceiptsPage implements OnInit {
   createInvoice(): void {
     const row = this.selected();
     if (!row || this.statusName(row) !== 'Posted') return;
-    void this.router.navigate(['/purchases/purchase-invoices'], {
+    void this.router.navigate(['/purchases/purchase-invoices/new'], {
       queryParams: { goodsReceiptId: row.id }
     });
   }

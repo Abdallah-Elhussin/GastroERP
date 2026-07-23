@@ -65,7 +65,7 @@
       <div class="header-grid">
         <label class="field">
           <span>{{ t('pur.dpi.col.documentNumber') }}</span>
-          <input type="text" [ngModel]="invoiceNumber()" disabled [placeholder]="t('pur.dpi.autoNumber')" />
+          <input type="text" [value]="invoiceNumber()" readonly class="code-readonly" />
         </label>
 
         <label class="field">
@@ -168,6 +168,8 @@
               <th>{{ t('pur.dpi.col.quantity') }}</th>
               <th>{{ t('pur.dpi.col.unit') }}</th>
               <th>{{ t('pur.dpi.col.unitPrice') }}</th>
+              <th>{{ t('pur.dpi.col.discountPercent') }}</th>
+              <th>{{ t('pur.dpi.col.discountAmount') }}</th>
               <th>{{ t('pur.dpi.col.warehouse') }}</th>
               <th>{{ t('pur.dpi.col.subtotal') }}</th>
               <th>{{ t('pur.dpi.col.taxPercent') }}</th>
@@ -178,7 +180,7 @@
           <tbody>
             @if (lines().length === 0) {
               <tr class="empty-row">
-                <td colspan="10" class="muted">{{ t('pur.dpi.noLines') }}</td>
+                <td colspan="12" class="muted">{{ t('pur.dpi.noLines') }}</td>
               </tr>
             }
             @for (line of lines(); track $index; let i = $index) {
@@ -193,7 +195,7 @@
                     >
                       <option value="">{{ t('pur.dpi.pickItem') }}</option>
                       @for (item of items(); track item.id) {
-                        <option [value]="item.id">{{ item.nameAr }}</option>
+                        <option [value]="item.id">{{ itemLabel(item) }}</option>
                       }
                     </select>
                   } @else {
@@ -234,28 +236,32 @@
                   />
                 </td>
                 <td>
+                  <input
+                    type="number"
+                    class="cell-input"
+                    min="0"
+                    max="100"
+                    [ngModel]="line.discountPercent"
+                    (ngModelChange)="updateLine(i, { discountPercent: +$event, discountAmount: 0 })"
+                    [disabled]="!isDraft()"
+                  />
+                </td>
+                <td class="num">{{ line.discountAmount | number: '1.2-2' }}</td>
+                <td>
                   <select
-                    class="cell-select"
-                    [ngModel]="line.lineWarehouseId || warehouseId()"
+                    class="cell-select wide"
+                    [ngModel]="line.lineWarehouseId"
                     (ngModelChange)="updateLine(i, { lineWarehouseId: $event || null })"
                     [disabled]="!isDraft()"
                   >
                     <option [ngValue]="null">{{ t('pur.dpi.pickWarehouse') }}</option>
                     @for (w of warehouses(); track w.id) {
-                      <option [ngValue]="w.id">{{ w.nameAr }}</option>
+                      <option [ngValue]="w.id">{{ warehouseLabel(w) }}</option>
                     }
                   </select>
                 </td>
                 <td class="num">{{ line.lineNet | number: '1.2-2' }}</td>
-                <td>
-                  <input
-                    type="number"
-                    class="cell-input"
-                    [ngModel]="line.taxPercent"
-                    (ngModelChange)="updateLine(i, { taxPercent: +$event, taxAmount: 0 })"
-                    [disabled]="!isDraft()"
-                  />
-                </td>
+                <td class="num readonly-cell">{{ line.taxPercent | number: '1.0-2' }}%</td>
                 <td class="num">{{ line.taxAmount | number: '1.2-2' }}</td>
                 <td class="num">{{ line.lineTotal | number: '1.2-2' }}</td>
               </tr>
@@ -274,6 +280,10 @@
           <strong>{{ subTotal() | number: '1.2-2' }}</strong>
         </div>
         <div>
+          <span>{{ t('pur.dpi.summary.lineDiscounts') }}</span>
+          <strong>{{ lineDiscountTotal() | number: '1.2-2' }}</strong>
+        </div>
+        <div>
           <span>{{ t('pur.dpi.summary.tax') }}</span>
           <strong>{{ taxAmount() | number: '1.2-2' }}</strong>
         </div>
@@ -285,3 +295,18 @@
     </section>
   }
 </app-inventory-page-shell>
+
+<app-dialog
+  [isOpen]="resultDialog().open"
+  [title]="resultDialog().title"
+  (close)="acknowledgeResult()"
+>
+  <p class="result-message" [class.success]="resultDialog().success" [class.failure]="!resultDialog().success">
+    {{ resultDialog().message }}
+  </p>
+  <div class="result-actions">
+    <button type="button" class="btn primary" (click)="acknowledgeResult()">
+      {{ t('common.ok') }}
+    </button>
+  </div>
+</app-dialog>

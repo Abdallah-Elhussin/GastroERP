@@ -1,6 +1,7 @@
 using GastroErp.Application.Common.Interfaces;
 using GastroErp.Application.Common.Responses;
 using GastroErp.Application.Features.Inventory.Commands;
+using GastroErp.Application.Features.Inventory.Services;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 
@@ -71,5 +72,17 @@ public class GetPurchaseInvoiceByIdQueryHandler(IApplicationDbContext context)
             return Result<PurchaseInvoiceDto>.Failure("PurchaseInvoiceNotFound", "Purchase invoice not found.");
 
         return Result<PurchaseInvoiceDto>.Success(CreatePurchaseInvoiceCommandHandler.Map(inv));
+    }
+}
+
+public class GetNextPurchaseInvoiceNumberQueryHandler(IApplicationDbContext context)
+    : IRequestHandler<GetNextPurchaseInvoiceNumberQuery, Result<string>>
+{
+    public async Task<Result<string>> Handle(
+        GetNextPurchaseInvoiceNumberQuery request, CancellationToken cancellationToken)
+    {
+        var number = await PurchaseInvoiceNumberAllocator.PeekNextAsync(
+            context, request.TenantId, request.Kind, cancellationToken);
+        return Result<string>.Success(number);
     }
 }

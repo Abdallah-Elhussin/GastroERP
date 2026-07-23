@@ -1,4 +1,5 @@
 export const environment = {
   production: false,
-  apiBaseUrl: 'http://localhost:5162/api/v1'
+  /** Same-origin via Angular proxy (proxy.conf.json → localhost:5162). Avoids CORS issues. */
+  apiBaseUrl: '/api/v1'
 };

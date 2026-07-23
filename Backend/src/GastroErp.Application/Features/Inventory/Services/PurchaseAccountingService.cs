@@ -4,6 +4,7 @@ using GastroErp.Application.Common.Responses;
 using GastroErp.Application.Features.Finance.DTOs;
 using GastroErp.Application.Features.Finance.Services;
 using GastroErp.Domain.Common.Localization;
+using GastroErp.Domain.Entities.Finance;
 using GastroErp.Domain.Entities.Inventory.Purchasing;
 using GastroErp.Domain.Enums;
 using Microsoft.EntityFrameworkCore;
@@ -44,14 +45,26 @@ public sealed class PurchaseAccountingService(
         if (gr.InspectionResult == InspectionResult.Rejected)
             return Result.Failure(ErrorCodes.InvalidStatusTransition, "Rejected inspection cannot be posted.");
 
-        var settings = await context.AccountingSettings.AsNoTracking()
+        var settings = await context.AccountingSettings
             .FirstOrDefaultAsync(s => s.TenantId == gr.TenantId && s.CompanyId == null, ct);
-        if (settings?.InventoryAccountId is null || settings.GrniAccountId is null)
-            return Result.Failure("AccountsNotMapped", "Inventory and GRNI accounts must be mapped in accounting settings.");
+        if (settings is null)
+            return Result.Failure("AccountsNotMapped", "إعدادات الحسابات غير موجودة. اضبط الربط المحاسبي أولاً.");
+
+        var inventoryAccountId = settings.InventoryAccountId;
+        if (inventoryAccountId is null)
+            return Result.Failure("AccountsNotMapped", "يجب ربط حساب المخزون في الإعدادات المحاسبية قبل الترحيل.");
+
+        var grniAccountId = settings.GrniAccountId;
+        if (grniAccountId is null)
+        {
+            grniAccountId = await EnsureGrniAccountMappedAsync(settings, ct);
+            if (grniAccountId is null)
+                return Result.Failure("AccountsNotMapped", "تعذر تجهيز حساب الاستلامات غير المفوترة (GRNI). اربطه من الإعدادات المحاسبية.");
+        }
 
         var stockLines = gr.Lines.Where(l => l.AcceptedQuantity > 0).ToList();
         if (stockLines.Count == 0)
-            return Result.Failure(ErrorCodes.InvalidQuantity, "No accepted quantity to post.");
+            return Result.Failure(ErrorCodes.InvalidQuantity, "لا توجد كمية مقبولة للترحيل.");
 
         var stock = await pipeline.ApplyMovementAsync(new InventoryMovementRequest(
             gr.TenantId,
@@ -67,7 +80,7 @@ public sealed class PurchaseAccountingService(
 
         var amount = stockLines.Sum(l => Math.Max(0, (l.AcceptedQuantity * l.UnitCost) - l.DiscountAmount));
         if (amount <= 0)
-            return Result.Failure(ErrorCodes.InvalidAmount, "Posted amount must be positive.");
+            return Result.Failure(ErrorCodes.InvalidAmount, "مبلغ الترحيل يجب أن يكون أكبر من صفر.");
         var journalDto = new CreateJournalDto(
             DateOnly.FromDateTime(gr.ReceiptDate.UtcDateTime),
             $"GRN {gr.ReceiptNumber}",
@@ -76,8 +89,8 @@ public sealed class PurchaseAccountingService(
             Reference: gr.ReceiptNumber,
             Lines:
             [
-                new JournalLineDto(null, settings.InventoryAccountId.Value, null, amount, 0, "Inventory"),
-                new JournalLineDto(null, settings.GrniAccountId.Value, null, 0, amount, "GRNI")
+                new JournalLineDto(null, inventoryAccountId.Value, null, amount, 0, "Inventory"),
+                new JournalLineDto(null, grniAccountId.Value, null, 0, amount, "GRNI")
             ]);
 
         var journal = await journalPosting.CreateAndPostAsync(gr.TenantId, userId, journalDto, ct);
@@ -226,7 +239,10 @@ public sealed class PurchaseAccountingService(
             return Result.Failure("PurchaseInvoiceNotFound", "Purchase invoice not found.");
         if (inv.Status != PurchasingDocumentStatus.Posted)
             return Result.Failure(ErrorCodes.InvalidStatusTransition, "Only posted invoices can be reversed.");
-        if (inv.PaidAmount > 0)
+        // Cash settlement is created by posting itself — clear it so reverse is allowed.
+        if (inv.PaymentMode == PurchaseInvoicePaymentMode.Cash && inv.PaidAmount > 0)
+            inv.ClearSettlement();
+        else if (inv.PaidAmount > 0)
             return Result.Failure("HasPayments", "Cannot reverse an invoice that has payments applied.");
         if (inv.Lines.Any(l => l.ReturnedQuantity > 0))
             return Result.Failure("HasReturns", "Cannot reverse an invoice that has returns.");
@@ -352,6 +368,10 @@ public sealed class PurchaseAccountingService(
             return Result.Failure(journal.ErrorCode!, journal.ErrorMessage!);
 
         inv.MarkPosted(journal.Data!.Id, userId);
+        // Cash purchase settles immediately (journal already credits cash/bank).
+        if (inv.PaymentMode == PurchaseInvoicePaymentMode.Cash && inv.TotalAmount > 0)
+            inv.ApplyPayment(inv.TotalAmount);
+
         return Result.Success();
     }
 
@@ -387,8 +407,8 @@ public sealed class PurchaseAccountingService(
             .FirstOrDefaultAsync(r => r.Id == purchaseReturnId, ct);
         if (ret is null)
             return Result.Failure("PurchaseReturnNotFound", "Purchase return not found.");
-        if (ret.Status is not (PurchasingDocumentStatus.Draft or PurchasingDocumentStatus.Approved))
-            return Result.Failure(ErrorCodes.InvalidStatusTransition, "Only draft/approved returns can be posted.");
+        if (ret.Status != PurchasingDocumentStatus.Approved)
+            return Result.Failure(ErrorCodes.InvalidStatusTransition, "Only approved returns can be posted.");
         if (!ret.Lines.Any())
             return Result.Failure("NoLines", "Cannot post a return with no lines.");
 
@@ -480,42 +500,12 @@ public sealed class PurchaseAccountingService(
         return Result.Success();
     }
 
-    public async Task<Result> UnpostPurchaseReturnAsync(Guid purchaseReturnId, Guid userId, CancellationToken ct = default)
+    public Task<Result> UnpostPurchaseReturnAsync(Guid purchaseReturnId, Guid userId, CancellationToken ct = default)
     {
-        var ret = await context.PurchaseReturns.Include(r => r.Lines)
-            .FirstOrDefaultAsync(r => r.Id == purchaseReturnId, ct);
-        if (ret is null)
-            return Result.Failure("PurchaseReturnNotFound", "Purchase return not found.");
-        if (ret.Status != PurchasingDocumentStatus.Posted)
-            return Result.Failure(ErrorCodes.InvalidStatusTransition, "Only posted returns can be unposted.");
-
-        var inbound = await pipeline.ApplyMovementAsync(new InventoryMovementRequest(
-            ret.TenantId,
-            InventoryMovementType.IN,
-            TransactionType.Reversal,
-            ret.Id,
-            $"REV-{ret.ReturnNumber}",
-            ret.Lines.Select(l => new InventoryMovementLine(
-                l.InventoryItemId, ret.WarehouseId, l.UnitId, l.ReturnQuantity, l.UnitCost)).ToList(),
-            $"Unpost {ret.ReturnNumber}"), ct);
-        if (inbound.IsFailure)
-            return Result.Failure(inbound.ErrorCode!, inbound.ErrorMessage);
-
-        Guid? reversalJournalId = null;
-        if (ret.JournalEntryId.HasValue && ret.JournalEntryId != Guid.Empty)
-        {
-            var rev = await journalPosting.ReverseAsync(ret.JournalEntryId.Value, userId, ct);
-            if (!rev.IsSuccess)
-                return Result.Failure(rev.ErrorCode!, rev.ErrorMessage!);
-            reversalJournalId = rev.Data!.Id;
-        }
-
-        await UpdateSourceReturnedQuantitiesAsync(ret, increase: false, ct);
-        ret.MarkReversed(reversalJournalId);
-        context.PurchaseReturns.Update(ret);
-        await context.SaveChangesAsync(ct);
-        logger.LogInformation("Purchase return unposted: {ReturnId}", ret.Id);
-        return Result.Success();
+        // Workflow: Save → Approve → Post. Approval and posting are irreversible.
+        return Task.FromResult(Result.Failure(
+            ErrorCodes.InvalidStatusTransition,
+            "Posted purchase returns cannot be unposted."));
     }
 
     private async Task UpdateSourceReturnedQuantitiesAsync(PurchaseReturn ret, bool increase, CancellationToken ct)
@@ -590,5 +580,49 @@ public sealed class PurchaseAccountingService(
         else if (anyReceived) po.MarkAsPartiallyReceived();
 
         context.PurchaseOrders.Update(po);
+    }
+
+    /// <summary>
+    /// Finds or creates a GRNI liability account and persists it on accounting settings.
+    /// </summary>
+    private async Task<Guid?> EnsureGrniAccountMappedAsync(AccountingSettings settings, CancellationToken ct)
+    {
+        var existing = await context.ChartOfAccounts.AsNoTracking()
+            .Where(a => a.TenantId == settings.TenantId && a.IsActive && a.IsPostingAllowed)
+            .Where(a =>
+                a.AccountNumber == "GRNI" ||
+                a.AccountNumber.StartsWith("GRNI") ||
+                (a.NameEn != null && a.NameEn.Contains("GRNI")) ||
+                a.NameAr.Contains("استلامات غير مفوترة") ||
+                a.NameAr.Contains("بضاعة مستلمة غير مفوترة"))
+            .Select(a => (Guid?)a.Id)
+            .FirstOrDefaultAsync(ct);
+
+        Guid grniId;
+        if (existing.HasValue)
+        {
+            grniId = existing.Value;
+        }
+        else
+        {
+            var account = ChartOfAccount.Create(
+                settings.TenantId,
+                accountNumber: "2120-GRNI",
+                nameAr: "استلامات غير مفوترة (GRNI)",
+                accountType: AccountType.Liability,
+                category: AccountCategory.CurrentLiability,
+                isPostingAllowed: true,
+                nameEn: "Goods Received Not Invoiced (GRNI)",
+                notes: "Auto-created for purchase goods receipt posting");
+            context.ChartOfAccounts.Add(account);
+            await context.SaveChangesAsync(ct);
+            grniId = account.Id;
+        }
+
+        settings.SetGrniAccount(grniId);
+        context.AccountingSettings.Update(settings);
+        await context.SaveChangesAsync(ct);
+        logger.LogInformation("Mapped GRNI account {AccountId} for tenant {TenantId}", grniId, settings.TenantId);
+        return grniId;
     }
 }

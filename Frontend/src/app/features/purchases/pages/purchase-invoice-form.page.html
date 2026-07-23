@@ -1,0 +1,189 @@
+<app-inventory-page-shell [breadcrumbs]="breadcrumbs" [title]="pageTitle()">
+  <section class="toolbar" shellActions>
+    <span class="status-pill" [attr.data-status]="status()">
+      {{ invoiceNumber() || t('pur.pi.new') }} · {{ statusLabel() }}
+    </span>
+    <button
+      type="button"
+      class="btn primary"
+      [disabled]="!canManage() || !isDraft() || saving()"
+      (click)="save()"
+    >
+      {{ t('pur.pi.save') }}
+    </button>
+    <button
+      type="button"
+      class="btn success"
+      [disabled]="!canManage() || !docId() || !isDraft() || saving()"
+      (click)="approve()"
+    >
+      {{ t('pur.pi.approve') }}
+    </button>
+    <button
+      type="button"
+      class="btn info"
+      [disabled]="!canManage() || !docId() || !isApproved() || saving()"
+      (click)="post()"
+    >
+      {{ t('pur.pi.post') }}
+    </button>
+    <button
+      type="button"
+      class="btn ghost"
+      [disabled]="!canManage() || !docId() || !isPosted() || saving()"
+      (click)="unpost()"
+    >
+      {{ t('pur.pi.unpost') }}
+    </button>
+    <button
+      type="button"
+      class="btn outline"
+      [disabled]="!canManage() || !docId() || !isPosted() || saving()"
+      (click)="createReturn()"
+    >
+      {{ t('pur.pi.createReturn') }}
+    </button>
+    <button type="button" class="btn ghost" (click)="back()">{{ t('pur.pi.back') }}</button>
+  </section>
+
+  <app-dialog
+    [isOpen]="resultDialog().open"
+    [title]="resultDialog().title"
+    (close)="acknowledgeResult()"
+  >
+    <p class="result-message" [class.success]="resultDialog().success" [class.failure]="!resultDialog().success">
+      {{ resultDialog().message }}
+    </p>
+    <div class="result-actions">
+      <button type="button" class="btn primary" (click)="acknowledgeResult()">{{ t('common.close') }}</button>
+    </div>
+  </app-dialog>
+
+  @if (error()) {
+    <div class="form-error">{{ error() }}</div>
+  }
+
+  @if (loading()) {
+    <p class="muted">{{ t('common.loading') }}</p>
+  } @else {
+    <section class="card">
+      <h3>{{ t('pur.pi.headerTitle') }}</h3>
+      <p class="hint">{{ t('pur.pi.fromReceiptHint') }}</p>
+      <div class="grid-4">
+        <label class="field span-2">
+          <span>{{ t('pur.pi.col.grn') }}</span>
+          @if (docId()) {
+            <input type="text" [ngModel]="goodsReceiptNumber()" disabled />
+          } @else {
+            <select
+              [ngModel]="goodsReceiptId()"
+              (ngModelChange)="onReceiptChange($event || null)"
+              [disabled]="!isDraft()"
+            >
+              <option [ngValue]="null">{{ t('pur.pi.pickGrn') }}</option>
+              @for (g of availableReceipts(); track g.id) {
+                <option [ngValue]="g.id">{{ g.grnNumber }} — {{ g.supplierNameAr }}</option>
+              }
+            </select>
+          }
+        </label>
+        <label class="field">
+          <span>{{ t('pur.pi.col.docNumber') }}</span>
+          <input type="text" [ngModel]="invoiceNumber()" disabled [placeholder]="t('pur.pi.autoNumber')" />
+        </label>
+        <label class="field">
+          <span>{{ t('pur.pi.col.date') }}</span>
+          <input
+            type="date"
+            [ngModel]="invoiceDate()"
+            (ngModelChange)="invoiceDate.set($event)"
+            [disabled]="!isDraft()"
+          />
+        </label>
+
+        <label class="field">
+          <span>{{ t('pur.pi.col.supplier') }}</span>
+          <input type="text" [ngModel]="supplierNameAr()" disabled [placeholder]="t('pur.pi.fromGrn')" />
+        </label>
+        <label class="field">
+          <span>{{ t('pur.pi.col.warehouse') }}</span>
+          <input type="text" [ngModel]="warehouseNameAr()" disabled [placeholder]="t('pur.pi.fromGrn')" />
+        </label>
+        <label class="field">
+          <span>{{ t('pur.pi.col.paymentMode') }}</span>
+          <select [ngModel]="paymentMode()" (ngModelChange)="paymentMode.set(+$event)" [disabled]="!isDraft()">
+            <option [ngValue]="1">{{ t('pur.pi.paymentMode.credit') }}</option>
+            <option [ngValue]="2">{{ t('pur.pi.paymentMode.cash') }}</option>
+          </select>
+        </label>
+        <label class="field">
+          <span>{{ t('pur.pi.col.dueDate') }}</span>
+          <input
+            type="date"
+            [ngModel]="dueDate()"
+            (ngModelChange)="dueDate.set($event || null)"
+            [disabled]="!isDraft()"
+          />
+        </label>
+
+        <label class="field">
+          <span>{{ t('pur.pi.col.supplierInvoice') }}</span>
+          <input
+            type="text"
+            [ngModel]="supplierInvoiceNumber()"
+            (ngModelChange)="supplierInvoiceNumber.set($event)"
+            [disabled]="!isDraft()"
+          />
+        </label>
+        <label class="field">
+          <span>{{ t('pur.pi.col.currency') }}</span>
+          <input type="text" [ngModel]="currency()" disabled />
+        </label>
+        <label class="field span-2">
+          <span>{{ t('pur.pi.col.notes') }}</span>
+          <input type="text" [ngModel]="notes()" (ngModelChange)="notes.set($event)" [disabled]="!isDraft()" />
+        </label>
+      </div>
+    </section>
+
+    <section class="card">
+      <h3>{{ t('pur.pi.linesTitle') }}</h3>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>{{ t('pur.pi.col.item') }}</th>
+              <th>{{ t('pur.pi.col.unit') }}</th>
+              <th>{{ t('pur.pi.col.qty') }}</th>
+              <th>{{ t('pur.pi.col.unitPrice') }}</th>
+              <th>{{ t('pur.pi.col.tax') }}</th>
+              <th>{{ t('pur.pi.col.lineTotal') }}</th>
+            </tr>
+          </thead>
+          <tbody>
+            @if (lines().length === 0) {
+              <tr>
+                <td colspan="6" class="muted">{{ t('pur.pi.noLines') }}</td>
+              </tr>
+            }
+            @for (line of lines(); track $index) {
+              <tr>
+                <td>{{ line.itemNameAr || line.inventoryItemId }}</td>
+                <td>{{ line.unitNameAr || '—' }}</td>
+                <td>{{ line.quantity | number: '1.0-3' }}</td>
+                <td>{{ line.unitPrice | number: '1.2-2' }}</td>
+                <td>{{ line.taxAmount | number: '1.2-2' }}</td>
+                <td>{{ line.lineTotal | number: '1.2-2' }}</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+      <div class="totals">
+        <span>{{ t('pur.pi.col.subTotal') }}: {{ subTotal() | number: '1.2-2' }}</span>
+        <span>{{ t('pur.pi.col.tax') }}: {{ taxTotal() | number: '1.2-2' }}</span>
+        <strong>{{ t('pur.pi.col.total') }}: {{ grandTotal() | number: '1.2-2' }} {{ currency() }}</strong>
+      </div>
+    </section>
+  }
+</app-inventory-page-shell>

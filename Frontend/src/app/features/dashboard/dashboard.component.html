@@ -1,122 +1,335 @@
-<div class="h-full flex flex-col gap-6 -m-6 p-6 overflow-y-auto">
-  
-  <div class="flex flex-col sm:flex-row justify-between items-center gap-4 flex-shrink-0 select-none text-left">
-    <div>
-      <h2 class="text-xl font-bold tracking-tight text-[var(--text-primary)]">{{ t('dash.title') }}</h2>
-      <p class="text-xs text-[var(--text-secondary)] mt-0.5">{{ t('dash.subtitle') }}</p>
+<div class="ed" [attr.dir]="isRtl() ? 'rtl' : 'ltr'">
+  <header class="ed-header">
+    <div class="ed-header__meta">
+      <div class="ed-brand">
+        <h1>{{ t('ed.title') }}</h1>
+        <p>
+          <strong>{{ companyLabel() }}</strong>
+          <span class="sep">·</span>
+          {{ branchLabel() }}
+        </p>
+      </div>
+      <div class="ed-meta-chips">
+        <span class="chip"><mat-icon>person</mat-icon>{{ userLabel() }}</span>
+        <span class="chip"><mat-icon>calendar_today</mat-icon>{{ now() | date: 'mediumDate' }}</span>
+        <span class="chip"><mat-icon>schedule</mat-icon>{{ now() | date: 'mediumTime' }}</span>
+        <span class="chip muted" *ngIf="lastSyncedAt()">
+          <mat-icon>sync</mat-icon>{{ t('ed.lastSync') }}: {{ lastSyncedAt() | date: 'shortTime' }}
+        </span>
+      </div>
     </div>
-    
-    <div class="flex items-center gap-2">
-      <app-button 
-        variant="secondary" 
-        [icon]="isCustomizing() ? 'done' : 'dashboard_customize'" 
-        (click)="toggleCustomizeMode()"
-      >
-        {{ isCustomizing() ? t('dash.saveLayout') : t('dash.customize') }}
-      </app-button>
-      <app-button 
-        *ngIf="isCustomizing()"
-        variant="outline" 
-        icon="restart_alt" 
-        (click)="resetLayout()"
-      >
-        {{ t('dash.resetGrid') }}
-      </app-button>
-    </div>
-  </div>
 
-  <div 
-    *ngIf="isCustomizing()"
-    class="p-4 bg-[var(--bg-surface)] border border-[var(--border-color)] rounded-xl flex flex-wrap gap-4 text-left animate-slide-up select-none"
-  >
-    <div class="flex items-center gap-2" *ngFor="let w of widgets()">
-      <label class="inline-flex items-center gap-2 cursor-pointer text-xs font-semibold">
-        <input 
-          type="checkbox" 
-          [checked]="w.visible"
-          (change)="toggleWidget(w.id)"
-          class="rounded text-[var(--accent-color)] border-[var(--border-color)] focus:ring-[var(--accent-color)]"
-        />
-        <span>{{ t(w.titleKey) }}</span>
-      </label>
-    </div>
-  </div>
-
-  <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-    <ng-container *ngFor="let w of activeWidgets()">
-      <app-card 
-        [title]="t(w.titleKey)"
-        [class]="w.size"
-        [hasHeader]="true"
-        [hoverElevation]="isCustomizing()"
-      >
-        <div header-actions class="flex items-center gap-1.5 select-none" *ngIf="isCustomizing()">
-          <button (click)="resizeWidget(w.id, 'col-span-1')" [class.text-[var(--accent-color)]]="w.size === 'col-span-1'" class="text-[10px] font-bold px-1 hover:underline cursor-pointer">1x</button>
-          <button (click)="resizeWidget(w.id, 'col-span-2')" [class.text-[var(--accent-color)]]="w.size === 'col-span-2'" class="text-[10px] font-bold px-1 hover:underline cursor-pointer">2x</button>
-          <button (click)="resizeWidget(w.id, 'col-span-3')" [class.text-[var(--accent-color)]]="w.size === 'col-span-3'" class="text-[10px] font-bold px-1 hover:underline cursor-pointer">3x</button>
-          <div class="h-4 w-px bg-[var(--border-color)] mx-1"></div>
-          <button (click)="togglePin(w.id)" [class.text-amber-500]="w.pinned" class="text-[var(--text-muted)] hover:text-amber-500 cursor-pointer">
-            <mat-icon class="text-sm">push_pin</mat-icon>
+    <div class="ed-header__actions">
+      <div class="period-bar">
+        @for (p of periods; track p.value) {
+          <button
+            type="button"
+            class="period-btn"
+            [class.active]="period() === p.value"
+            (click)="setPeriod(p.value)"
+          >
+            {{ t(p.key) }}
           </button>
-          <button (click)="toggleWidget(w.id)" class="text-[var(--text-muted)] hover:text-red-500 cursor-pointer">
-            <mat-icon class="text-sm">visibility_off</mat-icon>
-          </button>
+        }
+      </div>
+      @if (period() === 4) {
+        <div class="custom-range">
+          <input type="date" [ngModel]="customFrom()" (ngModelChange)="customFrom.set($event)" />
+          <input type="date" [ngModel]="customTo()" (ngModelChange)="customTo.set($event)" />
+          <button type="button" class="btn primary" (click)="applyCustomRange()">{{ t('ed.apply') }}</button>
         </div>
+      }
+      <button type="button" class="btn ghost" (click)="toggleCustomize()">
+        <mat-icon>{{ isCustomizing() ? 'done' : 'dashboard_customize' }}</mat-icon>
+        {{ isCustomizing() ? t('ed.saveLayout') : t('ed.customize') }}
+      </button>
+      @if (isCustomizing()) {
+        <button type="button" class="btn outline" (click)="resetLayout()">{{ t('ed.reset') }}</button>
+      }
+    </div>
+  </header>
 
-        <ng-container *ngIf="w.requiredRole === 'Chef Administrator'; else publicWidget">
-          <div class="flex flex-col gap-4 text-left">
-            <div *ngIf="w.id === 'sales'">
-              <app-chart></app-chart>
-            </div>
-            <div *ngIf="w.id === 'hr'" class="flex flex-col sm:flex-row gap-6 items-center">
-              <img 
-                src="https://images.unsplash.com/photo-1577219491135-ce391730fb2c?w=150&auto=format&fit=crop&q=80" 
-                [alt]="dataService.employees[0].name" 
-                class="w-20 h-20 rounded-2xl object-cover border border-[var(--border-color)] shadow-sm"
-              />
-              <div class="flex-1 flex flex-col gap-2">
-                <div class="flex items-center gap-2">
-                  <span class="font-extrabold text-sm text-[var(--text-primary)]">{{ dataService.employees[0].name }}</span>
-                  <span class="bg-emerald-500 bg-opacity-10 text-emerald-500 text-[9px] font-bold px-2 py-0.5 rounded-full">{{ t('dash.hr.active') }}</span>
-                </div>
-                <p class="text-[10px] text-[var(--text-secondary)] leading-relaxed italic">{{ dataService.employees[0].performanceNotes }}</p>
-                <div class="grid grid-cols-2 gap-4 mt-1.5 text-xs select-none">
-                  <div class="flex flex-col"><span class="text-[10px] text-[var(--text-muted)]">{{ t('dash.hr.attendance') }}</span><span class="font-bold text-[var(--text-primary)]">{{ dataService.employees[0].attendance }}</span></div>
-                  <div class="flex flex-col"><span class="text-[10px] text-[var(--text-muted)]">{{ t('dash.hr.tenure') }}</span><span class="font-bold text-[var(--text-primary)]">{{ dataService.employees[0].tenure }}</span></div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </ng-container>
+  @if (isCustomizing()) {
+    <div class="customize-panel">
+      @for (w of widgets(); track w.id) {
+        <label class="tog">
+          <input type="checkbox" [checked]="w.visible" (change)="toggleWidget(w.id)" />
+          {{ t(w.titleKey) }}
+        </label>
+      }
+      <p class="hint">{{ t('ed.dragHint') }}</p>
+    </div>
+  }
 
-        <ng-template #publicWidget>
-          <div class="flex flex-col gap-4 text-left">
-            <div *ngIf="w.id === 'kds'" class="flex flex-col gap-3 select-none">
-              <div class="flex justify-between items-center text-xs border-b border-[var(--border-color-muted)] pb-2.5" *ngFor="let status of kdsStatuses()">
-                <div class="flex items-center gap-2 font-medium">
-                  <span [ngClass]="['w-2 h-2 rounded-full', status.bg]"></span>
-                  <span>{{ t(status.labelKey) }}</span>
-                </div>
-                <span [ngClass]="['font-extrabold text-xs', status.color]">{{ status.count }}</span>
-              </div>
-            </div>
-            <div *ngIf="w.id === 'stock'" class="flex flex-col gap-3 select-none">
-              <div class="flex justify-between items-center text-xs border-b border-[var(--border-color-muted)] pb-2.5" *ngFor="let item of stockAlerts()">
-                <span class="font-medium text-[var(--text-primary)]">{{ t(item.nameKey) }}</span>
-                <span 
-                  [class.bg-[var(--warning-color-bg)]]="item.status === 'low_stock'"
-                  [class.text-[var(--warning-color-text)]]="item.status === 'low_stock'"
-                  [class.bg-[var(--danger-color-bg)]]="item.status === 'out_of_stock'"
-                  [class.text-[var(--danger-color-text)]]="item.status === 'out_of_stock'"
-                  class="px-2 py-0.5 rounded font-bold text-[9px] uppercase tracking-wide"
-                >
-                  {{ t(item.badgeKey) }}
-                </span>
-              </div>
-            </div>
+  @if (loading()) {
+    <div class="ed-loading">{{ t('ed.loading') }}</div>
+  } @else if (error()) {
+    <div class="ed-error">{{ error() }}</div>
+  } @else {
+    <div
+      class="ed-grid"
+      cdkDropList
+      [cdkDropListDisabled]="!isCustomizing()"
+      (cdkDropListDropped)="drop($event)"
+    >
+      @for (w of activeWidgets(); track w.id) {
+        <section class="ed-card" [class]="'size-' + w.size" cdkDrag [cdkDragDisabled]="!isCustomizing()">
+          <div class="ed-card__head" *ngIf="w.id !== 'kpis'">
+            <h2>{{ t(w.titleKey) }}</h2>
+            <mat-icon class="drag" *ngIf="isCustomizing()" cdkDragHandle>drag_indicator</mat-icon>
           </div>
-        </ng-template>
-      </app-card>
-    </ng-container>
-  </div>
+
+          @switch (w.id) {
+            @case ('kpis') {
+              <div class="kpi-grid">
+                @for (kpi of kpis(); track kpi.key) {
+                  <article class="kpi">
+                    <div class="kpi__top">
+                      <span class="kpi__label">{{ kpiLabel(kpi) }}</span>
+                      <span class="kpi__trend" [attr.data-dir]="kpiTrendClass(kpi)">
+                        @if (kpi.changePercent != null) {
+                          <mat-icon>{{ kpi.changePercent >= 0 ? 'trending_up' : 'trending_down' }}</mat-icon>
+                          {{ kpi.changePercent }}%
+                        } @else {
+                          —
+                        }
+                      </span>
+                    </div>
+                    <div class="kpi__value">{{ kpiValue(kpi) }}</div>
+                    <div class="kpi__spark">
+                      @for (h of sparkHeights(kpi.sparkline); track $index) {
+                        <i [style.height.%]="h"></i>
+                      }
+                    </div>
+                    <div class="kpi__foot">{{ t('ed.updated') }}: {{ kpi.updatedAt | date: 'shortTime' }}</div>
+                  </article>
+                }
+              </div>
+            }
+            @case ('sales') {
+              <div class="line-chart">
+                @for (b of barHeights(trend()); track b.label) {
+                  <div class="bar" [title]="formatMoney(b.sales)">
+                    <div class="bar__fill" [style.height.%]="b.h"></div>
+                    <span>{{ b.label }}</span>
+                  </div>
+                }
+                @if (!trend().length) {
+                  <p class="empty">{{ t('ed.empty') }}</p>
+                }
+              </div>
+              <div class="legend">
+                <span>{{ t('ed.legend.sales') }}</span>
+                <span>{{ t('ed.legend.profit') }}</span>
+                <span>{{ t('ed.legend.discounts') }}</span>
+                <span>{{ t('ed.legend.tax') }}</span>
+              </div>
+            }
+            @case ('revenueSources') {
+              <div class="split">
+                <div class="donut" [style.background]="donutStyle(revenueSources())"></div>
+                <ul class="legend-list">
+                  @for (s of pieSegments(revenueSources()); track s.name) {
+                    <li><i [style.background]="s.color"></i>{{ s.name }} — {{ s.pct }}%</li>
+                  }
+                </ul>
+              </div>
+            }
+            @case ('payments') {
+              <div class="split">
+                <div class="donut" [style.background]="donutStyle(paymentMethods())"></div>
+                <ul class="legend-list">
+                  @for (s of pieSegments(paymentMethods()); track s.name) {
+                    <li><i [style.background]="s.color"></i>{{ s.name }} — {{ formatMoney(s.value) }}</li>
+                  }
+                </ul>
+              </div>
+            }
+            @case ('topItems') {
+              <table class="tbl">
+                <thead>
+                  <tr>
+                    <th>{{ t('ed.col.item') }}</th>
+                    <th>{{ t('ed.col.qty') }}</th>
+                    <th>{{ t('ed.col.revenue') }}</th>
+                    <th>%</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (r of topItems(); track r.id) {
+                    <tr>
+                      <td>{{ r.name }}</td>
+                      <td>{{ formatNumber(r.quantity) }}</td>
+                      <td>{{ formatMoney(r.revenue) }}</td>
+                      <td>{{ r.percent ?? 0 }}%</td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            }
+            @case ('worstItems') {
+              <table class="tbl">
+                <thead>
+                  <tr>
+                    <th>{{ t('ed.col.item') }}</th>
+                    <th>{{ t('ed.col.qty') }}</th>
+                    <th>{{ t('ed.col.revenue') }}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (r of worstItems(); track r.id) {
+                    <tr>
+                      <td>{{ r.name }}</td>
+                      <td>{{ formatNumber(r.quantity) }}</td>
+                      <td>{{ formatMoney(r.revenue) }}</td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            }
+            @case ('topCustomers') {
+              <table class="tbl">
+                <thead>
+                  <tr>
+                    <th>{{ t('ed.col.name') }}</th>
+                    <th>{{ t('ed.col.orders') }}</th>
+                    <th>{{ t('ed.col.spend') }}</th>
+                    <th>{{ t('ed.col.lastVisit') }}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (r of topCustomers(); track r.id) {
+                    <tr>
+                      <td>{{ r.name }}</td>
+                      <td>{{ formatNumber(r.quantity) }}</td>
+                      <td>{{ formatMoney(r.revenue) }}</td>
+                      <td>{{ r.lastActivity ? (r.lastActivity | date: 'shortDate') : '—' }}</td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            }
+            @case ('lowInventory') {
+              <table class="tbl">
+                <thead>
+                  <tr>
+                    <th>{{ t('ed.col.item') }}</th>
+                    <th>{{ t('ed.col.current') }}</th>
+                    <th>{{ t('ed.col.min') }}</th>
+                    <th>{{ t('ed.col.suggested') }}</th>
+                    <th></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (r of lowStock(); track r.id) {
+                    <tr>
+                      <td>{{ r.name }}</td>
+                      <td>{{ formatNumber(r.currentQty ?? 0) }}</td>
+                      <td>{{ formatNumber(r.minQty ?? 0) }}</td>
+                      <td>{{ formatNumber(r.suggestedQty ?? 0) }}</td>
+                      <td>
+                        <a class="link" [routerLink]="['/purchases/purchase-orders/new']">{{ t('ed.createPo') }}</a>
+                      </td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+              @if (!lowStock().length) {
+                <p class="empty">{{ t('ed.stockOk') }}</p>
+              }
+            }
+            @case ('kitchen') {
+              <div class="status-grid">
+                <div><span>{{ t('ed.kitchen.pending') }}</span><b>{{ kitchen().pending }}</b></div>
+                <div><span>{{ t('ed.kitchen.preparing') }}</span><b>{{ kitchen().preparing }}</b></div>
+                <div><span>{{ t('ed.kitchen.ready') }}</span><b>{{ kitchen().ready }}</b></div>
+                <div><span>{{ t('ed.kitchen.served') }}</span><b>{{ kitchen().served }}</b></div>
+                <div><span>{{ t('ed.kitchen.delayed') }}</span><b class="warn">{{ kitchen().delayed }}</b></div>
+                <div><span>{{ t('ed.kitchen.avg') }}</span><b>{{ kitchen().avgPrepMinutes | number: '1.0-1' }} {{ t('ed.min') }}</b></div>
+              </div>
+            }
+            @case ('delivery') {
+              <div class="status-grid">
+                <div><span>{{ t('ed.delivery.inProgress') }}</span><b>{{ delivery().inProgress }}</b></div>
+                <div><span>{{ t('ed.delivery.delivered') }}</span><b>{{ delivery().delivered }}</b></div>
+                <div><span>{{ t('ed.delivery.delayed') }}</span><b class="warn">{{ delivery().delayed }}</b></div>
+                <div><span>{{ t('ed.delivery.avg') }}</span><b>{{ delivery().avgDeliveryMinutes | number: '1.0-1' }} {{ t('ed.min') }}</b></div>
+              </div>
+            }
+            @case ('hr') {
+              <div class="status-grid">
+                <div><span>{{ t('ed.hr.present') }}</span><b>{{ hr().present }}</b></div>
+                <div><span>{{ t('ed.hr.absent') }}</span><b>{{ hr().absent }}</b></div>
+                <div><span>{{ t('ed.hr.late') }}</span><b>{{ hr().late }}</b></div>
+                <div><span>{{ t('ed.hr.hours') }}</span><b>{{ hr().workedHours }}</b></div>
+              </div>
+            }
+            @case ('finance') {
+              @if (finance(); as fin) {
+                <div class="status-grid finance">
+                  <div><span>{{ t('ed.fin.bank') }}</span><b>{{ formatMoney(fin.bankBalance) }}</b></div>
+                  <div><span>{{ t('ed.fin.cash') }}</span><b>{{ formatMoney(fin.cashBalance) }}</b></div>
+                  <div><span>{{ t('ed.fin.ar') }}</span><b>{{ formatMoney(fin.receivables) }}</b></div>
+                  <div><span>{{ t('ed.fin.ap') }}</span><b>{{ formatMoney(fin.payables) }}</b></div>
+                  <div><span>{{ t('ed.fin.profit') }}</span><b>{{ formatMoney(fin.profit) }}</b></div>
+                </div>
+              }
+            }
+            @case ('activities') {
+              <ul class="timeline">
+                @for (a of activities(); track a.title + a.at) {
+                  <li>
+                    <span class="dot"></span>
+                    <div>
+                      <strong>{{ a.title }}</strong>
+                      <small>{{ a.at | date: 'short' }}</small>
+                    </div>
+                  </li>
+                }
+                @if (!activities().length) {
+                  <li class="empty">{{ t('ed.empty') }}</li>
+                }
+              </ul>
+            }
+            @case ('notifications') {
+              <ul class="notes">
+                @for (n of notifications(); track n.code + n.at) {
+                  <li [attr.data-sev]="n.severity">
+                    <strong>{{ n.message }}</strong>
+                    <small>{{ n.at | date: 'short' }}</small>
+                  </li>
+                }
+                @if (!notifications().length) {
+                  <li class="empty">{{ t('ed.noAlerts') }}</li>
+                }
+              </ul>
+            }
+            @case ('insights') {
+              <div class="insights">
+                @for (i of insights(); track i.title) {
+                  <article>
+                    <h3>{{ i.title }}</h3>
+                    <p>{{ i.detail }}</p>
+                    @if (i.actionHint) {
+                      <small>{{ i.actionHint }}</small>
+                    }
+                  </article>
+                }
+              </div>
+            }
+            @case ('quickActions') {
+              <div class="qa-grid">
+                @for (a of quickActions(); track a.key) {
+                  <a class="qa" [routerLink]="a.route">
+                    <mat-icon>{{ a.icon }}</mat-icon>
+                    <span>{{ qaLabel(a) }}</span>
+                  </a>
+                }
+              </div>
+            }
+          }
+        </section>
+      }
+    </div>
+  }
 </div>

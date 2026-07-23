@@ -208,15 +208,24 @@ export class RestInventoryRepository extends InventoryRepository {
   private http = inject(HttpClient);
   private readonly base = `${environment.apiBaseUrl}/inventory`;
 
-  getItems(search?: string, page = 1, pageSize = 100): Observable<InventoryItemDefinition[]> {
+  getItems(search?: string, page = 1, pageSize = 200): Observable<InventoryItemDefinition[]> {
     let params = new HttpParams()
       .set('page', page)
       .set('pageSize', pageSize);
     if (search?.trim()) {
       params = params.set('search', search.trim());
     }
-    return this.http.get<ApiInventoryItem[]>(`${this.base}/items`, { params }).pipe(
-      map(rows => rows.map(mapApiItem))
+    return this.http.get<unknown>(`${this.base}/items`, { params }).pipe(
+      map(raw => {
+        const rows = Array.isArray(raw)
+          ? raw
+          : raw && typeof raw === 'object' && Array.isArray((raw as { items?: unknown }).items)
+            ? ((raw as { items: unknown[] }).items)
+            : raw && typeof raw === 'object' && Array.isArray((raw as { data?: unknown }).data)
+              ? ((raw as { data: unknown[] }).data)
+              : [];
+        return (rows as ApiInventoryItem[]).map(mapApiItem);
+      })
     );
   }
 
@@ -325,11 +334,25 @@ export class RestInventoryRepository extends InventoryRepository {
     return this.http.delete<void>(`${this.base}/units/${id}`);
   }
 
-  getWarehouses(): Observable<Warehouse[]> {
-    const params = new HttpParams().set('page', 1).set('pageSize', 200);
-    return this.http.get<ApiWarehouse[]>(`${this.base}/warehouses`, { params }).pipe(
-      map(rows => rows.map(mapWarehouse))
+  getWarehouses(
+    options: { isActive?: boolean | null; pageSize?: number; branchId?: string | null } = {}
+  ): Observable<Warehouse[]> {
+    let params = new HttpParams()
+      .set('page', 1)
+      .set('pageSize', String(options.pageSize ?? 200));
+    if (options.isActive != null) params = params.set('isActive', String(options.isActive));
+    if (options.branchId) params = params.set('branchId', options.branchId);
+    return this.http.get<unknown>(`${this.base}/warehouses`, { params }).pipe(
+      map(raw => unwrapWarehouseList(raw))
     );
+  }
+
+  getWarehouseLookup(branchId?: string | null, activeOnly = true): Observable<Warehouse[]> {
+    let params = new HttpParams().set('activeOnly', String(activeOnly));
+    if (branchId) params = params.set('branchId', branchId);
+    return this.http
+      .get<unknown>(`${this.base}/warehouses/lookup`, { params })
+      .pipe(map(raw => unwrapWarehouseList(raw)));
   }
 
   getWarehouseTypes(): Observable<import('../models/inventory.models').WarehouseTypeDefinition[]> {
@@ -600,9 +623,20 @@ export class RestInventoryRepository extends InventoryRepository {
     return this.http.get<PurchaseOrderSummary[]>(`${this.base}/purchases`, { params });
   }
 
-  getSuppliers(page = 1, pageSize = 100): Observable<SupplierSummary[]> {
+  getSuppliers(page = 1, pageSize = 200): Observable<SupplierSummary[]> {
     const params = new HttpParams().set('page', page).set('pageSize', pageSize);
-    return this.http.get<SupplierSummary[]>(`${this.base}/suppliers`, { params });
+    return this.http.get<unknown>(`${this.base}/suppliers`, { params }).pipe(
+      map(raw => {
+        const rows = Array.isArray(raw)
+          ? raw
+          : raw && typeof raw === 'object' && Array.isArray((raw as { items?: unknown }).items)
+            ? (raw as { items: SupplierSummary[] }).items
+            : raw && typeof raw === 'object' && Array.isArray((raw as { data?: unknown }).data)
+              ? (raw as { data: SupplierSummary[] }).data
+              : [];
+        return rows as SupplierSummary[];
+      })
+    );
   }
 
   getDashboard(): Observable<InventoryDashboardSummary> {
@@ -920,6 +954,17 @@ function mapUnitClassification(value: string): number {
     Weight: 1, Volume: 2, Length: 3, Count: 4, Packaging: 5, Other: 6
   };
   return map[value] ?? 6;
+}
+
+function unwrapWarehouseList(raw: unknown): Warehouse[] {
+  const rows = Array.isArray(raw)
+    ? raw
+    : raw && typeof raw === 'object' && Array.isArray((raw as { items?: unknown }).items)
+      ? (raw as { items: ApiWarehouse[] }).items
+      : raw && typeof raw === 'object' && Array.isArray((raw as { data?: unknown }).data)
+        ? (raw as { data: ApiWarehouse[] }).data
+        : [];
+  return (rows as ApiWarehouse[]).map(w => mapWarehouse(w));
 }
 
 function mapWarehouseType(value: number | string): WarehouseType {

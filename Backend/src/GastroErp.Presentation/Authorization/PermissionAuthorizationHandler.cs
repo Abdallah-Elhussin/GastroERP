@@ -36,6 +36,19 @@ public class PermissionAuthorizationHandler : AuthorizationHandler<PermissionReq
         if (permissions.Contains(required) || permissions.Contains("ALL"))
             return true;
 
+        // Home / executive dashboard — allow any common operational view grant.
+        if (required.Equals("Dashboard.View", StringComparison.Ordinal))
+        {
+            if (permissions.Contains("Reports.View")
+                || permissions.Contains("Sales.Dashboard.View")
+                || permissions.Contains("Sales.View")
+                || permissions.Contains("Inventory.View")
+                || permissions.Contains("Finance.View")
+                || permissions.Contains("Accounting.View")
+                || permissions.Contains("Hr.Dashboard.View"))
+                return true;
+        }
+
         // Legacy inventory grants imply finer ItemTypes permissions.
         if (required.StartsWith("Inventory.ItemTypes.", StringComparison.Ordinal))
         {
@@ -576,6 +589,33 @@ public class PermissionAuthorizationHandler : AuthorizationHandler<PermissionReq
                 || permissions.Contains("Settings.Users.View")
                 || permissions.Contains("Identity.Users.Manage")
                 || permissions.Contains("Identity.Manage"))
+                return true;
+        }
+
+        // Supplier master — Inventory grants imply Supplier permissions.
+        if (required.StartsWith("Supplier.", StringComparison.Ordinal))
+        {
+            if (permissions.Contains("Inventory.Manage") || permissions.Contains("Supplier.Manage"))
+                return true;
+
+            if ((required.EndsWith(".View", StringComparison.Ordinal)
+                 || required.EndsWith(".ViewBalance", StringComparison.Ordinal)
+                 || required.EndsWith(".ViewStatement", StringComparison.Ordinal))
+                && (permissions.Contains("Inventory.View")
+                    || permissions.Contains("Supplier.View")
+                    || permissions.Contains("Purchase.View")))
+                return true;
+
+            if ((required.EndsWith(".Create", StringComparison.Ordinal)
+                 || required.EndsWith(".Update", StringComparison.Ordinal)
+                 || required.EndsWith(".Delete", StringComparison.Ordinal)
+                 || required.EndsWith(".Activate", StringComparison.Ordinal)
+                 || required.EndsWith(".Deactivate", StringComparison.Ordinal)
+                 || required.EndsWith(".Blacklist", StringComparison.Ordinal)
+                 || required.EndsWith(".ClearBlacklist", StringComparison.Ordinal)
+                 || required.EndsWith(".UpdateFinancial", StringComparison.Ordinal)
+                 || required.EndsWith(".ManageAttachments", StringComparison.Ordinal))
+                && permissions.Contains("Inventory.Manage"))
                 return true;
         }
 

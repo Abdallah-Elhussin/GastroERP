@@ -5,47 +5,57 @@
     </span>
     <span class="type-pill">{{ returnTypeLabel() }}</span>
     <button type="button" class="btn ghost" (click)="back()">{{ t('pur.pr.back') }}</button>
-    <button
-      type="button"
-      class="btn success"
-      [disabled]="!canManage() || !docId() || !isDraft() || saving()"
-      (click)="approve()"
-    >
-      {{ t('pur.pr.approve') }}
-    </button>
-    <button
-      type="button"
-      class="btn info"
-      [disabled]="!canManage() || !docId() || isPosted() || status() === 'Cancelled' || saving()"
-      (click)="post()"
-    >
-      {{ t('pur.pr.post') }}
-    </button>
-    <button
-      type="button"
-      class="btn ghost"
-      [disabled]="!canManage() || !docId() || !isPosted() || saving()"
-      (click)="unpost()"
-    >
-      {{ t('pur.pr.unpost') }}
-    </button>
-    <button
-      type="button"
-      class="btn danger"
-      [disabled]="!canManage() || !docId() || isPosted() || status() === 'Cancelled' || status() === 'Reversed' || saving()"
-      (click)="cancelDoc()"
-    >
-      {{ t('pur.pr.cancelDoc') }}
-    </button>
-    <button
-      type="button"
-      class="btn primary"
-      [disabled]="!canManage() || !isDraft() || saving()"
-      (click)="save()"
-    >
-      {{ t('pur.pr.save') }}
-    </button>
+
+    @if (docId() && canApprove()) {
+      <button type="button" class="btn success" [disabled]="!canManage() || saving()" (click)="openApproveConfirm()">
+        {{ t('pur.pr.approve') }}
+      </button>
+    }
+    @if (docId() && canPost()) {
+      <button type="button" class="btn info" [disabled]="!canManage() || saving()" (click)="post()">
+        {{ t('pur.pr.post') }}
+      </button>
+    }
+    @if (docId() && canCancel()) {
+      <button type="button" class="btn danger" [disabled]="!canManage() || saving()" (click)="cancelDoc()">
+        {{ t('pur.pr.cancelDoc') }}
+      </button>
+    }
+    @if (isEditableDraft()) {
+      <button type="button" class="btn primary" [disabled]="!canSaveDraft()" (click)="save()">
+        {{ t('pur.pr.save') }}
+      </button>
+    }
   </section>
+
+  <app-dialog
+    [isOpen]="approveConfirmOpen()"
+    [title]="t('pur.pr.confirmApproveTitle')"
+    (close)="closeApproveConfirm()"
+  >
+    <p class="result-message">{{ t('pur.pr.confirmApprove') }}</p>
+    <div class="result-actions">
+      <button type="button" class="btn ghost" (click)="closeApproveConfirm()">
+        {{ t('pur.pr.confirmApproveNo') }}
+      </button>
+      <button type="button" class="btn success" [disabled]="saving()" (click)="confirmApprove()">
+        {{ t('pur.pr.confirmApproveYes') }}
+      </button>
+    </div>
+  </app-dialog>
+
+  <app-dialog
+    [isOpen]="resultDialog().open"
+    [title]="resultDialog().title"
+    (close)="acknowledgeResult()"
+  >
+    <p class="result-message" [class.success]="resultDialog().success" [class.failure]="!resultDialog().success">
+      {{ resultDialog().message }}
+    </p>
+    <div class="result-actions">
+      <button type="button" class="btn primary" (click)="acknowledgeResult()">{{ t('common.close') }}</button>
+    </div>
+  </app-dialog>
 
   @if (error()) {
     <div class="form-error">{{ error() }}</div>
@@ -70,17 +80,17 @@
         </label>
         <label class="field">
           <span>{{ t('pur.pr.col.date') }}</span>
-          <input type="date" [ngModel]="returnDate()" (ngModelChange)="returnDate.set($event)" [disabled]="!isDraft()" />
+          <input type="date" [ngModel]="returnDate()" (ngModelChange)="returnDate.set($event)" [disabled]="!isEditableDraft()" />
         </label>
         <label class="field">
           <span>{{ t('pur.pr.col.returnType') }}</span>
-          @if (isDirectRoute() || !!docId()) {
+          @if (isInvoiceReturnsMode() || isDirectRoute() || !!docId()) {
             <input type="text" [ngModel]="returnTypeLabel()" disabled />
           } @else {
             <select
               [ngModel]="returnType()"
               (ngModelChange)="onReturnTypeChange(+$event)"
-              [disabled]="!isDraft()"
+              [disabled]="!isEditableDraft()"
             >
               <option [ngValue]="1">{{ t('pur.pr.type.beforeInvoice') }}</option>
               <option [ngValue]="2">{{ t('pur.pr.type.afterInvoice') }}</option>
@@ -100,14 +110,14 @@
               <select
                 [ngModel]="goodsReceiptId()"
                 (ngModelChange)="goodsReceiptId.set($event || null)"
-                [disabled]="!isDraft() || !!docId()"
+                [disabled]="!isEditableDraft() || !!docId()"
               >
                 <option [ngValue]="null">{{ t('pur.pr.pickGrn') }}</option>
                 @for (g of goodsReceipts(); track g.id) {
                   <option [ngValue]="g.id">{{ g.grnNumber }} — {{ g.supplierNameAr }}</option>
                 }
               </select>
-              <button type="button" class="btn ghost" [disabled]="!isDraft() || !!docId()" (click)="loadFromGrn()">
+              <button type="button" class="btn ghost" [disabled]="!isEditableDraft() || !!docId()" (click)="loadFromGrn()">
                 {{ t('pur.pr.loadFromSource') }}
               </button>
             </div>
@@ -115,67 +125,61 @@
         } @else {
           <label class="field span-2">
             <span>{{ t('pur.pr.sourceInvoice') }}</span>
-            <div class="inline">
-              <select
-                [ngModel]="purchaseInvoiceId()"
-                (ngModelChange)="purchaseInvoiceId.set($event || null)"
-                [disabled]="!isDraft() || !!docId()"
-              >
-                <option [ngValue]="null">{{ t('pur.pr.pickInvoice') }}</option>
-                @for (inv of invoices(); track inv.id) {
-                  <option [ngValue]="inv.id">{{ inv.invoiceNumber }}</option>
-                }
-              </select>
-              <button type="button" class="btn ghost" [disabled]="!isDraft() || !!docId()" (click)="loadFromInvoice()">
-                {{ t('pur.pr.loadFromSource') }}
-              </button>
-            </div>
+            <select
+              [ngModel]="purchaseInvoiceId()"
+              (ngModelChange)="onInvoiceChange($event || null)"
+              [disabled]="!isEditableDraft() || !!docId()"
+            >
+              <option [ngValue]="null">{{ t('pur.pr.pickInvoice') }}</option>
+              @for (inv of invoices(); track inv.id) {
+                <option [ngValue]="inv.id">{{ invoiceOptionLabel(inv) }}</option>
+              }
+            </select>
           </label>
         }
 
-        <div class="field span-2 status-track">
-          <span>{{ t('pur.pr.col.status') }}</span>
-          <div class="steps">
-            <span [class.active]="unifiedStatusCode() === 0 || status() === 'Draft'">0 · {{ t('pur.pr.status.draft') }}</span>
-            <span [class.active]="status() === 'Approved'">1 · {{ t('pur.pr.status.approved') }}</span>
-            <span [class.active]="status() === 'Posted'">2 · {{ t('pur.pr.status.posted') }}</span>
-            <span [class.active]="status() === 'Cancelled'">9 · {{ t('pur.pr.status.cancelled') }}</span>
-          </div>
-        </div>
-
         <label class="field">
           <span>{{ t('pur.pr.col.warehouse') }}</span>
-          <select [ngModel]="warehouseId()" (ngModelChange)="warehouseId.set($event || null)" [disabled]="!isDraft() || !!supplierNameAr()">
-            <option [ngValue]="null">{{ t('pur.pr.pickWarehouse') }}</option>
-            @for (w of warehouses(); track w.id) {
-              <option [ngValue]="w.id">{{ w.nameAr }}</option>
-            }
-          </select>
+          @if (warehouseLocked()) {
+            <input type="text" [ngModel]="warehouseDisplayName()" disabled />
+          } @else {
+            <select
+              [ngModel]="warehouseId()"
+              (ngModelChange)="onWarehouseChange($event || null)"
+              [disabled]="!isEditableDraft()"
+            >
+              <option [ngValue]="null">{{ t('pur.pr.pickWarehouse') }}</option>
+              @for (w of warehouses(); track w.id) {
+                <option [ngValue]="w.id">{{ warehouseLabel(w) }}</option>
+              }
+            </select>
+          }
         </label>
         <label class="field">
           <span>{{ t('pur.pr.col.reason') }}</span>
-          <select [ngModel]="returnReasonId()" (ngModelChange)="returnReasonId.set($event || null)" [disabled]="!isDraft()">
+          <select
+            [ngModel]="returnReasonId()"
+            (ngModelChange)="returnReasonId.set($event || null)"
+            [disabled]="!isEditableDraft()"
+          >
             <option [ngValue]="null">{{ t('pur.pr.pickReason') }}</option>
             @for (r of reasons(); track r.id) {
               <option [ngValue]="r.id">{{ r.nameAr }}</option>
             }
           </select>
         </label>
+
         <label class="field">
           <span>{{ t('pur.pr.col.ref') }}</span>
-          <input type="text" [ngModel]="referenceNumber()" (ngModelChange)="referenceNumber.set($event)" [disabled]="!isDraft()" />
+          <input type="text" [ngModel]="referenceNumber()" (ngModelChange)="referenceNumber.set($event)" [disabled]="!isEditableDraft()" />
         </label>
         <label class="field">
           <span>{{ t('pur.pr.col.currency') }}</span>
           <input type="text" [ngModel]="currency()" disabled />
         </label>
         <label class="field span-2">
-          <span>{{ t('pur.pr.col.reasonNotes') }}</span>
-          <input type="text" [ngModel]="reasonNotes()" (ngModelChange)="reasonNotes.set($event)" [disabled]="!isDraft()" />
-        </label>
-        <label class="field span-2">
           <span>{{ t('pur.pr.col.notes') }}</span>
-          <input type="text" [ngModel]="notes()" (ngModelChange)="notes.set($event)" [disabled]="!isDraft()" />
+          <input type="text" [ngModel]="notes()" (ngModelChange)="notes.set($event)" [disabled]="!isEditableDraft()" />
         </label>
       </div>
     </section>
@@ -183,19 +187,20 @@
     <section class="card">
       <div class="card-head">
         <h3>{{ t('pur.pr.linesTitle') }}</h3>
-        <div class="row-actions">
-          <button type="button" class="btn ghost" [disabled]="!isDraft() || !!docId()" (click)="loadFromSource()">
-            {{ t('pur.pr.loadFromSource') }}
-          </button>
-        </div>
       </div>
 
-      <div class="table-wrap">
+      @if (usesInvoiceSource() && !purchaseInvoiceId()) {
+        <p class="muted source-hint">{{ t('pur.pr.linesDisabledHint') }}</p>
+      }
+
+      <div class="table-wrap" [class.disabled-block]="usesInvoiceSource() && !purchaseInvoiceId()">
         <table>
           <thead>
             <tr>
               <th>{{ t('pur.pr.col.item') }}</th>
               <th>{{ t('pur.pr.col.originalQty') }}</th>
+              <th>{{ t('pur.pr.col.returnedQty') }}</th>
+              <th>{{ t('pur.pr.col.remainingQty') }}</th>
               <th>{{ t('pur.pr.col.returnQty') }}</th>
               <th>{{ t('pur.pr.col.unit') }}</th>
               <th>{{ t('pur.pr.col.unitPrice') }}</th>
@@ -207,26 +212,33 @@
           <tbody>
             @if (lines().length === 0) {
               <tr>
-                <td colspan="8" class="muted">{{ t('pur.pr.noLines') }}</td>
+                <td colspan="10" class="muted">{{ t('pur.pr.noLines') }}</td>
               </tr>
             }
             @for (line of lines(); track $index; let i = $index) {
-              <tr [class.selected]="selectedLineIndex() === i" (click)="selectLine(i)">
+              <tr
+                [class.selected]="selectedLineIndex() === i"
+                [class.disabled-row]="line.isDisabled"
+                (click)="selectLine(i)"
+              >
                 <td>{{ line.itemNameAr || line.inventoryItemId }}</td>
                 <td>{{ line.originalQuantity | number: '1.0-3' }}</td>
+                <td>{{ line.previouslyReturnedQuantity | number: '1.0-3' }}</td>
+                <td>{{ line.availableToReturn | number: '1.0-3' }}</td>
                 <td>
                   <input
                     type="number"
                     class="cell-input"
+                    min="0"
                     [ngModel]="line.returnQuantity"
                     (ngModelChange)="updateLine(i, { returnQuantity: +$event })"
-                    [disabled]="!isDraft()"
+                    [disabled]="!isEditableDraft() || !!line.isDisabled || !linesEnabled()"
                     [attr.max]="line.availableToReturn"
                   />
                 </td>
                 <td>{{ line.unitNameAr || '—' }}</td>
                 <td>{{ line.unitCost | number: '1.2-2' }}</td>
-                <td>{{ warehouseNameAr() || '—' }}</td>
+                <td>{{ line.lineWarehouseNameAr || warehouseNameAr() || '—' }}</td>
                 <td>{{ line.taxAmount | number: '1.2-2' }}</td>
                 <td>{{ line.lineTotal | number: '1.2-2' }}</td>
               </tr>
@@ -237,7 +249,6 @@
       <div class="totals">
         <strong>{{ t('pur.pr.grandTotal') }}: {{ grandTotal() | number: '1.2-2' }} {{ currency() }}</strong>
       </div>
-      <p class="tip"><mat-icon>lightbulb</mat-icon> {{ t('pur.pr.tip') }}</p>
     </section>
   }
 </app-inventory-page-shell>

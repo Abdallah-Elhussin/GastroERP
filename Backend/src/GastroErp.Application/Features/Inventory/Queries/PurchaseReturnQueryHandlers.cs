@@ -2,6 +2,7 @@ using GastroErp.Application.Common.Interfaces;
 using GastroErp.Application.Common.Responses;
 using GastroErp.Application.Features.Inventory.Commands;
 using GastroErp.Application.Features.Inventory.DTOs;
+using GastroErp.Application.Features.Inventory.Services;
 using GastroErp.Domain.Enums;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
@@ -27,6 +28,10 @@ public class GetPurchaseReturnsQueryHandler(IApplicationDbContext context)
             query = query.Where(r => r.WarehouseId == request.WarehouseId.Value);
         if (request.ReturnType.HasValue)
             query = query.Where(r => r.ReturnType == request.ReturnType.Value);
+        else if (request.InvoiceBasedOnly)
+            query = query.Where(r =>
+                r.ReturnType == PurchaseReturnType.AfterInvoice ||
+                r.ReturnType == PurchaseReturnType.Direct);
         if (request.Status.HasValue)
             query = query.Where(r => r.Status == request.Status.Value);
         if (request.From.HasValue)
@@ -76,6 +81,18 @@ public class GetPurchaseReturnByIdQueryHandler(IApplicationDbContext context)
     }
 }
 
+public class GetNextPurchaseReturnNumberQueryHandler(IApplicationDbContext context)
+    : IRequestHandler<GetNextPurchaseReturnNumberQuery, Result<string>>
+{
+    public async Task<Result<string>> Handle(
+        GetNextPurchaseReturnNumberQuery request, CancellationToken cancellationToken)
+    {
+        var number = await PurchaseReturnNumberAllocator.PeekNextAsync(
+            context, request.TenantId, cancellationToken);
+        return Result<string>.Success(number);
+    }
+}
+
 public class PreviewPurchaseReturnFromGrnQueryHandler(IApplicationDbContext context)
     : IRequestHandler<PreviewPurchaseReturnFromGrnQuery, Result<PurchaseReturnDto>>
 {
@@ -114,36 +131,263 @@ public class PreviewPurchaseReturnFromInvoiceQueryHandler(IApplicationDbContext 
     public async Task<Result<PurchaseReturnDto>> Handle(
         PreviewPurchaseReturnFromInvoiceQuery request, CancellationToken cancellationToken)
     {
-        var inv = await context.PurchaseInvoices.AsNoTracking().Include(i => i.Lines)
-            .FirstOrDefaultAsync(i => i.Id == request.PurchaseInvoiceId && i.TenantId == request.TenantId, cancellationToken);
-        if (inv is null)
-            return Result<PurchaseReturnDto>.Failure("PurchaseInvoiceNotFound", "Purchase invoice not found.");
-        if (inv.Status != PurchasingDocumentStatus.Posted)
-            return Result<PurchaseReturnDto>.Failure("InvalidStatus", "Can only return against a posted invoice.");
-        if (inv.WarehouseId is null)
+        var forReturn = await GetPurchaseInvoiceForReturnQueryHandler.BuildAsync(
+            context, request.TenantId, request.PurchaseInvoiceId, cancellationToken);
+        if (!forReturn.IsSuccess)
+            return Result<PurchaseReturnDto>.Failure(forReturn.ErrorCode!, forReturn.ErrorMessage!);
+
+        var data = forReturn.Data!;
+        if (!data.Header.CanCreateReturn)
+        {
+            var code = data.Header.BlockReasonCode ?? "InvalidStatus";
+            return Result<PurchaseReturnDto>.Failure(code, data.Header.BlockReason ?? "Cannot create return from this invoice.");
+        }
+
+        var warehouseId = data.Header.WarehouseId
+            ?? data.Items.Select(i => i.WarehouseId).FirstOrDefault(id => id.HasValue);
+        if (warehouseId is null)
             return Result<PurchaseReturnDto>.Failure("RequiredField", "Invoice warehouse is required.");
 
-        var type = inv.Kind == PurchaseInvoiceKind.Direct
+        var type = data.Header.Kind == PurchaseInvoiceKind.Direct
             ? PurchaseReturnType.Direct
             : PurchaseReturnType.AfterInvoice;
 
         var preview = Domain.Entities.Inventory.Purchasing.PurchaseReturn.CreateFromInvoice(
-            request.TenantId, inv.SupplierId, inv.WarehouseId.Value, "PREVIEW", inv.Id, type, inv.Currency, inv.BranchId);
+            request.TenantId, data.Header.SupplierId, warehouseId.Value, "PREVIEW",
+            data.Header.Id, type, data.Header.Currency, null);
 
-        foreach (var l in inv.Lines.Where(x => x.RemainingToReturn > 0))
+        var baseDto = await PurchaseReturnMapper.EnrichAsync(context, preview, cancellationToken);
+        var lines = data.Items
+            .Where(i => !i.IsDisabled)
+            .Select(i => new PurchaseReturnLineDto(
+                Guid.Empty,
+                i.InventoryItemId,
+                i.ItemNameAr,
+                i.ItemSku,
+                i.UnitId,
+                i.UnitNameAr,
+                null,
+                i.PurchaseInvoiceLineId,
+                i.OriginalQuantity,
+                i.PreviouslyReturnedQuantity,
+                i.RemainingQuantity,
+                0,
+                i.UnitPrice,
+                i.DiscountAmount,
+                i.TaxPercent,
+                0,
+                0,
+                0,
+                null,
+                null,
+                i.Description,
+                null,
+                null,
+                false))
+            .ToList();
+
+        return Result<PurchaseReturnDto>.Success(baseDto with
         {
-            preview.AddLine(l.InventoryItemId, l.UnitId, l.Quantity, l.ReturnedQuantity, l.RemainingToReturn,
-                l.UnitPrice,
-                taxAmount: l.RemainingToReturn > 0 && l.Quantity > 0
-                    ? Math.Round(l.TaxAmount * (l.RemainingToReturn / l.Quantity), 4) : 0,
-                purchaseInvoiceLineId: l.Id);
+            SupplierNameAr = data.Header.SupplierNameAr,
+            WarehouseId = warehouseId.Value,
+            WarehouseNameAr = data.Header.WarehouseNameAr ?? baseDto.WarehouseNameAr,
+            PurchaseInvoiceId = data.Header.Id,
+            PurchaseInvoiceNumber = data.Header.InvoiceNumber,
+            Notes = data.Header.Notes,
+            Currency = data.Header.Currency,
+            ReferenceNumber = data.Header.ExternalReference ?? data.Header.SupplierInvoiceNumber,
+            Lines = lines,
+            LineCount = lines.Count,
+            SubTotal = 0,
+            TaxAmount = 0,
+            TotalAmount = 0
+        });
+    }
+}
+
+public class GetPurchaseInvoiceForReturnQueryHandler(IApplicationDbContext context)
+    : IRequestHandler<GetPurchaseInvoiceForReturnQuery, Result<PurchaseInvoiceForReturnDto>>
+{
+    public Task<Result<PurchaseInvoiceForReturnDto>> Handle(
+        GetPurchaseInvoiceForReturnQuery request, CancellationToken cancellationToken)
+        => BuildAsync(context, request.TenantId, request.PurchaseInvoiceId, cancellationToken);
+
+    internal static async Task<Result<PurchaseInvoiceForReturnDto>> BuildAsync(
+        IApplicationDbContext context,
+        Guid tenantId,
+        Guid purchaseInvoiceId,
+        CancellationToken cancellationToken)
+    {
+        var inv = await context.PurchaseInvoices.AsNoTracking()
+            .Include(i => i.Lines)
+            .FirstOrDefaultAsync(i => i.Id == purchaseInvoiceId && i.TenantId == tenantId, cancellationToken);
+
+        if (inv is null)
+            return Result<PurchaseInvoiceForReturnDto>.Failure("PurchaseInvoiceNotFound", "Purchase invoice not found.");
+
+        string? blockCode = null;
+        string? blockReason = null;
+        if (inv.Status == PurchasingDocumentStatus.Cancelled)
+        {
+            blockCode = "InvoiceCancelled";
+            blockReason = "Cannot create a return from a cancelled invoice.";
+        }
+        else if (inv.Status == PurchasingDocumentStatus.Reversed)
+        {
+            blockCode = "InvoiceReversed";
+            blockReason = "Cannot create a return from a reversed invoice.";
+        }
+        else if (inv.Status != PurchasingDocumentStatus.Posted)
+        {
+            blockCode = "InvalidStatus";
+            blockReason = "Can only return against a posted invoice.";
         }
 
-        if (!preview.Lines.Any())
-            return Result<PurchaseReturnDto>.Failure("NothingToReturn", "No remaining quantities to return.");
+        var supplier = await context.Suppliers.AsNoTracking()
+            .Where(s => s.Id == inv.SupplierId)
+            .Select(s => new { s.NameAr, s.ApAccountId })
+            .FirstOrDefaultAsync(cancellationToken);
 
-        return Result<PurchaseReturnDto>.Success(
-            await PurchaseReturnMapper.EnrichAsync(context, preview, cancellationToken));
+        string? apAccountName = null;
+        if (supplier?.ApAccountId is Guid apId)
+        {
+            apAccountName = await context.ChartOfAccounts.AsNoTracking()
+                .Where(a => a.Id == apId)
+                .Select(a => a.NameAr)
+                .FirstOrDefaultAsync(cancellationToken);
+        }
+
+        string? costCenterName = null;
+        if (inv.CostCenterId is Guid ccId)
+        {
+            costCenterName = await context.CostCenters.AsNoTracking()
+                .Where(c => c.Id == ccId)
+                .Select(c => c.NameAr)
+                .FirstOrDefaultAsync(cancellationToken);
+        }
+
+        var itemIds = inv.Lines.Select(l => l.InventoryItemId).Distinct().ToList();
+        var unitIds = inv.Lines.Select(l => l.UnitId).Distinct().ToList();
+        var lineWhIds = inv.Lines.Where(l => l.LineWarehouseId.HasValue)
+            .Select(l => l.LineWarehouseId!.Value).Distinct().ToList();
+        if (inv.WarehouseId.HasValue) lineWhIds.Add(inv.WarehouseId.Value);
+        lineWhIds = lineWhIds.Distinct().ToList();
+
+        var items = await context.InventoryItems.AsNoTracking()
+            .Where(i => itemIds.Contains(i.Id))
+            .ToDictionaryAsync(i => i.Id, i => new { i.NameAr, i.Sku }, cancellationToken);
+        var units = await context.InventoryUnits.AsNoTracking()
+            .Where(u => unitIds.Contains(u.Id))
+            .ToDictionaryAsync(u => u.Id, u => u.NameAr, cancellationToken);
+        var warehouses = await context.Warehouses.AsNoTracking()
+            .Where(w => lineWhIds.Contains(w.Id))
+            .ToDictionaryAsync(w => w.Id, w => w.NameAr, cancellationToken);
+
+        // Header warehouse: invoice warehouse, or the only distinct line warehouse.
+        Guid? resolvedWarehouseId = inv.WarehouseId;
+        string? resolvedWarehouseName = inv.WarehouseId is Guid hw && warehouses.TryGetValue(hw, out var hwn)
+            ? hwn
+            : null;
+        if (resolvedWarehouseId is null)
+        {
+            var distinctLineWh = inv.Lines
+                .Select(l => l.LineWarehouseId)
+                .Where(id => id.HasValue)
+                .Select(id => id!.Value)
+                .Distinct()
+                .ToList();
+            if (distinctLineWh.Count == 1)
+            {
+                resolvedWarehouseId = distinctLineWh[0];
+                warehouses.TryGetValue(resolvedWarehouseId.Value, out resolvedWarehouseName);
+            }
+        }
+
+        var lineDtos = inv.Lines.Select(l =>
+        {
+            items.TryGetValue(l.InventoryItemId, out var item);
+            units.TryGetValue(l.UnitId, out var unitName);
+            var whId = l.LineWarehouseId ?? inv.WarehouseId;
+            string? whName = whId is Guid wid && warehouses.TryGetValue(wid, out var wn) ? wn : null;
+            var remaining = l.RemainingToReturn;
+            var disabled = remaining <= 0;
+            return new PurchaseInvoiceForReturnLineDto(
+                l.Id,
+                l.InventoryItemId,
+                item?.NameAr,
+                item?.Sku,
+                l.Description,
+                l.UnitId,
+                unitName,
+                whId,
+                whName,
+                l.Quantity,
+                l.ReturnedQuantity,
+                remaining,
+                ReturnQuantity: 0,
+                l.UnitPrice,
+                l.DiscountPercent,
+                l.DiscountAmount,
+                l.TaxPercent,
+                l.TaxAmount,
+                l.LineNet,
+                l.LineTotal,
+                disabled);
+        }).ToList();
+
+        var totalRemaining = lineDtos.Sum(l => l.RemainingQuantity);
+        if (blockCode is null && totalRemaining <= 0)
+        {
+            blockCode = "NothingToReturn";
+            blockReason = "No remaining quantities to return.";
+        }
+
+        var taxes = lineDtos
+            .Where(l => l.TaxPercent > 0 || l.TaxAmount > 0)
+            .GroupBy(l => l.TaxPercent)
+            .Select(g => new PurchaseInvoiceForReturnTaxDto(
+                g.Key,
+                g.Sum(x => x.LineSubTotal),
+                g.Sum(x => x.TaxAmount)))
+            .OrderBy(t => t.TaxPercent)
+            .ToList();
+
+        var header = new PurchaseInvoiceForReturnHeaderDto(
+            inv.Id,
+            inv.InvoiceNumber,
+            inv.Kind,
+            inv.Status,
+            inv.PaymentMode,
+            inv.Nature,
+            inv.SupplierId,
+            supplier?.NameAr ?? string.Empty,
+            resolvedWarehouseId,
+            resolvedWarehouseName,
+            inv.CostCenterId,
+            costCenterName,
+            inv.InvoiceDate,
+            inv.DueDate,
+            inv.Currency,
+            inv.ExchangeRate,
+            inv.SupplierInvoiceNumber,
+            inv.ExternalReference,
+            inv.Notes,
+            supplier?.ApAccountId,
+            apAccountName,
+            inv.DiscountAmount,
+            inv.SubTotal,
+            inv.TaxAmount,
+            inv.TotalAmount,
+            CanCreateReturn: blockCode is null,
+            BlockReason: blockReason,
+            BlockReasonCode: blockCode);
+
+        return Result<PurchaseInvoiceForReturnDto>.Success(new PurchaseInvoiceForReturnDto(
+            header,
+            lineDtos,
+            taxes,
+            totalRemaining,
+            inv.TotalAmount));
     }
 }
 

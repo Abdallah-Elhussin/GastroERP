@@ -67,28 +67,30 @@ export class PurchaseReturnsPage implements OnInit {
   showDeleted = signal(false);
   pageSize = signal(50);
 
-  /** When set (e.g. direct-returns), API list is filtered to this returnType. */
+  /** When set (e.g. legacy single-type filter), API list is filtered to this returnType. */
   returnTypeFilter = signal<number | null>(null);
-  isDirectMode = signal(false);
+  /** Invoice-based returns: FromReceipt (AfterInvoice) + Direct. */
+  isInvoiceReturnsMode = signal(false);
 
   breadcrumbs = computed(() => [
     { labelKey: 'nav.purchases', path: '/purchases/dashboard' },
     {
-      labelKey: this.isDirectMode() ? 'pur.nav.directReturns' : 'pur.nav.purchaseReturns'
+      labelKey: this.isInvoiceReturnsMode() ? 'pur.nav.invoiceReturns' : 'pur.nav.purchaseReturns'
     }
   ]);
 
   titleKey = computed(() =>
-    this.isDirectMode() ? 'pur.nav.directReturns' : 'pur.nav.purchaseReturns'
+    this.isInvoiceReturnsMode() ? 'pur.nav.invoiceReturns' : 'pur.nav.purchaseReturns'
   );
   subtitleKey = computed(() =>
-    this.isDirectMode() ? 'pur.pr.directSubtitle' : 'pur.pr.subtitle'
+    this.isInvoiceReturnsMode() ? 'pur.pr.invoiceSubtitle' : 'pur.pr.subtitle'
   );
   listBasePath = computed(() =>
-    this.isDirectMode() ? '/purchases/direct-returns' : '/purchases/purchase-returns'
+    this.isInvoiceReturnsMode() ? '/purchases/invoice-returns' : '/purchases/purchase-returns'
   );
 
   canManage = computed(() => this.auth.hasPermission('Inventory.Manage'));
+  isDirectMode = computed(() => this.returnTypeFilter() != null);
   selected = computed(() => this.rows().find(r => r.id === this.selectedId()) ?? null);
 
   filteredRows = computed(() => {
@@ -100,11 +102,15 @@ export class PurchaseReturnsPage implements OnInit {
   });
 
   ngOnInit(): void {
-    const dataFilter = this.route.snapshot.data['returnTypeFilter'] as number | undefined;
+    const data = this.route.snapshot.data;
     const path = this.route.snapshot.routeConfig?.path ?? '';
-    const isDirect = dataFilter === 3 || path.startsWith('direct-returns');
-    this.isDirectMode.set(isDirect);
-    this.returnTypeFilter.set(isDirect ? 3 : null);
+    const invoiceMode =
+      data['invoiceReturnsMode'] === true ||
+      path.startsWith('invoice-returns') ||
+      path.startsWith('direct-returns');
+    this.isInvoiceReturnsMode.set(invoiceMode);
+    const dataFilter = data['returnTypeFilter'] as number | undefined;
+    this.returnTypeFilter.set(!invoiceMode && dataFilter != null ? dataFilter : null);
     this.load();
   }
 
@@ -124,6 +130,7 @@ export class PurchaseReturnsPage implements OnInit {
         search: this.search().trim() || undefined,
         status: filter === 'all' ? null : STATUS_API[filter],
         returnType: this.returnTypeFilter(),
+        invoiceBasedOnly: this.isInvoiceReturnsMode() && this.returnTypeFilter() == null,
         from,
         to
       })
@@ -157,12 +164,7 @@ export class PurchaseReturnsPage implements OnInit {
   }
 
   createNew(): void {
-    const base = this.listBasePath();
-    if (this.isDirectMode()) {
-      void this.router.navigate([`${base}/new`], { queryParams: { returnType: 3 } });
-      return;
-    }
-    void this.router.navigate([`${base}/new`]);
+    void this.router.navigate([`${this.listBasePath()}/new`]);
   }
 
   edit(): void {
@@ -171,22 +173,17 @@ export class PurchaseReturnsPage implements OnInit {
     void this.router.navigate([this.listBasePath(), row.id]);
   }
 
-  approve(): void {
-    const row = this.selected();
-    if (!row || !this.canManage()) return;
-    this.runAction(() => this.repo.approve(row.id));
-  }
-
   post(): void {
     const row = this.selected();
     if (!row || !this.canManage()) return;
     this.runAction(() => this.repo.post(row.id));
   }
 
-  unpost(): void {
+  approve(): void {
     const row = this.selected();
     if (!row || !this.canManage()) return;
-    this.runAction(() => this.repo.unpost(row.id));
+    if (!confirm(this.t('pur.pr.confirmApprove'))) return;
+    this.runAction(() => this.repo.approve(row.id));
   }
 
   cancel(): void {

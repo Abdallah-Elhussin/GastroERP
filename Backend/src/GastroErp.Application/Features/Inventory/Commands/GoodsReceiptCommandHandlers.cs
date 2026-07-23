@@ -35,7 +35,7 @@ public class CreateGoodsReceiptCommandHandler(
             { return Result<GoodsReceiptDto>.Failure(ex.ErrorCode, ex.Message); }
 
             var number = string.IsNullOrWhiteSpace(dto.GrnNumber)
-                ? $"GRN-{DateTime.UtcNow:yyyyMMddHHmmss}"
+                ? await GoodsReceiptNumberAllocator.PeekNextAsync(context, dto.TenantId, cancellationToken)
                 : dto.GrnNumber.Trim();
 
             gr = GoodsReceipt.CreateDirect(
@@ -56,7 +56,7 @@ public class CreateGoodsReceiptCommandHandler(
                 return Result<GoodsReceiptDto>.Failure("InvalidStatus", "Cannot receive against a closed/cancelled PO.");
 
             var number = string.IsNullOrWhiteSpace(dto.GrnNumber)
-                ? $"GRN-{DateTime.UtcNow:yyyyMMddHHmmss}"
+                ? await GoodsReceiptNumberAllocator.PeekNextAsync(context, dto.TenantId, cancellationToken)
                 : dto.GrnNumber.Trim();
 
             gr = GoodsReceipt.CreateFromPurchaseOrder(

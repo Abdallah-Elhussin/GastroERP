@@ -15,6 +15,14 @@ namespace GastroErp.Presentation.Controllers.Inventory;
 [ApiVersion("1.0")]
 public class WarehouseController : BaseApiController
 {
+    [HttpGet($"{ApiRoutes.Inventory.Warehouses}/lookup")]
+    [HasPermission(Permissions.InventoryWarehouses.View)]
+    public async Task<IActionResult> GetLookup([FromQuery] Guid? branchId = null, [FromQuery] bool activeOnly = true)
+        => HandleResult(await Mediator.Send(new GetWarehouseLookupQuery(
+            TenantId,
+            branchId ?? BranchId,
+            activeOnly)));
+
     [HttpGet(ApiRoutes.Inventory.Warehouses)]
     [HasPermission(Permissions.InventoryWarehouses.View)]
     public async Task<IActionResult> GetWarehouses(
@@ -44,11 +52,6 @@ public class WarehouseController : BaseApiController
             page,
             pageSize)));
     }
-
-    [HttpGet($"{ApiRoutes.Inventory.Warehouses}/lookup")]
-    [HasPermission(Permissions.InventoryWarehouses.View)]
-    public async Task<IActionResult> GetLookup([FromQuery] Guid? branchId = null, [FromQuery] bool activeOnly = true)
-        => HandleResult(await Mediator.Send(new GetWarehouseLookupQuery(TenantId, branchId ?? BranchId, activeOnly)));
 
     [HttpGet($"{ApiRoutes.Inventory.Warehouses}/types")]
     [HasPermission(Permissions.InventoryWarehouses.View)]

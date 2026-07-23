@@ -9,14 +9,18 @@
       <a routerLink="/purchases/purchase-invoices" class="btn primary">{{ t('pur.nav.purchaseInvoices') }}</a>
       <a routerLink="/purchases/goods-receipts" class="btn primary">{{ t('pur.nav.goodsReceipts') }}</a>
       <a routerLink="/purchases/purchase-orders" class="btn primary">{{ t('pur.nav.purchaseOrders') }}</a>
-      <button type="button" class="btn ghost" (click)="refresh()">
+      <button type="button" class="btn ghost" (click)="refresh()" [disabled]="loading()">
         <mat-icon>sync</mat-icon>
         {{ t('common.refresh') }}
       </button>
     </div>
   </header>
 
-  <section class="kpi-grid">
+  @if (error()) {
+    <div class="error-banner">{{ error() }}</div>
+  }
+
+  <section class="kpi-grid" [class.is-loading]="loading()">
     @for (c of cards(); track c.key) {
       <a class="kpi-card" [routerLink]="c.link">
         <div class="kpi-top">
@@ -25,8 +29,8 @@
         </div>
         <strong>{{ c.value }}</strong>
         <div class="kpi-meta">
-          <span>{{ t(c.metaA) }}: 0</span>
-          <span>{{ t(c.metaB) }}: 0</span>
+          <span>{{ t(c.metaALabel) }}: {{ c.metaAValue }}</span>
+          <span>{{ t(c.metaBLabel) }}: {{ c.metaBValue }}</span>
         </div>
       </a>
     }
@@ -35,11 +39,43 @@
   <section class="split">
     <div class="panel">
       <h2>{{ t('pur.dash.alerts') }}</h2>
-      <p class="empty">{{ t('pur.dash.alertsEmpty') }}</p>
+      @if (alerts().length === 0) {
+        <p class="empty">{{ t('pur.dash.alertsEmpty') }}</p>
+      } @else {
+        <ul class="alert-list">
+          @for (a of alerts(); track a.code) {
+            <li [class]="'sev-' + a.severity">
+              @if (a.path) {
+                <a [routerLink]="a.path">{{ alertMessage(a) }}</a>
+              } @else {
+                <span>{{ alertMessage(a) }}</span>
+              }
+            </li>
+          }
+        </ul>
+      }
     </div>
     <div class="panel wide">
       <h2>{{ t('pur.dash.recent') }}</h2>
-      <p class="empty">{{ t('pur.dash.recentEmpty') }}</p>
+      @if (recent().length === 0) {
+        <p class="empty">{{ t('pur.dash.recentEmpty') }}</p>
+      } @else {
+        <ul class="activity-list">
+          @for (r of recent(); track r.id + r.kind) {
+            <li>
+              <div class="act-main">
+                <span class="kind">{{ activityKindLabel(r.kind) }}</span>
+                @if (r.path) {
+                  <a [routerLink]="r.path" class="ref">{{ r.reference }}</a>
+                } @else {
+                  <span class="ref">{{ r.reference }}</span>
+                }
+              </div>
+              <time>{{ r.occurredAt | date: 'mediumDate' }}</time>
+            </li>
+          }
+        </ul>
+      }
     </div>
   </section>
 

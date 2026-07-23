@@ -30,6 +30,11 @@ public class SupplierController : BaseApiController
             TenantId, isActive, isPreferred, isBlacklisted, hasBalance, overCreditLimit,
             category, city, country, search, code, query.Page, query.PageSize)));
 
+    [HttpGet($"{ApiRoutes.Inventory.Suppliers}/next-code")]
+    [HasPermission(Permissions.Supplier.View)]
+    public async Task<IActionResult> GetNextCode()
+        => HandleResult(await Mediator.Send(new GetNextSupplierCodeQuery(TenantId)));
+
     [HttpGet($"{ApiRoutes.Inventory.Suppliers}/{{id:guid}}")]
     [HasPermission(Permissions.Supplier.View)]
     public async Task<IActionResult> GetSupplierById(Guid id, [FromQuery] bool includeStats = true)

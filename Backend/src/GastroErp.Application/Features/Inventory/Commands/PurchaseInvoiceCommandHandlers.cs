@@ -90,9 +90,18 @@ public class CreatePurchaseInvoiceCommandHandler
                 };
         }
 
-        var number = string.IsNullOrWhiteSpace(dto.InvoiceNumber)
-            ? $"PI-{DateTime.UtcNow:yyyyMMddHHmmss}"
-            : dto.InvoiceNumber.Trim();
+        var number = await PurchaseInvoiceNumberAllocator.PeekNextAsync(
+            _context, request.TenantId, dto.Kind, cancellationToken);
+        if (!string.IsNullOrWhiteSpace(dto.InvoiceNumber))
+        {
+            var requested = dto.InvoiceNumber.Trim().ToUpperInvariant();
+            // Accept client preview only when it is still free; otherwise keep server allocation.
+            if (!await _context.PurchaseInvoices.AsNoTracking()
+                    .AnyAsync(i => i.TenantId == request.TenantId && i.InvoiceNumber == requested, cancellationToken))
+            {
+                number = requested;
+            }
+        }
 
         var invoice = PurchaseInvoice.CreateDraft(
             request.TenantId,

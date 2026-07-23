@@ -37,6 +37,11 @@ public class GoodsReceiptController : BaseApiController
     public async Task<IActionResult> PreviewFromPo(Guid purchaseOrderId)
         => HandleResult(await Mediator.Send(new PreviewGoodsReceiptFromPoQuery(TenantId, purchaseOrderId)));
 
+    [HttpGet($"{ApiRoutes.Inventory.GoodsReceipts}/next-number")]
+    [HasPermission(Permissions.Inventory.View)]
+    public async Task<IActionResult> GetNextNumber()
+        => HandleResult(await Mediator.Send(new GetNextGoodsReceiptNumberQuery(TenantId)));
+
     [HttpPost(ApiRoutes.Inventory.GoodsReceipts)]
     [HasPermission(Permissions.Inventory.Manage)]
     public async Task<IActionResult> CreateGoodsReceipt([FromBody] CreateGoodsReceiptDto dto)

@@ -4,6 +4,7 @@ import { Observable, map } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import {
   CreatePurchaseReturnPayload,
+  PurchaseInvoiceForReturn,
   PurchaseReturnDoc,
   PurchaseReturnListParams,
   PurchaseReturnReason,
@@ -22,6 +23,7 @@ export class PurchaseReturnRepository {
     if (params.search) httpParams = httpParams.set('search', params.search);
     if (params.status != null) httpParams = httpParams.set('status', params.status);
     if (params.returnType != null) httpParams = httpParams.set('returnType', params.returnType);
+    if (params.invoiceBasedOnly) httpParams = httpParams.set('invoiceBasedOnly', true);
     if (params.from) httpParams = httpParams.set('from', params.from);
     if (params.to) httpParams = httpParams.set('to', params.to);
     if (params.supplierId) httpParams = httpParams.set('supplierId', params.supplierId);
@@ -38,6 +40,25 @@ export class PurchaseReturnRepository {
 
   previewFromInvoice(purchaseInvoiceId: string): Observable<PurchaseReturnDoc> {
     return this.http.get<PurchaseReturnDoc>(`${this.base}/preview-from-invoice/${purchaseInvoiceId}`);
+  }
+
+  getInvoiceForReturn(purchaseInvoiceId: string): Observable<PurchaseInvoiceForReturn> {
+    return this.http.get<PurchaseInvoiceForReturn>(
+      `${this.base}/invoice-for-return/${purchaseInvoiceId}`
+    );
+  }
+
+  getNextNumber(): Observable<string> {
+    return this.http
+      .get(`${this.base}/next-number`, { responseType: 'text' })
+      .pipe(
+        map(raw => {
+          const value = String(raw ?? '')
+            .trim()
+            .replace(/^"|"$/g, '');
+          return /^PR\d{10}$/.test(value) ? value : '';
+        })
+      );
   }
 
   getReasons(activeOnly = true): Observable<PurchaseReturnReason[]> {
@@ -63,10 +84,6 @@ export class PurchaseReturnRepository {
 
   post(id: string): Observable<void> {
     return this.http.post<void>(`${this.base}/${id}/post`, {});
-  }
-
-  unpost(id: string): Observable<void> {
-    return this.http.post<void>(`${this.base}/${id}/unpost`, {});
   }
 
   cancel(id: string): Observable<void> {

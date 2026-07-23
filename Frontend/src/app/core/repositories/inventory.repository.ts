@@ -80,7 +80,12 @@ export abstract class InventoryRepository {
   abstract deactivateUnit(id: string): Observable<void>;
   abstract deleteUnit(id: string): Observable<void>;
 
-  abstract getWarehouses(): Observable<Warehouse[]>;
+  abstract getWarehouses(options?: {
+    isActive?: boolean | null;
+    pageSize?: number;
+    branchId?: string | null;
+  }): Observable<Warehouse[]>;
+  abstract getWarehouseLookup(branchId?: string | null, activeOnly?: boolean): Observable<Warehouse[]>;
   abstract getWarehouseTypes(): Observable<import('../models/inventory.models').WarehouseTypeDefinition[]>;
   abstract getBranchesLookup(): Observable<import('../models/inventory.models').BranchLookup[]>;
   abstract createWarehouse(payload: CreateWarehousePayload): Observable<Warehouse>;

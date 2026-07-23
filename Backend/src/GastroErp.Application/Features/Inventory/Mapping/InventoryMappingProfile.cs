@@ -38,36 +38,36 @@ public class InventoryMappingProfile : Profile
             .ForMember(d => d.CategoryNameAr, opt => opt.Ignore())
             .ForMember(d => d.BaseUnitNameAr, opt => opt.Ignore());
 
-        // Warehouse
+        // Warehouse — AutoMapper 16 maps records via ctor; use ForCtorParam (ForMember is ignored).
         CreateMap<Warehouse, WarehouseDto>()
-            .ForMember(d => d.ZoneCount, opt => opt.MapFrom(src => src.Zones.Count))
-            .ForMember(d => d.WarehouseTypeNameAr, opt => opt.Ignore())
-            .ForMember(d => d.ParentWarehouseNameAr, opt => opt.Ignore())
-            .ForMember(d => d.BranchNameAr, opt => opt.Ignore());
+            .ForCtorParam(nameof(WarehouseDto.ZoneCount), opt => opt.MapFrom(src => src.Zones.Count))
+            .ForCtorParam(nameof(WarehouseDto.WarehouseTypeNameAr), opt => opt.MapFrom(_ => (string?)null))
+            .ForCtorParam(nameof(WarehouseDto.ParentWarehouseNameAr), opt => opt.MapFrom(_ => (string?)null))
+            .ForCtorParam(nameof(WarehouseDto.BranchNameAr), opt => opt.MapFrom(_ => (string?)null));
 
         CreateMap<WarehouseTypeDefinition, WarehouseTypeDefinitionDto>();
 
         CreateMap<Warehouse, WarehouseDetailDto>()
-            .ForMember(d => d.ZoneCount, opt => opt.MapFrom(src => src.Zones.Count))
-            .ForMember(d => d.Zones, opt => opt.MapFrom(src => src.Zones));
+            .ForCtorParam(nameof(WarehouseDetailDto.ZoneCount), opt => opt.MapFrom(src => src.Zones.Count))
+            .ForCtorParam(nameof(WarehouseDetailDto.Zones), opt => opt.MapFrom(src => src.Zones));
 
         // WarehouseZone
         CreateMap<WarehouseZone, WarehouseZoneDto>()
-            .ForMember(d => d.ShelfCount, opt => opt.MapFrom(src => src.Shelves.Count));
+            .ForCtorParam(nameof(WarehouseZoneDto.ShelfCount), opt => opt.MapFrom(src => src.Shelves.Count));
 
         CreateMap<WarehouseZone, WarehouseZoneDetailDto>()
-            .ForMember(d => d.Shelves, opt => opt.MapFrom(src => src.Shelves));
+            .ForCtorParam(nameof(WarehouseZoneDetailDto.Shelves), opt => opt.MapFrom(src => src.Shelves));
 
         CreateMap<WarehouseShelf, WarehouseShelfDto>()
-            .ForMember(d => d.ZoneId, opt => opt.MapFrom(src => src.WarehouseZoneId))
-            .ForMember(d => d.BinCount, opt => opt.MapFrom(src => src.Bins.Count));
+            .ForCtorParam(nameof(WarehouseShelfDto.ZoneId), opt => opt.MapFrom(src => src.WarehouseZoneId))
+            .ForCtorParam(nameof(WarehouseShelfDto.BinCount), opt => opt.MapFrom(src => src.Bins.Count));
 
         CreateMap<WarehouseShelf, WarehouseShelfDetailDto>()
-            .ForMember(d => d.ZoneId, opt => opt.MapFrom(src => src.WarehouseZoneId))
-            .ForMember(d => d.Bins, opt => opt.MapFrom(src => src.Bins));
+            .ForCtorParam(nameof(WarehouseShelfDetailDto.ZoneId), opt => opt.MapFrom(src => src.WarehouseZoneId))
+            .ForCtorParam(nameof(WarehouseShelfDetailDto.Bins), opt => opt.MapFrom(src => src.Bins));
 
         CreateMap<WarehouseBin, WarehouseBinDto>()
-            .ForMember(d => d.ShelfId, opt => opt.MapFrom(src => src.WarehouseShelfId));
+            .ForCtorParam(nameof(WarehouseBinDto.ShelfId), opt => opt.MapFrom(src => src.WarehouseShelfId));
 
         CreateMap<InventoryBrand, InventoryBrandDto>();
         CreateMap<InventoryManufacturer, InventoryManufacturerDto>();

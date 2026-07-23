@@ -34,6 +34,22 @@ export class PurchaseInvoiceRepository {
     return this.http.get<PurchaseInvoiceDoc>(`${this.base}/${id}`);
   }
 
+  getNextNumber(kind: number = 1): Observable<string> {
+    const params = new HttpParams().set('kind', String(kind));
+    return this.http
+      .get(`${this.base}/next-number`, { params, responseType: 'text' })
+      .pipe(
+        map(raw => {
+          const value = String(raw ?? '')
+            .trim()
+            .replace(/^"|"$/g, '');
+          // FromReceipt: PI + yyyyMM + #### ; Direct: DPI + yyyyMM + ####
+          if (kind === 2) return /^DPI\d{10}$/.test(value) ? value : '';
+          return /^PI\d{10}$/.test(value) ? value : '';
+        })
+      );
+  }
+
   create(payload: CreatePurchaseInvoicePayload): Observable<PurchaseInvoiceDoc> {
     return this.http.post<PurchaseInvoiceDoc>(this.base, payload);
   }
